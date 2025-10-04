@@ -10,11 +10,25 @@
     "dev": "tsc --watch",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
+    "test:get-test": "tsx watch tests/get-test.ts",
+    "test:get-current-network": "tsx watch tests/get-current-network.ts",
+    "test:get-peer-addresses": "tsx watch tests/get-peer-addresses.ts",
+    "test:get-selected-tip-hash": "tsx watch tests/get-selected-tip-hash.ts",
+    "test:get-mempool-entry": "tsx watch tests/get-mempool-entry.ts",
+
     "test:get-info": "node tests/get-info.js",
-    "test:get-blockdag-info": "node tests/get-blockdag-info.js"
+    "test:get-blockdag-info": "node tests/get-blockdag-info.js",
+    "test:get-balance": "node tests/get-balance.js",
+    "test:get-utxos": "node tests/get-utxos.js",
+    "test:get-utxos-by-addresses": "node tests/get-utxos-by-addresses.js",
+    "test:get-block": "node tests/get-block.js",
+    "test:get-blocks": "node tests/get-blocks.js",
+    "test:get-virtual-selected-parent-blue-score": "node tests/get-virtual-selected-parent-blue-score.js",
+    "test:mempool-entries": "node tests/get-mempool-entries.js"
   },
   "keywords": [
     "hoosat",
+    "htn",
     "blockchain",
     "grpc",
     "sdk",
@@ -22,15 +36,15 @@
     "node",
     "client"
   ],
-  "author": "Andrei Kliubchenko <namp2988@gmail.com>",
+  "author": "Andrei Kliubchenko, namp2988@gmail.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/hoosat-node-sdk.git"
+    "url": "https://github.com/Namp88/hooast-node-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/hoosat-node-sdk/issues"
+    "url": "https://github.com/Namp88/hooast-node-sdk/issues"
   },
-  "homepage": "https://github.com/yourusername/hoosat-node-sdk#readme",
+  "homepage": "https://github.com/Namp88/hooast-node-sdk#readme",
   "files": [
     "dist",
     "README.md",
@@ -44,6 +58,7 @@
     "@types/node": "^24.6.2",
     "copyfiles": "^2.4.1",
     "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }
 }

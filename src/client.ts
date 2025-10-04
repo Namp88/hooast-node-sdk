@@ -1,9 +1,22 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { join } from 'path';
-import type { NodeConfig, NodeInfo, BlockDagInfo, Balance, UTXO, Transaction, Block } from './types';
+import { NodeConfig } from './types';
+import { GetCurrentNetworkResponse } from '@models/response/get-current-network.response';
+import { RequestType } from '@enums/request-type.enum';
+import { GetPeerAddressesResponse } from '@models/response/get-peer-addresses.response';
+import { GetSelectedTipHashResponse } from '@models/response/get-selected-tip-hash.response';
+import { GetMempoolEntryResponse } from '@models/response/get-mempool-entry.response';
+import { GetConnectedPeerInfoResponse } from '@models/response/get-connected-peer-info.response';
+import { GetConnectedPeerInfo } from '@models/result/get-connected-peer-info.result';
+import { GetCurrentNetwork } from '@models/result/get-current-network.response';
+import { GetMempoolEntry } from '@models/result/get-mempool-entry.result';
+import { GetPeerAddresses, GetPeerAddressItem } from '@models/result/get-peer-addresses.result';
+import { GetSelectedTipHash } from '@models/result/get-selected-tip-hash.result';
+import { ErrorResponse } from '@models/response/error.response';
+import { BaseResult } from '@models/result/base.result';
 
-export class HoosatNode {
+class HoosatNode {
   private client: any;
   private readonly host: string;
   private readonly port: number;
@@ -42,7 +55,7 @@ export class HoosatNode {
     }
   }
 
-  private async _request(command: string, params: any = {}): Promise<any> {
+  private async _request<T = any>(command: RequestType, params: any = {}): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Request ${command} timed out after ${this.timeout}ms`));
@@ -83,216 +96,269 @@ export class HoosatNode {
     });
   }
 
-  /**
-   * Get node information
-   */
-  async getInfo(): Promise<NodeInfo> {
-    const response = await this._request('getInfoRequest', {});
-    return response.getInfoResponse;
-  }
-
-  /**
-   * Get BlockDAG information
-   */
-  async getBlockDagInfo(): Promise<BlockDagInfo> {
-    const response = await this._request('getBlockDagInfoRequest', {});
-    return response.getBlockDagInfoResponse;
-  }
-
-  /**
-   * Get balance for an address
-   */
-  async getBalance(address: string): Promise<Balance> {
-    const response = await this._request('getBalanceByAddressRequest', {
-      address,
-    });
-    return {
-      address,
-      balance: response.getBalanceByAddressResponse.balance,
-    };
-  }
-
-  /**
-   * Get UTXOs for addresses
-   */
-  async getUtxos(addresses: string[]): Promise<UTXO[]> {
-    const response = await this._request('getUtxosByAddressesRequest', {
-      addresses,
-    });
-    return response.getUtxosByAddressesResponse.entries || [];
-  }
-
-  /**
-   * Get block by hash
-   */
-  async getBlock(blockHash: string, includeTransactions = true): Promise<Block> {
-    const response = await this._request('getBlockRequest', {
-      hash: blockHash,
-      includeTransactions,
-    });
-    return response.getBlockResponse.block;
-  }
-
-  /**
-   * Get transaction by ID
-   */
-  async getTransaction(txId: string): Promise<Transaction> {
-    const response = await this._request('getTransactionRequest', {
-      transactionId: txId,
-      includeOrphanPool: true,
-    });
-    return response.getTransactionResponse.transaction;
-  }
-
-  /**
-   * Submit a transaction to the network
-   */
-  async submitTransaction(transaction: Transaction): Promise<string> {
-    const response = await this._request('submitTransactionRequest', {
-      transaction,
-    });
-    return response.submitTransactionResponse.transactionId;
-  }
-
-  /**
-   * Get current virtual selected parent blue score
-   */
-  async getVirtualSelectedParentBlueScore(): Promise<string> {
-    const response = await this._request('getVirtualSelectedParentBlueScoreRequest', {});
-    return response.getVirtualSelectedParentBlueScoreResponse.blueScore;
-  }
-
-  /**
-   * Get multiple blocks by hashes
-   */
-  async getBlocks(blockHashes: string[], includeTransactions = true): Promise<Block[]> {
-    const response = await this._request('getBlocksRequest', {
-      lowHash: '',
-      includeBlocks: true,
-      includeTransactions,
-    });
-    return response.getBlocksResponse.blocks || [];
-  }
-
-  /**
-   * Get transactions for an address
-   */
-  async getTransactionsByAddress(address: string, startingBlockHash?: string): Promise<Transaction[]> {
-    const utxos = await this.getUtxos([address]);
-    const txIds = new Set<string>();
-
-    utxos.forEach(utxo => {
-      txIds.add(utxo.outpoint.transactionId);
-    });
-
-    const transactions: Transaction[] = [];
-    for (const txId of txIds) {
-      try {
-        const tx = await this.getTransaction(txId);
-        transactions.push(tx);
-      } catch (error) {
-        // Skip failed transactions
-      }
+  async test() {
+    try {
+      return await this._request(RequestType.Test, {});
+    } catch (error) {
+      console.error('error', error);
     }
-
-    return transactions;
   }
 
   /**
-   * Get mempool entries
+   * Get current network
    */
-  async getMempoolEntries(includeOrphanPool = true): Promise<any> {
-    const response = await this._request('getMempoolEntriesRequest', {
-      includeOrphanPool,
-      filterTransactionPool: true,
-    });
-    return response.getMempoolEntriesResponse.entries || [];
-  }
+  async getCurrentNetwork(): Promise<BaseResult<GetCurrentNetwork>> {
+    const { getCurrentNetworkResponse } = await this._request<GetCurrentNetworkResponse>(RequestType.GetCurrentNetworkRequest, {});
 
-  /**
-   * Get coin supply information
-   */
-  async getCoinSupply(): Promise<{ circulatingSupply: string; maxSupply: string }> {
-    const response = await this._request('getCoinSupplyRequest', {});
-    return {
-      circulatingSupply: response.getCoinSupplyResponse.circulatingSompi || '0',
-      maxSupply: response.getCoinSupplyResponse.maxSompi || '0',
+    const result: GetCurrentNetwork = {
+      currentNetwork: getCurrentNetworkResponse.currentNetwork,
     };
+
+    return this._buildResult(getCurrentNetworkResponse.error, result);
   }
 
   /**
-   * Get selected tip hash (best block)
+   * Get current network
    */
-  async getSelectedTipHash(): Promise<string> {
-    const blockdag = await this.getBlockDagInfo();
-    return blockdag.tipHashes[0] || '';
+  async getPeerAddresses(): Promise<BaseResult<GetPeerAddresses>> {
+    const { getPeerAddressesResponse } = await this._request<GetPeerAddressesResponse>(RequestType.GetPeerAddressesRequest, {});
+
+    const parseAddress = (addr: string): GetPeerAddressItem => {
+      const isIPv6 = addr.startsWith('[');
+      const [host, port] = isIPv6 ? [addr.substring(1, addr.lastIndexOf(']')), addr.split(':').pop()] : addr.split(':');
+
+      return {
+        address: addr,
+        isIPv6,
+        host,
+        port: parseInt(port!),
+      };
+    };
+
+    const result: GetPeerAddresses = {
+      addresses: getPeerAddressesResponse.addresses?.map(a => parseAddress(a.Addr)) || [],
+      bannedAddresses: getPeerAddressesResponse.bannedAddresses?.map(a => parseAddress(a.Addr)) || [],
+    };
+
+    return this._buildResult(getPeerAddressesResponse.error, result);
   }
 
   /**
-   * Resolve finality conflict
+   * Get selected tip hash (best block in the DAG)
    */
-  async resolveFinalityConflict(finalityBlockHash: string): Promise<any> {
-    const response = await this._request('resolveFinalityConflictRequest', {
-      finalityBlockHash,
+  async getSelectedTipHash(): Promise<BaseResult<GetSelectedTipHash>> {
+    const { getSelectedTipHashResponse } = await this._request<GetSelectedTipHashResponse>(RequestType.GetSelectedTipHashRequest, {});
+
+    const result: GetSelectedTipHash = {
+      selectedTipHash: getSelectedTipHashResponse.selectedTipHash,
+    };
+
+    return this._buildResult(getSelectedTipHashResponse.error, result);
+  }
+
+  /**
+   * Get mempool entry for a specific transaction
+   * Returns fee and orphan status information
+   */
+  async getMempoolEntry(txId: string): Promise<BaseResult<GetMempoolEntry>> {
+    const { getMempoolEntryResponse } = await this._request<GetMempoolEntryResponse>(RequestType.GetMempoolEntryRequest, {
+      txId,
+      includeOrphanPool: true,
+      filterTransactionPool: false,
     });
-    return response.resolveFinalityConflictResponse;
-  }
 
-  /**
-   * Estimate network hashes per second
-   */
-  async estimateNetworkHashesPerSecond(startHash?: string, windowSize = 1000): Promise<string> {
-    const response = await this._request('estimateNetworkHashesPerSecondRequest', {
-      startHash,
-      windowSize,
-    });
-    return response.estimateNetworkHashesPerSecondResponse.networkHashesPerSecond || '0';
+    const result: GetMempoolEntry = {
+      transaction: getMempoolEntryResponse?.entry?.transaction ?? null,
+      fee: getMempoolEntryResponse?.entry?.fee ?? null,
+      mass: getMempoolEntryResponse?.entry?.mass ?? null,
+      isOrphan: getMempoolEntryResponse?.entry?.isOrphan ?? false,
+    };
+
+    return this._buildResult(getMempoolEntryResponse.error, result);
   }
 
   /**
    * Get connected peer info
    */
-  async getConnectedPeerInfo(): Promise<any[]> {
-    const response = await this._request('getConnectedPeerInfoRequest', {});
-    return response.getConnectedPeerInfoResponse.infos || [];
+  async getConnectedPeerInfo(): Promise<BaseResult<GetConnectedPeerInfo>> {
+    const { getConnectedPeerInfoResponse } = await this._request<GetConnectedPeerInfoResponse>(RequestType.GetConnectedPeerInfoRequest, {});
+
+    const result: GetConnectedPeerInfo = {
+      peers: getConnectedPeerInfoResponse.infos,
+    };
+
+    return this._buildResult(getConnectedPeerInfoResponse.error, result);
   }
+
+  private _buildResult<T>(error: ErrorResponse, model: T): BaseResult<T> {
+    const extractedError = error ? error.message : null;
+
+    return {
+      ok: !Boolean(extractedError),
+      result: Boolean(extractedError) ? null : model,
+      error: extractedError,
+    };
+  }
+
+  /**
+   * Get node information
+   */
+  // async getInfo(): Promise<NodeInfo> {
+  //   const response = await this._request('getInfoRequest', {});
+  //   return response.getInfoResponse;
+  // }
+
+  /**
+   * Get BlockDAG information
+   */
+  // async getBlockDagInfo(): Promise<BlockDagInfo> {
+  //   const response = await this._request('getBlockDagInfoRequest', {});
+  //   return response.getBlockDagInfoResponse;
+  // }
+
+  /**
+   * Get balance for an address
+   */
+  // async getBalance(address: string, formatAmount = false): Promise<Balance> {
+  //   const response = await this._request('getBalanceByAddressRequest', {
+  //     address,
+  //   });
+  //
+  //   const balance = formatAmount
+  //     ? HoosatUtils.formatAmount(response.getBalanceByAddressResponse.balance)
+  //     : response.getBalanceByAddressResponse.balance;
+  //
+  //   return {
+  //     address,
+  //     balance,
+  //   };
+  // }
+
+  /**
+   * Get UTXOs for addresses
+   */
+  // async getUtxos(addresses: string[]): Promise<UTXO[]> {
+  //   const response = await this._request('getUtxosByAddressesRequest', {
+  //     addresses,
+  //   });
+  //
+  //   return response.getUtxosByAddressesResponse.entries || [];
+  // }
+
+  /**
+   * Get UTXOs grouped by address
+   */
+  // async getUtxosByAddresses(addresses: string[]): Promise<UtxosByAddress> {
+  //   const allUtxos = await this.getUtxos(addresses);
+  //
+  //   const grouped: UtxosByAddress = {};
+  //
+  //   addresses.forEach(addr => {
+  //     grouped[addr] = [];
+  //   });
+  //
+  //   allUtxos.forEach(utxo => {
+  //     if (grouped[utxo.address]) {
+  //       const { address, ...utxoData } = utxo;
+  //       grouped[utxo.address].push(utxoData);
+  //     }
+  //   });
+  //
+  //   return grouped;
+  // }
+
+  /**
+   * Get block by hash
+   */
+  // async getBlock(blockHash: string, includeTransactions = true): Promise<Block> {
+  //   const response = await this._request('getBlockRequest', {
+  //     hash: blockHash,
+  //     includeTransactions,
+  //   });
+  //
+  //   return response.getBlockResponse.block;
+  // }
+
+  /**
+   * Get multiple blocks by hashes
+   */
+  // async getBlocks(blockHashes: string[], includeTransactions = true): Promise<Block[]> {
+  //   const blocks: Block[] = [];
+  //
+  //   for (const hash of blockHashes) {
+  //     try {
+  //       const block = await this.getBlock(hash, includeTransactions);
+  //       blocks.push(block);
+  //     } catch (error) {
+  //       // Skip blocks that failed to fetch
+  //       console.warn(`Failed to fetch block ${hash}:`, error);
+  //     }
+  //   }
+  //
+  //   return blocks;
+  // }
+
+  /**
+   * Get current virtual selected parent blue score
+   */
+  // async getVirtualSelectedParentBlueScore(): Promise<string> {
+  //   const response = await this._request('getVirtualSelectedParentBlueScoreRequest', {});
+  //   return response.getVirtualSelectedParentBlueScoreResponse.blueScore;
+  // }
+
+  /**
+   * Get coin supply information
+   */
+  // async getCoinSupply(): Promise<{ circulatingSupply: string; maxSupply: string }> {
+  //   const response = await this._request('getCoinSupplyRequest', {});
+  //   return {
+  //     circulatingSupply: response.getCoinSupplyResponse.circulatingSompi || '0',
+  //     maxSupply: response.getCoinSupplyResponse.maxSompi || '0',
+  //   };
+  // }
+
+  /**
+   * Get selected tip hash (best block)
+   */
+  // async getSelectedTipHash(): Promise<string> {
+  //   const blockdag = await this.getBlockDagInfo();
+  //   return blockdag.tipHashes[0] || '';
+  // }
+
+  /**
+   * Estimate network hashes per second
+   */
+  // async estimateNetworkHashesPerSecond(startHash?: string, windowSize = 1000): Promise<string> {
+  //   const response = await this._request('estimateNetworkHashesPerSecondRequest', {
+  //     startHash,
+  //     windowSize,
+  //   });
+  //   return response.estimateNetworkHashesPerSecondResponse.networkHashesPerSecond || '0';
+  // }
+
+  /**
+   * Get connected peer info
+   */
+  // async getConnectedPeerInfo(): Promise<any[]> {
+  //   const response = await this._request('getConnectedPeerInfoRequest', {});
+  //   return response.getConnectedPeerInfoResponse.infos || [];
+  // }
 
   /**
    * Get block count
    */
-  async getBlockCount(): Promise<string> {
-    const blockdag = await this.getBlockDagInfo();
-    return blockdag.blockCount;
-  }
+  // async getBlockCount(): Promise<string> {
+  //   const blockdag = await this.getBlockDagInfo();
+  //   return blockdag.blockCount;
+  // }
 
   /**
    * Get header count
    */
-  async getHeaderCount(): Promise<string> {
-    const blockdag = await this.getBlockDagInfo();
-    return blockdag.headerCount;
-  }
-
-  /**
-   * Utility: Check if address is valid
-   */
-  isValidAddress(address: string): boolean {
-    return address.startsWith('hoosat:') && address.length > 10;
-  }
-
-  /**
-   * Utility: Format sompi to HTN
-   */
-  formatAmount(sompi: string | bigint): string {
-    const amount = typeof sompi === 'string' ? BigInt(sompi) : sompi;
-    return (Number(amount) / 100000000).toFixed(8);
-  }
-
-  /**
-   * Utility: Parse HTN to sompi
-   */
-  parseAmount(hoo: string): string {
-    const amount = parseFloat(hoo) * 100000000;
-    return BigInt(Math.floor(amount)).toString();
-  }
+  // async getHeaderCount(): Promise<string> {
+  //   const blockdag = await this.getBlockDagInfo();
+  //   return blockdag.headerCount;
+  // }
 }
+
+export default HoosatNode;

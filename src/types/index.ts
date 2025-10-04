@@ -32,6 +32,7 @@ export interface Balance {
 }
 
 export interface UTXO {
+  address: string;
   outpoint: {
     transactionId: string;
     index: number;
@@ -45,6 +46,10 @@ export interface UTXO {
     blockDaaScore: string;
     isCoinbase: boolean;
   };
+}
+
+export interface UtxosByAddress {
+  [address: string]: Omit<UTXO, 'address'>[];
 }
 
 export interface Transaction {
@@ -80,13 +85,13 @@ export interface TransactionOutput {
 
 export interface Block {
   header: BlockHeader;
-  transactions: Transaction[];
+  transactions: BlockTransaction[];
   verboseData?: BlockVerboseData;
 }
 
 export interface BlockHeader {
-  version: number;
   parents: Array<{ parentHashes: string[] }>;
+  version: number;
   hashMerkleRoot: string;
   acceptedIdMerkleRoot: string;
   utxoCommitment: string;
@@ -95,28 +100,38 @@ export interface BlockHeader {
   nonce: string;
   daaScore: string;
   blueWork: string;
-  pruningPoint: string;
   blueScore: string;
+  pruningPoint: string;
+}
+
+export interface BlockTransaction {
+  inputs: TransactionInput[];
+  outputs: TransactionOutput[];
+  version: number;
+  lockTime: string;
+  subnetworkId: string;
+  gas: string;
+  payload: string;
+  verboseData: {
+    transactionId: string;
+    hash: string;
+    mass: string;
+    blockHash: string;
+    blockTime: string;
+  };
 }
 
 export interface BlockVerboseData {
-  hash: string;
-  difficulty: number;
-  selectedParentHash: string;
   transactionIds: string[];
-  isHeaderOnly: boolean;
-  blueScore: string;
   childrenHashes: string[];
   mergeSetBluesHashes: string[];
   mergeSetRedsHashes: string[];
+  hash: string;
+  difficulty: number;
+  selectedParentHash: string;
+  isHeaderOnly: boolean;
+  blueScore: string;
   isChainBlock: boolean;
-}
-
-export interface MempoolEntry {
-  transaction: Transaction;
-  fee: string;
-  mass: string;
-  isOrphan: boolean;
 }
 
 export interface PeerInfo {
