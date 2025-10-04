@@ -568,8 +568,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] WebSocket support for better streaming performance
 - [ ] Transaction building utilities
 - [ ] Address generation helpers
-- [ ] Browser compatibility layer
-- [ ] React hooks for easy integration
 - [ ] Advanced caching mechanisms
 
 ---
