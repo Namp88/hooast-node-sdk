@@ -543,13 +543,13 @@ npm install
 npm run build
 ```
 
-### Running Tests
+### Running Examples
 
 ```bash
-# Run specific test
-npm run test:get-info
-npm run test:wallet-balances
-npm run test:network-hashrate
+# Run specific example
+npm run example:get-info
+npm run example:wallet-balances
+npm run example:network-hashrate
 ```
 
 ## 📄 License
