@@ -35,6 +35,14 @@ import { GetMempoolEntries } from '@models/result/get-mempool-entries.result';
 
 // Streaming
 import { StreamingManager } from './streaming/streaming-manager';
+import { GetUtxosByAddresses } from '@models/result/get-utxos-by-addresses.result';
+import { GetUtxosByAddressesResponse } from '@models/response/get-utxos-by-addresses.response';
+import { GetVirtualSelectedParentBlueScore } from '@models/result/get-virtual-selected-parent-blue-score.result';
+import { GetVirtualSelectedParentBlueScoreResponse } from '@models/response/get-virtual-selected-parent-blue-score.response';
+import { GetInfo } from '@models/result/get-info.result';
+import { GetInfoResponse } from '@models/response/get-info.response';
+import { EstimateNetworkHashesPerSecond } from '@models/result/estimate-network-hashes-per-second.result';
+import { EstimateNetworkHashesPerSecondResponse } from '@models/response/estimate-network-hashes-per-second.response';
 
 class HoosatNode extends EventEmitter {
   private readonly _host: string;
@@ -42,7 +50,7 @@ class HoosatNode extends EventEmitter {
   private readonly _timeout: number;
 
   private _client: any;
-  private _streamingManager: StreamingManager;
+  private _streamingManager: StreamingManager | null = null;
 
   constructor(config: NodeConfig = {}) {
     super();
@@ -331,34 +339,103 @@ class HoosatNode extends EventEmitter {
     return this._buildResult(getMempoolEntriesResponse.error, result);
   }
 
+  /**
+   * Get UTXOs for multiple addresses
+   */
+  async getUtxosByAddresses(addresses: string[]): Promise<BaseResult<GetUtxosByAddresses>> {
+    const { getUtxosByAddressesResponse } = await this._request<GetUtxosByAddressesResponse>(RequestType.GetUtxosByAddressesRequest, {
+      addresses,
+    });
+
+    const result: GetUtxosByAddresses = {
+      utxos: getUtxosByAddressesResponse.entries || [],
+    };
+
+    return this._buildResult(getUtxosByAddressesResponse.error, result);
+  }
+
+  /**
+   * Get virtual selected parent blue score
+   */
+  async getVirtualSelectedParentBlueScore(): Promise<BaseResult<GetVirtualSelectedParentBlueScore>> {
+    const { getVirtualSelectedParentBlueScoreResponse } = await this._request<GetVirtualSelectedParentBlueScoreResponse>(
+      RequestType.GetVirtualSelectedParentBlueScoreRequest,
+      {}
+    );
+
+    const result: GetVirtualSelectedParentBlueScore = {
+      blueScore: getVirtualSelectedParentBlueScoreResponse.blueScore,
+    };
+
+    return this._buildResult(getVirtualSelectedParentBlueScoreResponse.error, result);
+  }
+
+  /**
+   * Get node information - basic status and capabilities
+   */
+  async getInfo(): Promise<BaseResult<GetInfo>> {
+    const { getInfoResponse } = await this._request<GetInfoResponse>(RequestType.GetInfoRequest, {});
+
+    const result: GetInfo = {
+      p2pId: getInfoResponse.p2pId,
+      mempoolSize: getInfoResponse.mempoolSize,
+      serverVersion: getInfoResponse.serverVersion,
+      isUtxoIndexed: getInfoResponse.isUtxoIndexed,
+      isSynced: getInfoResponse.isSynced,
+    };
+
+    return this._buildResult(getInfoResponse.error, result);
+  }
+
+  /**
+   * Estimate network hashes per second (hashrate)
+   */
+  async estimateNetworkHashesPerSecond(windowSize = 1000, startHash?: string): Promise<BaseResult<EstimateNetworkHashesPerSecond>> {
+    const params: any = { windowSize };
+    if (startHash) {
+      params.startHash = startHash;
+    }
+
+    const { estimateNetworkHashesPerSecondResponse } = await this._request<EstimateNetworkHashesPerSecondResponse>(
+      RequestType.EstimateNetworkHashesPerSecondRequest,
+      params
+    );
+
+    const result: EstimateNetworkHashesPerSecond = {
+      networkHashesPerSecond: estimateNetworkHashesPerSecondResponse.networkHashesPerSecond,
+    };
+
+    return this._buildResult(estimateNetworkHashesPerSecondResponse.error, result);
+  }
+
   // ==================== STREAMING METHODS ====================
 
   /**
    * Subscribe to UTXO changes for specific addresses
    */
   async subscribeToUtxoChanges(addresses: string[]): Promise<void> {
-    return this._streamingManager.subscribeToUtxoChanges(addresses);
+    return this._streamingManager!.subscribeToUtxoChanges(addresses);
   }
 
   /**
    * Unsubscribe from UTXO changes
    */
   async unsubscribeFromUtxoChanges(addresses?: string[]): Promise<void> {
-    return this._streamingManager.unsubscribeFromUtxoChanges(addresses);
+    return this._streamingManager!.unsubscribeFromUtxoChanges(addresses);
   }
 
   /**
    * Check if streaming is connected
    */
   isStreamingConnected(): boolean {
-    return this._streamingManager.isConnected();
+    return this._streamingManager!.isConnected();
   }
 
   /**
    * Get subscribed addresses
    */
   getSubscribedAddresses(): string[] {
-    return this._streamingManager.getSubscribedAddresses();
+    return this._streamingManager!.getSubscribedAddresses();
   }
 
   // ==================== UTILITY METHODS ====================
@@ -367,7 +444,7 @@ class HoosatNode extends EventEmitter {
    * Disconnect and cleanup
    */
   disconnect(): void {
-    this._streamingManager.disconnect();
+    this._streamingManager!.disconnect();
     this.removeAllListeners();
   }
 

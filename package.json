@@ -20,7 +20,10 @@
     "test:get-block": "tsx watch tests/get-block.ts",
     "test:get-blocks": "tsx watch tests/get-blocks.ts",
     "test:get-block-count": "tsx watch tests/get-block-count.ts",
-    "test:get-block-dag-info": "tsx watch tests/get-block-dag-info.ts"
+    "test:get-block-dag-info": "tsx watch tests/get-block-dag-info.ts",
+    "test:utxos-and-blue-score": "tsx watch tests/utxos-and-blue-score.ts",
+    "test:get-info": "tsx watch tests/get-info.ts",
+    "test:network-hashrate": "tsx watch tests/network-hashrate.ts"
   },
   "keywords": [
     "hoosat",

@@ -29,6 +29,7 @@ export enum RequestType {
   // Streaming/Notifications
   NotifyUtxosChangedRequest = 'notifyUtxosChangedRequest',
   StopNotifyingUtxosChangedRequest = 'stopNotifyingUtxosChangedRequest',
+  UtxosChangedNotification = 'utxosChangedNotification',
   NotifyBlockAddedRequest = 'notifyBlockAddedRequest',
   NotifyVirtualSelectedParentChainChangedRequest = 'notifyVirtualSelectedParentChainChangedRequest',
   NotifyVirtualSelectedParentBlueScoreChangedRequest = 'notifyVirtualSelectedParentBlueScoreChangedRequest',
