@@ -23,7 +23,9 @@
     "test:get-block-dag-info": "tsx watch tests/get-block-dag-info.ts",
     "test:utxos-and-blue-score": "tsx watch tests/utxos-and-blue-score.ts",
     "test:get-info": "tsx watch tests/get-info.ts",
-    "test:network-hashrate": "tsx watch tests/network-hashrate.ts"
+    "test:network-hashrate": "tsx watch tests/network-hashrate.ts",
+    "test:wallet-balances": "tsx watch tests/wallet-balances.ts",
+    "test:pending-transactions-and-supply": "tsx watch tests/pending-transactions-and-supply.ts"
   },
   "keywords": [
     "hoosat",

@@ -43,6 +43,14 @@ import { GetInfo } from '@models/result/get-info.result';
 import { GetInfoResponse } from '@models/response/get-info.response';
 import { EstimateNetworkHashesPerSecond } from '@models/result/estimate-network-hashes-per-second.result';
 import { EstimateNetworkHashesPerSecondResponse } from '@models/response/estimate-network-hashes-per-second.response';
+import { GetBalanceByAddress } from '@models/result/get-balance-by-address.result';
+import { GetBalanceByAddressResponse } from '@models/response/get-balance-by-address.response';
+import { GetBalancesByAddresses } from '@models/result/get-balances-by-addresses.result';
+import { GetBalancesByAddressesResponse } from '@models/response/get-balances-by-addresses.response';
+import { GetMempoolEntriesByAddresses } from '@models/result/get-mempool-entries-by-addresses.result';
+import { GetMempoolEntriesByAddressesResponse } from '@models/response/get-mempool-entries-by-addresses.response';
+import { GetCoinSupply } from '@models/result/get-coin-supply.result';
+import { GetCoinSupplyResponse } from '@models/response/get-coin-supply.response';
 
 class HoosatNode extends EventEmitter {
   private readonly _host: string;
@@ -406,6 +414,84 @@ class HoosatNode extends EventEmitter {
     };
 
     return this._buildResult(estimateNetworkHashesPerSecondResponse.error, result);
+  }
+
+  /**
+   * Get balance for a single address
+   * Requires node to be started with --utxoindex flag
+   */
+  async getBalance(address: string): Promise<BaseResult<GetBalanceByAddress>> {
+    const { getBalanceByAddressResponse } = await this._request<GetBalanceByAddressResponse>(RequestType.GetBalanceByAddressRequest, {
+      address,
+    });
+
+    const result: GetBalanceByAddress = {
+      balance: getBalanceByAddressResponse.balance,
+    };
+
+    return this._buildResult(getBalanceByAddressResponse.error, result);
+  }
+
+  /**
+   * Get balances for multiple addresses
+   * Requires node to be started with --utxoindex flag
+   */
+  async getBalances(addresses: string[]): Promise<BaseResult<GetBalancesByAddresses>> {
+    const { getBalancesByAddressesResponse } = await this._request<GetBalancesByAddressesResponse>(
+      RequestType.GetBalancesByAddressesRequest,
+      { addresses }
+    );
+
+    const result: GetBalancesByAddresses = {
+      balances: getBalancesByAddressesResponse.entries.map(entry => ({
+        address: entry.address,
+        balance: entry.balance,
+      })),
+    };
+
+    return this._buildResult(getBalancesByAddressesResponse.error, result);
+  }
+
+  /**
+   * Get mempool entries for specific addresses
+   * Returns pending transactions involving these addresses
+   */
+  async getMempoolEntriesByAddresses(
+    addresses: string[],
+    includeOrphanPool = false,
+    filterTransactionPool = false
+  ): Promise<BaseResult<GetMempoolEntriesByAddresses>> {
+    const { getMempoolEntriesByAddressesResponse } = await this._request<GetMempoolEntriesByAddressesResponse>(
+      RequestType.GetMempoolEntriesByAddressesRequest,
+      {
+        addresses,
+        includeOrphanPool,
+        filterTransactionPool,
+      }
+    );
+
+    const result: GetMempoolEntriesByAddresses = {
+      entries: getMempoolEntriesByAddressesResponse.entries || [],
+    };
+
+    return this._buildResult(getMempoolEntriesByAddressesResponse.error, result);
+  }
+
+  // ==================== NETWORK INFO METHODS ====================
+
+  /**
+   * Get coin supply information
+   * Returns circulating and maximum supply
+   */
+  async getCoinSupply(): Promise<BaseResult<GetCoinSupply>> {
+    const { getCoinSupplyResponse } = await this._request<GetCoinSupplyResponse>(RequestType.GetCoinSupplyRequest, {});
+
+    const result: GetCoinSupply = {
+      circulatingSupply: getCoinSupplyResponse.circulatingSompi,
+      maxSupply: getCoinSupplyResponse.maxSompi,
+    };
+
+    return this._buildResult(getCoinSupplyResponse.error, result);
   }
 
   // ==================== STREAMING METHODS ====================
