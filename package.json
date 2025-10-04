@@ -11,10 +11,16 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test:get-test": "tsx watch tests/get-test.ts",
+    "test:get-notify-utxos-changed-subscribe": "tsx watch tests/get-notify-utxos-changed-subscribe.ts",
     "test:get-current-network": "tsx watch tests/get-current-network.ts",
     "test:get-peer-addresses": "tsx watch tests/get-peer-addresses.ts",
     "test:get-selected-tip-hash": "tsx watch tests/get-selected-tip-hash.ts",
     "test:get-mempool-entry": "tsx watch tests/get-mempool-entry.ts",
+    "test:get-mempool-entries": "tsx watch tests/get-mempool-entries.ts",
+    "test:get-block": "tsx watch tests/get-block.ts",
+    "test:get-blocks": "tsx watch tests/get-blocks.ts",
+    "test:get-block-count": "tsx watch tests/get-block-count.ts",
+    "test:get-block-dag-info": "tsx watch tests/get-block-dag-info.ts"
   },
   "keywords": [
     "hoosat",

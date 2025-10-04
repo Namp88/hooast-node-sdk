@@ -1,33 +1,60 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { join } from 'path';
+import { EventEmitter } from 'events';
+
+// Core types
 import { NodeConfig } from './types';
-import { GetCurrentNetworkResponse } from '@models/response/get-current-network.response';
 import { RequestType } from '@enums/request-type.enum';
+import { BaseResult } from '@models/result/base.result';
+import { ErrorResponse } from '@models/response/error.response';
+
+// Response types
+import { GetCurrentNetworkResponse } from '@models/response/get-current-network.response';
 import { GetPeerAddressesResponse } from '@models/response/get-peer-addresses.response';
 import { GetSelectedTipHashResponse } from '@models/response/get-selected-tip-hash.response';
 import { GetMempoolEntryResponse } from '@models/response/get-mempool-entry.response';
 import { GetConnectedPeerInfoResponse } from '@models/response/get-connected-peer-info.response';
-import { GetConnectedPeerInfo } from '@models/result/get-connected-peer-info.result';
-import { GetCurrentNetwork } from '@models/result/get-current-network.response';
-import { GetMempoolEntry } from '@models/result/get-mempool-entry.result';
+import { GetBlockResponse } from '@models/response/get-block.response';
+import { GetBlocksResponse } from '@models/response/get-blocks.response';
+import { GetBlockCountResponse } from '@models/response/get-block-count.response';
+import { GetBlockDagInfoResponse } from '@models/response/get-block-dag-info.response';
+import { GetMempoolEntriesResponse } from '@models/response/get-mempool-entries.response';
+
+// Result types
+import { GetCurrentNetwork } from '@models/result/get-current-network.result';
 import { GetPeerAddresses, GetPeerAddressItem } from '@models/result/get-peer-addresses.result';
 import { GetSelectedTipHash } from '@models/result/get-selected-tip-hash.result';
-import { ErrorResponse } from '@models/response/error.response';
-import { BaseResult } from '@models/result/base.result';
+import { GetMempoolEntry } from '@models/result/get-mempool-entry.result';
+import { GetConnectedPeerInfo } from '@models/result/get-connected-peer-info.result';
+import { GetBlock } from '@models/result/get-block.result';
+import { GetBlocks } from '@models/result/get-blocks.result';
+import { GetBlockCount } from '@models/result/get-block-count.result';
+import { GetBlockDagInfo } from '@models/result/get-block-dag-info.result';
+import { GetMempoolEntries } from '@models/result/get-mempool-entries.result';
 
-class HoosatNode {
-  private client: any;
-  private readonly host: string;
-  private readonly port: number;
-  private readonly timeout: number;
+// Streaming
+import { StreamingManager } from './streaming/streaming-manager';
+import { TypedEventEmitter } from './types/typed-event-emitter';
+
+interface HoosatNode extends TypedEventEmitter<HoosatNodeEvents> {}
+class HoosatNode extends EventEmitter {
+  private readonly _host: string;
+  private readonly _port: number;
+  private readonly _timeout: number;
+
+  private _client: any;
+  private _streamingManager: StreamingManager;
 
   constructor(config: NodeConfig = {}) {
-    this.host = config.host || '127.0.0.1';
-    this.port = config.port || 42420;
-    this.timeout = config.timeout || 10000;
+    super();
+
+    this._host = config.host || '127.0.0.1';
+    this._port = config.port || 42420;
+    this._timeout = config.timeout || 10000;
 
     this._initializeClient();
+    this._initializeStreaming();
   }
 
   private _initializeClient(): void {
@@ -46,7 +73,7 @@ class HoosatNode {
       const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
       const protowire = protoDescriptor.protowire as any;
 
-      this.client = new protowire.RPC(`${this.host}:${this.port}`, grpc.credentials.createInsecure(), {
+      this._client = new protowire.RPC(`${this._host}:${this._port}`, grpc.credentials.createInsecure(), {
         'grpc.max_send_message_length': 1024 * 1024 * 1024,
         'grpc.max_receive_message_length': 1024 * 1024 * 1024,
       });
@@ -55,14 +82,49 @@ class HoosatNode {
     }
   }
 
+  private _initializeStreaming(): void {
+    this._streamingManager = new StreamingManager(this._client);
+
+    // Проксируем события от StreamingManager с правильной типизацией
+    this._streamingManager.on('utxoChanged', change => {
+      this.emit('utxoChanged', change);
+    });
+
+    this._streamingManager.on('utxosChanged', changes => {
+      this.emit('utxosChanged', changes);
+    });
+
+    this._streamingManager.on('error', error => {
+      this.emit('streamingError', error);
+    });
+
+    this._streamingManager.on('streamEnded', () => {
+      this.emit('streamEnded');
+    });
+
+    this._streamingManager.on('streamClosed', () => {
+      this.emit('streamClosed');
+    });
+
+    this._streamingManager.on('reconnected', () => {
+      this.emit('streamReconnected');
+    });
+
+    this._streamingManager.on('maxReconnectAttemptsReached', () => {
+      this.emit('streamMaxReconnectAttemptsReached');
+    });
+  }
+
+  // ==================== CORE METHODS ====================
+
   private async _request<T = any>(command: RequestType, params: any = {}): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error(`Request ${command} timed out after ${this.timeout}ms`));
-      }, this.timeout);
+        reject(new Error(`Request ${command} timed out after ${this._timeout}ms`));
+      }, this._timeout);
 
       try {
-        const call = this.client.MessageStream();
+        const call = this._client.MessageStream();
         let responseReceived = false;
 
         call.on('data', (response: any) => {
@@ -96,13 +158,17 @@ class HoosatNode {
     });
   }
 
-  async test() {
-    try {
-      return await this._request(RequestType.Test, {});
-    } catch (error) {
-      console.error('error', error);
-    }
+  private _buildResult<T>(error: ErrorResponse | null, model: T): BaseResult<T> {
+    const extractedError = error ? error.message : null;
+
+    return {
+      ok: !Boolean(extractedError),
+      result: Boolean(extractedError) ? null : model,
+      error: extractedError,
+    };
   }
+
+  // ==================== NETWORK METHODS ====================
 
   /**
    * Get current network
@@ -118,7 +184,7 @@ class HoosatNode {
   }
 
   /**
-   * Get current network
+   * Get peer addresses
    */
   async getPeerAddresses(): Promise<BaseResult<GetPeerAddresses>> {
     const { getPeerAddressesResponse } = await this._request<GetPeerAddressesResponse>(RequestType.GetPeerAddressesRequest, {});
@@ -144,6 +210,21 @@ class HoosatNode {
   }
 
   /**
+   * Get connected peer info
+   */
+  async getConnectedPeerInfo(): Promise<BaseResult<GetConnectedPeerInfo>> {
+    const { getConnectedPeerInfoResponse } = await this._request<GetConnectedPeerInfoResponse>(RequestType.GetConnectedPeerInfoRequest, {});
+
+    const result: GetConnectedPeerInfo = {
+      peers: getConnectedPeerInfoResponse.infos,
+    };
+
+    return this._buildResult(getConnectedPeerInfoResponse.error, result);
+  }
+
+  // ==================== BLOCK METHODS ====================
+
+  /**
    * Get selected tip hash (best block in the DAG)
    */
   async getSelectedTipHash(): Promise<BaseResult<GetSelectedTipHash>> {
@@ -157,14 +238,73 @@ class HoosatNode {
   }
 
   /**
-   * Get mempool entry for a specific transaction
-   * Returns fee and orphan status information
+   * Get block by hash
    */
-  async getMempoolEntry(txId: string): Promise<BaseResult<GetMempoolEntry>> {
+  async getBlock(blockHash: string, includeTransactions = true): Promise<BaseResult<GetBlock>> {
+    const { getBlockResponse } = await this._request<GetBlockResponse>(RequestType.GetBlockRequest, {
+      hash: blockHash,
+      includeTransactions,
+    });
+
+    const result: GetBlock = getBlockResponse.block;
+
+    return this._buildResult(getBlockResponse.error, result);
+  }
+
+  /**
+   * Get multiple blocks
+   */
+  async getBlocks(lowHash: string, includeTransactions = false): Promise<BaseResult<GetBlocks>> {
+    const { getBlocksResponse } = await this._request<GetBlocksResponse>(RequestType.GetBlocksRequest, {
+      lowHash,
+      includeBlocks: true,
+      includeTransactions,
+    });
+
+    const result: GetBlocks = {
+      blocks: getBlocksResponse.blocks,
+      blockHashes: getBlocksResponse.blockHashes,
+    };
+
+    return this._buildResult(getBlocksResponse.error, result);
+  }
+
+  /**
+   * Get block count
+   */
+  async getBlockCount(): Promise<BaseResult<GetBlockCount>> {
+    const { getBlockCountResponse } = await this._request<GetBlockCountResponse>(RequestType.GetBlockCountRequest, {});
+
+    const result: GetBlockCount = {
+      blockCount: getBlockCountResponse.blockCount,
+      headerCount: getBlockCountResponse.headerCount,
+    };
+
+    return this._buildResult(getBlockCountResponse.error, result);
+  }
+
+  /**
+   * Get BlockDAG info
+   */
+  async getBlockDagInfo(): Promise<BaseResult<GetBlockDagInfo>> {
+    const { getBlockDagInfoResponse } = await this._request<GetBlockDagInfoResponse>(RequestType.GetBlockDagInfoRequest, {});
+    const { error, ...model } = getBlockDagInfoResponse;
+
+    const result: GetBlockDagInfo = model;
+
+    return this._buildResult(getBlockDagInfoResponse.error, result);
+  }
+
+  // ==================== MEMPOOL METHODS ====================
+
+  /**
+   * Get mempool entry for a specific transaction
+   */
+  async getMempoolEntry(txId: string, includeOrphanPool = true, filterTransactionPool = false): Promise<BaseResult<GetMempoolEntry>> {
     const { getMempoolEntryResponse } = await this._request<GetMempoolEntryResponse>(RequestType.GetMempoolEntryRequest, {
       txId,
-      includeOrphanPool: true,
-      filterTransactionPool: false,
+      includeOrphanPool,
+      filterTransactionPool,
     });
 
     const result: GetMempoolEntry = {
@@ -178,187 +318,71 @@ class HoosatNode {
   }
 
   /**
-   * Get connected peer info
+   * Get all mempool entries
    */
-  async getConnectedPeerInfo(): Promise<BaseResult<GetConnectedPeerInfo>> {
-    const { getConnectedPeerInfoResponse } = await this._request<GetConnectedPeerInfoResponse>(RequestType.GetConnectedPeerInfoRequest, {});
+  async getMempoolEntries(includeOrphanPool = true, filterTransactionPool = false): Promise<BaseResult<GetMempoolEntries>> {
+    const { getMempoolEntriesResponse } = await this._request<GetMempoolEntriesResponse>(RequestType.GetMempoolEntriesRequest, {
+      includeOrphanPool,
+      filterTransactionPool,
+    });
 
-    const result: GetConnectedPeerInfo = {
-      peers: getConnectedPeerInfoResponse.infos,
+    const result: GetMempoolEntries = {
+      entries: getMempoolEntriesResponse.entries,
     };
 
-    return this._buildResult(getConnectedPeerInfoResponse.error, result);
+    return this._buildResult(getMempoolEntriesResponse.error, result);
   }
 
-  private _buildResult<T>(error: ErrorResponse, model: T): BaseResult<T> {
-    const extractedError = error ? error.message : null;
+  // ==================== STREAMING METHODS ====================
 
-    return {
-      ok: !Boolean(extractedError),
-      result: Boolean(extractedError) ? null : model,
-      error: extractedError,
-    };
+  /**
+   * Subscribe to UTXO changes for specific addresses
+   */
+  async subscribeToUtxoChanges(addresses: string[]): Promise<void> {
+    return this._streamingManager.subscribeToUtxoChanges(addresses);
   }
 
   /**
-   * Get node information
+   * Unsubscribe from UTXO changes
    */
-  // async getInfo(): Promise<NodeInfo> {
-  //   const response = await this._request('getInfoRequest', {});
-  //   return response.getInfoResponse;
-  // }
+  async unsubscribeFromUtxoChanges(addresses?: string[]): Promise<void> {
+    return this._streamingManager.unsubscribeFromUtxoChanges(addresses);
+  }
 
   /**
-   * Get BlockDAG information
+   * Check if streaming is connected
    */
-  // async getBlockDagInfo(): Promise<BlockDagInfo> {
-  //   const response = await this._request('getBlockDagInfoRequest', {});
-  //   return response.getBlockDagInfoResponse;
-  // }
+  isStreamingConnected(): boolean {
+    return this._streamingManager.isConnected();
+  }
 
   /**
-   * Get balance for an address
+   * Get subscribed addresses
    */
-  // async getBalance(address: string, formatAmount = false): Promise<Balance> {
-  //   const response = await this._request('getBalanceByAddressRequest', {
-  //     address,
-  //   });
-  //
-  //   const balance = formatAmount
-  //     ? HoosatUtils.formatAmount(response.getBalanceByAddressResponse.balance)
-  //     : response.getBalanceByAddressResponse.balance;
-  //
-  //   return {
-  //     address,
-  //     balance,
-  //   };
-  // }
+  getSubscribedAddresses(): string[] {
+    return this._streamingManager.getSubscribedAddresses();
+  }
+
+  // ==================== UTILITY METHODS ====================
 
   /**
-   * Get UTXOs for addresses
+   * Disconnect and cleanup
    */
-  // async getUtxos(addresses: string[]): Promise<UTXO[]> {
-  //   const response = await this._request('getUtxosByAddressesRequest', {
-  //     addresses,
-  //   });
-  //
-  //   return response.getUtxosByAddressesResponse.entries || [];
-  // }
+  disconnect(): void {
+    this._streamingManager.disconnect();
+    this.removeAllListeners();
+  }
 
   /**
-   * Get UTXOs grouped by address
+   * Test method for debugging
    */
-  // async getUtxosByAddresses(addresses: string[]): Promise<UtxosByAddress> {
-  //   const allUtxos = await this.getUtxos(addresses);
-  //
-  //   const grouped: UtxosByAddress = {};
-  //
-  //   addresses.forEach(addr => {
-  //     grouped[addr] = [];
-  //   });
-  //
-  //   allUtxos.forEach(utxo => {
-  //     if (grouped[utxo.address]) {
-  //       const { address, ...utxoData } = utxo;
-  //       grouped[utxo.address].push(utxoData);
-  //     }
-  //   });
-  //
-  //   return grouped;
-  // }
-
-  /**
-   * Get block by hash
-   */
-  // async getBlock(blockHash: string, includeTransactions = true): Promise<Block> {
-  //   const response = await this._request('getBlockRequest', {
-  //     hash: blockHash,
-  //     includeTransactions,
-  //   });
-  //
-  //   return response.getBlockResponse.block;
-  // }
-
-  /**
-   * Get multiple blocks by hashes
-   */
-  // async getBlocks(blockHashes: string[], includeTransactions = true): Promise<Block[]> {
-  //   const blocks: Block[] = [];
-  //
-  //   for (const hash of blockHashes) {
-  //     try {
-  //       const block = await this.getBlock(hash, includeTransactions);
-  //       blocks.push(block);
-  //     } catch (error) {
-  //       // Skip blocks that failed to fetch
-  //       console.warn(`Failed to fetch block ${hash}:`, error);
-  //     }
-  //   }
-  //
-  //   return blocks;
-  // }
-
-  /**
-   * Get current virtual selected parent blue score
-   */
-  // async getVirtualSelectedParentBlueScore(): Promise<string> {
-  //   const response = await this._request('getVirtualSelectedParentBlueScoreRequest', {});
-  //   return response.getVirtualSelectedParentBlueScoreResponse.blueScore;
-  // }
-
-  /**
-   * Get coin supply information
-   */
-  // async getCoinSupply(): Promise<{ circulatingSupply: string; maxSupply: string }> {
-  //   const response = await this._request('getCoinSupplyRequest', {});
-  //   return {
-  //     circulatingSupply: response.getCoinSupplyResponse.circulatingSompi || '0',
-  //     maxSupply: response.getCoinSupplyResponse.maxSompi || '0',
-  //   };
-  // }
-
-  /**
-   * Get selected tip hash (best block)
-   */
-  // async getSelectedTipHash(): Promise<string> {
-  //   const blockdag = await this.getBlockDagInfo();
-  //   return blockdag.tipHashes[0] || '';
-  // }
-
-  /**
-   * Estimate network hashes per second
-   */
-  // async estimateNetworkHashesPerSecond(startHash?: string, windowSize = 1000): Promise<string> {
-  //   const response = await this._request('estimateNetworkHashesPerSecondRequest', {
-  //     startHash,
-  //     windowSize,
-  //   });
-  //   return response.estimateNetworkHashesPerSecondResponse.networkHashesPerSecond || '0';
-  // }
-
-  /**
-   * Get connected peer info
-   */
-  // async getConnectedPeerInfo(): Promise<any[]> {
-  //   const response = await this._request('getConnectedPeerInfoRequest', {});
-  //   return response.getConnectedPeerInfoResponse.infos || [];
-  // }
-
-  /**
-   * Get block count
-   */
-  // async getBlockCount(): Promise<string> {
-  //   const blockdag = await this.getBlockDagInfo();
-  //   return blockdag.blockCount;
-  // }
-
-  /**
-   * Get header count
-   */
-  // async getHeaderCount(): Promise<string> {
-  //   const blockdag = await this.getBlockDagInfo();
-  //   return blockdag.headerCount;
-  // }
+  async test() {
+    try {
+      return await this._request(RequestType.Test, {});
+    } catch (error) {
+      console.error('Test error:', error);
+    }
+  }
 }
 
 export default HoosatNode;
