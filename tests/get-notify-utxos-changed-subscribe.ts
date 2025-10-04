@@ -216,55 +216,6 @@ function setupGracefulShutdown(node: HoosatNode): void {
   process.on('SIGUSR2', () => shutdown('SIGUSR2')); // nodemon restart
 }
 
-/**
- * Пример статистики по адресам
- */
-interface AddressStats {
-  address: string;
-  totalReceived: bigint;
-  totalSent: bigint;
-  transactionCount: number;
-  lastActivity: Date;
-}
-
-class WalletStatistics {
-  private stats: Map<string, AddressStats> = new Map();
-
-  updateStats(address: string, utxo: UtxoEntry, type: 'received' | 'sent'): void {
-    const currentStats = this.stats.get(address) || {
-      address,
-      totalReceived: 0n,
-      totalSent: 0n,
-      transactionCount: 0,
-      lastActivity: new Date(),
-    };
-
-    const amount = BigInt(utxo.amount);
-
-    if (type === 'received') {
-      currentStats.totalReceived += amount;
-    } else {
-      currentStats.totalSent += amount;
-    }
-
-    currentStats.transactionCount++;
-    currentStats.lastActivity = new Date();
-
-    this.stats.set(address, currentStats);
-  }
-
-  getStats(address: string): AddressStats | undefined {
-    return this.stats.get(address);
-  }
-
-  getAllStats(): AddressStats[] {
-    return Array.from(this.stats.values());
-  }
-}
-
-// Экспорт для использования в других модулях
-export { setupWalletMonitoring, addNewAddressToMonitoring, WalletStatistics, type AddressStats };
-
 // Запуск
 if (require.main === module) {
   setupWalletMonitoring().catch((error: Error) => {

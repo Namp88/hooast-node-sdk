@@ -35,9 +35,7 @@ import { GetMempoolEntries } from '@models/result/get-mempool-entries.result';
 
 // Streaming
 import { StreamingManager } from './streaming/streaming-manager';
-import { TypedEventEmitter } from './types/typed-event-emitter';
 
-interface HoosatNode extends TypedEventEmitter<HoosatNodeEvents> {}
 class HoosatNode extends EventEmitter {
   private readonly _host: string;
   private readonly _port: number;
