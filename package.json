@@ -25,7 +25,8 @@
     "test:get-info": "tsx watch tests/get-info.ts",
     "test:network-hashrate": "tsx watch tests/network-hashrate.ts",
     "test:wallet-balances": "tsx watch tests/wallet-balances.ts",
-    "test:pending-transactions-and-supply": "tsx watch tests/pending-transactions-and-supply.ts"
+    "test:pending-transactions-and-supply": "tsx watch tests/pending-transactions-and-supply.ts",
+    "test:send-transaction": "tsx watch tests/send-transaction.ts"
   },
   "keywords": [
     "hoosat",

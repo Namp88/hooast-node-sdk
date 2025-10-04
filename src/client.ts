@@ -51,6 +51,9 @@ import { GetMempoolEntriesByAddresses } from '@models/result/get-mempool-entries
 import { GetMempoolEntriesByAddressesResponse } from '@models/response/get-mempool-entries-by-addresses.response';
 import { GetCoinSupply } from '@models/result/get-coin-supply.result';
 import { GetCoinSupplyResponse } from '@models/response/get-coin-supply.response';
+import { SubmitTransaction } from '@models/result/submit-transaction.result';
+import { SubmitTransactionResponse } from '@models/response/submit-transaction.response';
+import { Transaction } from '@models/transaction/transaction.types';
 
 class HoosatNode extends EventEmitter {
   private readonly _host: string;
@@ -492,6 +495,22 @@ class HoosatNode extends EventEmitter {
     };
 
     return this._buildResult(getCoinSupplyResponse.error, result);
+  }
+
+  /**
+   * Submit a transaction to the mempool
+   */
+  async submitTransaction(transaction: Transaction, allowOrphan = false): Promise<BaseResult<SubmitTransaction>> {
+    const { submitTransactionResponse } = await this._request<SubmitTransactionResponse>(RequestType.SubmitTransactionRequest, {
+      transaction,
+      allowOrphan,
+    });
+
+    const result: SubmitTransaction = {
+      transactionId: submitTransactionResponse.transactionId,
+    };
+
+    return this._buildResult(submitTransactionResponse.error, result);
   }
 
   // ==================== STREAMING METHODS ====================
