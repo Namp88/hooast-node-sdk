@@ -1,0 +1,49 @@
+{
+  "name": "@hoosat/node-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for communicating with Hoosat nodes via gRPC",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && copyfiles -u 1 src/protos/*.proto dist",
+    "prepare": "npm run build",
+    "dev": "tsc --watch",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "test:get-info": "node tests/get-info.js",
+    "test:get-blockdag-info": "node tests/get-blockdag-info.js"
+  },
+  "keywords": [
+    "hoosat",
+    "blockchain",
+    "grpc",
+    "sdk",
+    "cryptocurrency",
+    "node",
+    "client"
+  ],
+  "author": "Andrei Kliubchenko <namp2988@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/hoosat-node-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/hoosat-node-sdk/issues"
+  },
+  "homepage": "https://github.com/yourusername/hoosat-node-sdk#readme",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.0",
+    "@grpc/proto-loader": "^0.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.2",
+    "copyfiles": "^2.4.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  }
+}
