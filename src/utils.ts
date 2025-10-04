@@ -1,8 +1,4 @@
 export class HoosatUtils {
-  static isValidAddress(address: string): boolean {
-    return address.startsWith('hoosat:') && address.length > 10;
-  }
-
   /**
    * Utility: Format sompi to HTN
    */
