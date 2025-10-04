@@ -1,6 +1,4 @@
-// examples/send-transaction.ts
-
-import { HoosatNode, HoosatUtils } from '../src';
+import { HoosatNode } from '../src';
 import { Transaction, TransactionInput, TransactionOutput } from '../src/models/transaction/transaction.types';
 
 async function demonstrateTransactionSending() {
@@ -35,14 +33,14 @@ async function demonstrateTransactionSending() {
       ],
       outputs: [
         {
-          amount: HoosatUtils.parseAmount('10.5'), // 10.5 HTN в sompi
+          amount: node.parseAmount('10.5'), // 10.5 HTN в sompi
           scriptPublicKey: {
             version: 0,
             scriptPublicKey: '76a914...', // Адрес получателя в script форме
           },
         },
         {
-          amount: HoosatUtils.parseAmount('89.4'), // Сдача
+          amount: node.parseAmount('89.4'), // Сдача
           scriptPublicKey: {
             version: 0,
             scriptPublicKey: '76a914...', // Адрес отправителя (сдача)
@@ -100,7 +98,7 @@ async function createAndSendTransaction(
 
     // Шаг 2: Выбираем UTXO для транзакции
     console.log('2️⃣ Выбираем UTXO для транзакции...');
-    const targetAmountSompi = BigInt(HoosatUtils.parseAmount(amount));
+    const targetAmountSompi = BigInt(node.parseAmount(amount));
     const selectedUtxos = selectUtxosForAmount(availableUtxos, targetAmountSompi);
 
     if (selectedUtxos.length === 0) {
@@ -111,7 +109,7 @@ async function createAndSendTransaction(
       return sum + BigInt(utxo.utxoEntry.amount);
     }, 0n);
 
-    console.log(`   Выбрано ${selectedUtxos.length} UTXO на сумму ${HoosatUtils.formatAmount(totalInputAmount.toString())} HTN`);
+    console.log(`   Выбрано ${selectedUtxos.length} UTXO на сумму ${node.formatAmount(totalInputAmount.toString())} HTN`);
 
     // Шаг 3: Создаем inputs
     console.log('3️⃣ Создаем transaction inputs...');
@@ -170,7 +168,7 @@ async function createAndSendTransaction(
       console.log('✅ Транзакция отправлена!');
       console.log(`   TX ID: ${txId}`);
       console.log(`   Сумма: ${amount} HTN`);
-      console.log(`   Комиссия: ${HoosatUtils.formatAmount(fee.toString())} HTN`);
+      console.log(`   Комиссия: ${node.formatAmount(fee.toString())} HTN`);
 
       return txId;
     } else {

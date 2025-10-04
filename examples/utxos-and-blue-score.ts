@@ -1,4 +1,4 @@
-import { HoosatNode, HoosatUtils } from '../src';
+import { HoosatNode } from '../src';
 
 async function demonstrateNewMethods() {
   const node = new HoosatNode({
@@ -18,7 +18,7 @@ async function demonstrateNewMethods() {
   try {
     const utxosResult = await node.getUtxosByAddresses(addresses);
 
-    console.log(utxosResult.result.utxos);
+    console.log(utxosResult.result!.utxos);
 
     if (utxosResult.ok && utxosResult.result) {
       console.log(`✅ Найдено ${utxosResult.result.utxos.length} UTXO:`);
@@ -44,11 +44,11 @@ async function demonstrateNewMethods() {
           return sum + BigInt(utxo.utxoEntry.amount);
         }, 0n);
 
-        console.log(`   Баланс: ${HoosatUtils.formatAmount(totalAmount.toString())} HTN`);
+        console.log(`   Баланс: ${node.formatAmount(totalAmount.toString())} HTN`);
 
         // Показываем первые 3 UTXO
         utxos.slice(0, 3).forEach((utxo, index) => {
-          const amount = HoosatUtils.formatAmount(utxo.utxoEntry.amount);
+          const amount = node.formatAmount(utxo.utxoEntry.amount);
           console.log(`   ${index + 1}. ${amount} HTN (${utxo.outpoint.transactionId.substring(0, 20)}...)`);
         });
 
@@ -105,7 +105,7 @@ async function demonstrateNewMethods() {
         return sum + BigInt(utxo.utxoEntry.amount);
       }, 0n);
 
-      console.log(`💰 Доступный баланс: ${HoosatUtils.formatAmount(totalBalance.toString())} HTN`);
+      console.log(`💰 Доступный баланс: ${node.formatAmount(totalBalance.toString())} HTN`);
       console.log(`🧾 Количество UTXO: ${availableUtxos.length}`);
 
       // Сортируем UTXO по размеру (от большего к меньшему)
@@ -117,13 +117,13 @@ async function demonstrateNewMethods() {
 
       console.log('\n🏆 Топ-3 крупнейших UTXO:');
       sortedUtxos.slice(0, 3).forEach((utxo, index) => {
-        const amount = HoosatUtils.formatAmount(utxo.utxoEntry.amount);
+        const amount = node.formatAmount(utxo.utxoEntry.amount);
         const isCoinbase = utxo.utxoEntry.isCoinbase ? ' (coinbase)' : '';
         console.log(`   ${index + 1}. ${amount} HTN${isCoinbase}`);
       });
 
       // Пример: отбираем UTXO для транзакции на 1 HTN
-      const targetAmount = HoosatUtils.parseAmount('1.0'); // 1 HTN в sompi
+      const targetAmount = node.parseAmount('1.0'); // 1 HTN в sompi
       const selectedUtxos = selectUtxosForAmount(sortedUtxos, BigInt(targetAmount));
 
       if (selectedUtxos.length > 0) {
@@ -132,8 +132,8 @@ async function demonstrateNewMethods() {
         }, 0n);
 
         console.log(`\n✅ Выбрано ${selectedUtxos.length} UTXO для транзакции на 1 HTN:`);
-        console.log(`   Общая сумма: ${HoosatUtils.formatAmount(selectedAmount.toString())} HTN`);
-        console.log(`   Сдача: ${HoosatUtils.formatAmount((selectedAmount - BigInt(targetAmount)).toString())} HTN`);
+        console.log(`   Общая сумма: ${node.formatAmount(selectedAmount.toString())} HTN`);
+        console.log(`   Сдача: ${node.formatAmount((selectedAmount - BigInt(targetAmount)).toString())} HTN`);
       } else {
         console.log('❌ Недостаточно средств для транзакции на 1 HTN');
       }

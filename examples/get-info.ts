@@ -1,5 +1,3 @@
-// examples/node-info.ts
-
 import { HoosatNode } from '../src';
 
 async function demonstrateGetInfo() {

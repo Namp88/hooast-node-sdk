@@ -57,7 +57,4 @@ export enum RequestType {
   GetVirtualSelectedParentChainFromBlockRequest = 'getVirtualSelectedParentChainFromBlockRequest',
   ResolveFinalityConflictRequest = 'resolveFinalityConflictRequest',
   NotifyFinalityConflictsRequest = 'notifyFinalityConflictsRequest',
-
-  // Test/Debug
-  Test = 'getConnectedPeerInfoRequest',
 }

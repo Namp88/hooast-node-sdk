@@ -1,4 +1,4 @@
-import { HoosatNode, HoosatUtils } from '../src';
+import { HoosatNode } from '../src';
 import { UtxoChange, UtxoChanges, UtxoEntry } from '../src/models/streaming/streaming.types';
 
 async function setupWalletMonitoring(): Promise<void> {
@@ -26,7 +26,7 @@ async function setupWalletMonitoring(): Promise<void> {
 
       // Новые UTXO (входящие платежи)
       changes.added.forEach(utxo => {
-        const amount: string = HoosatUtils.formatAmount(utxo.amount);
+        const amount: string = node.formatAmount(utxo.amount);
         console.log(`  ✅ Получено: ${amount} HTN`);
         console.log(`     TX: ${utxo.outpoint.transactionId.substring(0, 20)}...`);
 
@@ -39,7 +39,7 @@ async function setupWalletMonitoring(): Promise<void> {
 
       // Потраченные UTXO (исходящие платежи)
       changes.removed.forEach((utxo: UtxoEntry) => {
-        const amount: string = HoosatUtils.formatAmount(utxo.amount);
+        const amount: string = node.formatAmount(utxo.amount);
         console.log(`  ❌ Потрачено: ${amount} HTN`);
         console.log(`     TX: ${utxo.outpoint.transactionId.substring(0, 20)}...`);
 
@@ -177,7 +177,7 @@ function handleMaxReconnectAttempts(): void {
 async function addNewAddressToMonitoring(node: HoosatNode, newAddress: string): Promise<void> {
   try {
     // Валидация адреса
-    if (!HoosatUtils.isValidAddress(newAddress)) {
+    if (!node.isValidAddress(newAddress)) {
       throw new Error(`Невалидный адрес: ${newAddress}`);
     }
 

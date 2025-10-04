@@ -3,7 +3,7 @@ import * as protoLoader from '@grpc/proto-loader';
 import { join } from 'path';
 import { EventEmitter } from 'events';
 
-import { NodeConfig } from './types';
+import { NodeConfig } from '@models/node-config.model';
 import { RequestType } from '@enums/request-type.enum';
 import { BaseResult } from '@models/result/base.result';
 import { ErrorResponse } from '@models/response/error.response';

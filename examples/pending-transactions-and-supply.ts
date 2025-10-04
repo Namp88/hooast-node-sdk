@@ -1,4 +1,4 @@
-import { HoosatNode, HoosatUtils } from '../src';
+import { HoosatNode } from '../src';
 
 async function demonstrateNewFeatures() {
   const node = new HoosatNode({
@@ -19,8 +19,8 @@ async function demonstrateNewFeatures() {
       const supply = supplyResult.result;
 
       console.log('✅ Информация об эмиссии:');
-      console.log(`   Максимальная эмиссия: ${HoosatUtils.formatAmount(supply.maxSupply)} HTN`);
-      console.log(`   В обращении: ${HoosatUtils.formatAmount(supply.circulatingSupply)} HTN`);
+      console.log(`   Максимальная эмиссия: ${node.formatAmount(supply.maxSupply)} HTN`);
+      console.log(`   В обращении: ${node.formatAmount(supply.circulatingSupply)} HTN`);
 
       // Расчет процента выпуска
       const circulatingBig = BigInt(supply.circulatingSupply);
@@ -31,7 +31,7 @@ async function demonstrateNewFeatures() {
 
       // Оставшиеся к выпуску
       const remaining = maxBig - circulatingBig;
-      console.log(`   Осталось к выпуску: ${HoosatUtils.formatAmount(remaining.toString())} HTN`);
+      console.log(`   Осталось к выпуску: ${node.formatAmount(remaining.toString())} HTN`);
 
       // Анализ инфляции
       console.log('\n📊 Анализ эмиссии:');
@@ -84,7 +84,7 @@ async function demonstrateNewFeatures() {
             console.log(`   📤 Исходящих: ${sendingCount}`);
 
             entry.sending.forEach((tx, index) => {
-              const fee = HoosatUtils.formatAmount(tx.fee);
+              const fee = node.formatAmount(tx.fee);
               const status = tx.isOrphan ? ' (orphan)' : '';
               console.log(`      ${index + 1}. ${tx.transaction.transactionId.substring(0, 20)}... (комиссия: ${fee} HTN)${status}`);
             });
@@ -128,11 +128,6 @@ async function demonstrateNewFeatures() {
     ]);
 
     console.log('✅ Сводная статистика:');
-
-    if (supplyResult.ok && supplyResult.result) {
-      const marketCap = calculateMarketCap(supplyResult.result.circulatingSupply, 0.001); // Примерная цена
-      console.log(`   💎 Market Cap: ~$${marketCap.toLocaleString()} (при цене $0.001)`);
-    }
 
     if (infoResult.ok && infoResult.result) {
       console.log(`   📦 Версия ноды: ${infoResult.result.serverVersion}`);
@@ -205,7 +200,7 @@ async function analyzeMempoolFees(node: HoosatNode, addresses: string[]): Promis
 
     pendingResult.result.entries.forEach(entry => {
       entry.sending.forEach(tx => {
-        const feeHTN = parseFloat(HoosatUtils.formatAmount(tx.fee));
+        const feeHTN = parseFloat(node.formatAmount(tx.fee));
         allFees.push(feeHTN);
       });
     });
@@ -233,14 +228,6 @@ async function analyzeMempoolFees(node: HoosatNode, addresses: string[]): Promis
 }
 
 /**
- * Расчет примерного market cap
- */
-function calculateMarketCap(circulatingSupply: string, pricePerCoin: number): number {
-  const supply = parseFloat(HoosatUtils.formatAmount(circulatingSupply));
-  return Math.round(supply * pricePerCoin);
-}
-
-/**
  * Сравнение с другими сетями по эмиссии
  */
 async function compareEmissionModels(node: HoosatNode): Promise<void> {
@@ -252,8 +239,8 @@ async function compareEmissionModels(node: HoosatNode): Promise<void> {
     }
 
     const supply = supplyResult.result;
-    const maxSupplyHTN = parseFloat(HoosatUtils.formatAmount(supply.maxSupply));
-    const circulatingHTN = parseFloat(HoosatUtils.formatAmount(supply.circulatingSupply));
+    const maxSupplyHTN = parseFloat(node.formatAmount(supply.maxSupply));
+    const circulatingHTN = parseFloat(node.formatAmount(supply.circulatingSupply));
 
     console.log('📊 Сравнение эмиссионных моделей:');
 
