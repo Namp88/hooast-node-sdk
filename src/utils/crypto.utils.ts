@@ -242,7 +242,6 @@ export class CryptoUtils {
     const hashType = HOOSAT_PARAMS.SIGHASH_ALL;
     const buffers: Buffer[] = [];
 
-    // 1. Version (uint16)
     const versionBuf = Buffer.alloc(2);
     versionBuf.writeUInt16LE(transaction.version, 0);
     buffers.push(versionBuf);
@@ -258,14 +257,16 @@ export class CryptoUtils {
     indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
     buffers.push(indexBuf);
 
-    // 6. ✅ PrevScriptPublicKey Version (uint16) - ОТДЕЛЬНО!
+    // 6. ✅ PrevScriptPublicKey Version - ВСЕГДА 0!
     const scriptVersionBuf = Buffer.alloc(2);
-    scriptVersionBuf.writeUInt16LE(0, 0); // Always 0, not utxo.utxoEntry.scriptPublicKey.version!
+    scriptVersionBuf.writeUInt16LE(0, 0); // ✅ Исправлено: всегда 0!
     buffers.push(scriptVersionBuf);
 
-    // 7. ✅ PrevScriptPublicKey Script - БЕЗ ВЕРСИИ!
+    // 7. ✅ PrevScriptPublicKey Script - длина как UInt64LE!
     const prevScript = Buffer.from(utxo.utxoEntry.scriptPublicKey.script, 'hex');
-    buffers.push(this._encodeVarInt(prevScript.length));
+    const scriptLengthBuf = Buffer.alloc(8);
+    scriptLengthBuf.writeBigUInt64LE(BigInt(prevScript.length), 0); // ✅ Исправлено: UInt64LE вместо VarInt!
+    buffers.push(scriptLengthBuf);
     buffers.push(prevScript);
 
     // 8. Amount (uint64)
@@ -375,7 +376,8 @@ export class CryptoUtils {
         indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
         buffers.push(indexBuf);
       }
-      reused.previousOutputsHash = this.blake3Hash(Buffer.concat(buffers));
+      // ✅ KEYED HASH!
+      reused.previousOutputsHash = this.blake3KeyedHash('TransactionSigningHash', Buffer.concat(buffers));
     }
 
     return reused.previousOutputsHash;
@@ -397,7 +399,8 @@ export class CryptoUtils {
         seqBuf.writeBigUInt64LE(BigInt(input.sequence), 0);
         buffers.push(seqBuf);
       }
-      reused.sequencesHash = this.blake3Hash(Buffer.concat(buffers));
+      // ✅ KEYED HASH!
+      reused.sequencesHash = this.blake3KeyedHash('TransactionSigningHash', Buffer.concat(buffers));
     }
 
     return reused.sequencesHash;
@@ -410,7 +413,8 @@ export class CryptoUtils {
 
     if (!reused.sigOpCountsHash) {
       const sigOpCounts = tx.inputs.map(input => input.sigOpCount);
-      reused.sigOpCountsHash = this.blake3Hash(Buffer.from(sigOpCounts));
+      // ✅ KEYED HASH!
+      reused.sigOpCountsHash = this.blake3KeyedHash('TransactionSigningHash', Buffer.from(sigOpCounts));
     }
 
     return reused.sigOpCountsHash;
@@ -425,13 +429,48 @@ export class CryptoUtils {
       if (inputIndex >= tx.outputs.length) {
         return Buffer.alloc(32, 0);
       }
+      // ✅ KEYED HASH для сериализации одного output
+      const buffers: Buffer[] = [];
       const output = tx.outputs[inputIndex];
-      return this.blake3Hash(this._serializeOutput(output));
+
+      const amountBuf = Buffer.alloc(8);
+      amountBuf.writeBigUInt64LE(BigInt(output.amount), 0);
+      buffers.push(amountBuf);
+
+      const versionBuf = Buffer.alloc(2);
+      versionBuf.writeUInt16LE(0, 0);
+      buffers.push(versionBuf);
+
+      const script = Buffer.from(output.scriptPublicKey.scriptPublicKey, 'hex');
+      const scriptLengthBuf = Buffer.alloc(8);
+      scriptLengthBuf.writeBigUInt64LE(BigInt(script.length), 0);
+      buffers.push(scriptLengthBuf);
+      buffers.push(script);
+
+      return this.blake3KeyedHash('TransactionSigningHash', Buffer.concat(buffers));
     }
 
     if (!reused.outputsHash) {
-      const buffers = tx.outputs.map(output => this._serializeOutput(output));
-      reused.outputsHash = this.blake3Hash(Buffer.concat(buffers));
+      const buffers: Buffer[] = [];
+
+      for (const output of tx.outputs) {
+        const amountBuf = Buffer.alloc(8);
+        amountBuf.writeBigUInt64LE(BigInt(output.amount), 0);
+        buffers.push(amountBuf);
+
+        const versionBuf = Buffer.alloc(2);
+        versionBuf.writeUInt16LE(0, 0);
+        buffers.push(versionBuf);
+
+        const script = Buffer.from(output.scriptPublicKey.scriptPublicKey, 'hex');
+        const scriptLengthBuf = Buffer.alloc(8);
+        scriptLengthBuf.writeBigUInt64LE(BigInt(script.length), 0);
+        buffers.push(scriptLengthBuf);
+        buffers.push(script);
+      }
+
+      // ✅ KEYED HASH!
+      reused.outputsHash = this.blake3KeyedHash('TransactionSigningHash', Buffer.concat(buffers));
     }
 
     return reused.outputsHash;
@@ -445,8 +484,10 @@ export class CryptoUtils {
 
     if (!reused.payloadHash) {
       const payload = Buffer.from(tx.payload, 'hex');
-      const payloadLen = this._encodeVarInt(payload.length);
-      reused.payloadHash = this.blake3Hash(Buffer.concat([payloadLen, payload]));
+      const payloadLenBuf = Buffer.alloc(8);
+      payloadLenBuf.writeBigUInt64LE(BigInt(payload.length), 0);
+      // ✅ KEYED HASH!
+      reused.payloadHash = this.blake3KeyedHash('TransactionSigningHash', Buffer.concat([payloadLenBuf, payload]));
     }
 
     return reused.payloadHash;
@@ -459,13 +500,16 @@ export class CryptoUtils {
     amountBuf.writeBigUInt64LE(BigInt(output.amount), 0);
     buffers.push(amountBuf);
 
-    // КРИТИЧНО: Version тоже всегда 0 для outputs!
+    // ✅ Версия всегда 0
     const versionBuf = Buffer.alloc(2);
-    versionBuf.writeUInt16LE(0, 0); // Всегда 0, НЕ output.scriptPublicKey.version!
+    versionBuf.writeUInt16LE(0, 0); // ✅ Исправлено!
     buffers.push(versionBuf);
 
+    // ✅ Длина как UInt64LE
     const script = Buffer.from(output.scriptPublicKey.scriptPublicKey, 'hex');
-    buffers.push(this._encodeVarInt(script.length));
+    const scriptLengthBuf = Buffer.alloc(8);
+    scriptLengthBuf.writeBigUInt64LE(BigInt(script.length), 0); // ✅ Исправлено!
+    buffers.push(scriptLengthBuf);
     buffers.push(script);
 
     return Buffer.concat(buffers);
@@ -474,39 +518,74 @@ export class CryptoUtils {
   static serializeTransactionForID(transaction: Transaction): Buffer {
     const buffers: Buffer[] = [];
 
+    // Version (uint16)
     const versionBuf = Buffer.alloc(2);
     versionBuf.writeUInt16LE(transaction.version, 0);
     buffers.push(versionBuf);
 
-    buffers.push(this._encodeVarInt(transaction.inputs.length));
+    // ✅ Inputs length как UInt64LE
+    const inputsLengthBuf = Buffer.alloc(8);
+    inputsLengthBuf.writeBigUInt64LE(BigInt(transaction.inputs.length), 0);
+    buffers.push(inputsLengthBuf);
+
     for (const input of transaction.inputs) {
       buffers.push(Buffer.from(input.previousOutpoint.transactionId, 'hex').reverse());
       const indexBuf = Buffer.alloc(4);
       indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
       buffers.push(indexBuf);
-      buffers.push(this._encodeVarInt(0));
+
+      // ✅ SignatureScript length как UInt64LE
+      const sigScript = Buffer.from(input.signatureScript, 'hex');
+      const sigScriptLengthBuf = Buffer.alloc(8);
+      sigScriptLengthBuf.writeBigUInt64LE(BigInt(sigScript.length), 0);
+      buffers.push(sigScriptLengthBuf);
+      buffers.push(sigScript);
+
+      // Sequence (uint64)
       const seqBuf = Buffer.alloc(8);
       seqBuf.writeBigUInt64LE(BigInt(input.sequence), 0);
       buffers.push(seqBuf);
     }
 
-    buffers.push(this._encodeVarInt(transaction.outputs.length));
+    // ✅ Outputs length как UInt64LE
+    const outputsLengthBuf = Buffer.alloc(8);
+    outputsLengthBuf.writeBigUInt64LE(BigInt(transaction.outputs.length), 0);
+    buffers.push(outputsLengthBuf);
+
     for (const output of transaction.outputs) {
-      buffers.push(this._serializeOutput(output));
+      // Amount (uint64)
+      const amountBuf = Buffer.alloc(8);
+      amountBuf.writeBigUInt64LE(BigInt(output.amount), 0);
+      buffers.push(amountBuf);
+
+      // Version (uint16)
+      const versionBuf = Buffer.alloc(2);
+      versionBuf.writeUInt16LE(output.scriptPublicKey.version, 0);
+      buffers.push(versionBuf);
+
+      // ✅ Script length как UInt64LE
+      const script = Buffer.from(output.scriptPublicKey.scriptPublicKey, 'hex');
+      const scriptLengthBuf = Buffer.alloc(8);
+      scriptLengthBuf.writeBigUInt64LE(BigInt(script.length), 0);
+      buffers.push(scriptLengthBuf);
+      buffers.push(script);
     }
 
+    // LockTime (uint64)
     const lockTimeBuf = Buffer.alloc(8);
     lockTimeBuf.writeBigUInt64LE(BigInt(transaction.lockTime), 0);
     buffers.push(lockTimeBuf);
 
+    // SubnetworkID (20 bytes)
     buffers.push(Buffer.from(transaction.subnetworkId, 'hex'));
 
+    // Gas (uint64)
     const gasBuf = Buffer.alloc(8);
-    gasBuf.writeBigUInt64LE(BigInt(transaction.gas), 0);
+    gasBuf.writeBigUInt64LE(BigInt(transaction.gas || '0'), 0);
     buffers.push(gasBuf);
 
-    const payload = Buffer.from(transaction.payload, 'hex');
-    buffers.push(this._encodeVarInt(payload.length));
+    // Payload (32 bytes)
+    const payload = transaction.payload ? Buffer.from(transaction.payload, 'hex') : Buffer.alloc(32, 0);
     buffers.push(payload);
 
     return Buffer.concat(buffers);
