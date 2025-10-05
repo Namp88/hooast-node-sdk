@@ -13,7 +13,7 @@ async function demonstrateWalletBalances() {
   console.log('📍 Проверяем баланс одного адреса:');
 
   try {
-    const address = 'hoosat:qz8hek32xdryqstk6ptvvfzmrsrns95h7nd2r9f55epnxx7eummegyxa7f2lu';
+    const address = 'hoosat:qypf00qzdh6we8jd2uq6yen7hzvjjttn5s0fjyurhss5a86x3r4jkhgaqfj3zhf';
 
     const balanceResult = await node.getBalance(address);
 

@@ -810,15 +810,17 @@ class HoosatNode extends EventEmitter {
         throw new Error('Invalid Hoosat address format');
       }
 
-      const { getBalanceByAddressResponse } = await this._request<GetBalanceByAddressResponse>(RequestType.GetBalanceByAddressRequest, {
+      const response = await this._request<GetBalanceByAddressResponse>(RequestType.GetBalanceByAddressRequest, {
         address,
       });
 
+      console.log(response);
+
       const result: GetBalanceByAddress = {
-        balance: getBalanceByAddressResponse.balance,
+        balance: response.getBalanceByAddressResponse.balance,
       };
 
-      return this._buildResult(getBalanceByAddressResponse.error, result);
+      return this._buildResult(response.getBalanceByAddressResponse.error, result);
     } catch (error) {
       return this._buildResult({ message: `Failed to get balance: ${error}` }, {} as GetBalanceByAddress);
     }

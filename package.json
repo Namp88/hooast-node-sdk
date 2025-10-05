@@ -27,11 +27,13 @@
     "example:pending-transactions-and-supply": "tsx watch examples/pending-transactions-and-supply.ts",
     "example:send-transaction": "tsx watch examples/send-transaction.ts",
 
-    "test:crypto": "tsx examples/test-crypto-functionality.ts",
-    "test:crypto:full": "tsx examples/test-crypto-functionality.ts full",
-    "test:crypto:quick": "tsx examples/test-crypto-functionality.ts quick",
-    "test:crypto:errors": "tsx examples/test-crypto-functionality.ts errors",
-    "test:diagnose-address-validation": "tsx examples/diagnose-address-validation.ts"
+    "test:crypto:basic": "tsx examples/test-crypto-basic.ts",
+    "test:crypto:signing": "tsx examples/test-crypto-signing.ts",
+    "test:crypto:htnd": "tsx examples/test-compare-with-htnd.ts",
+    "test:crypto:real": "tsx examples/test-real-transaction.ts",
+
+    "create:test-wallet": "tsx examples/create-test-wallet.ts",
+    "test:real-tx": "tsx examples/test-real-transaction.ts"
   },
   "keywords": [
     "hoosat",
