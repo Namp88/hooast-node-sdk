@@ -1,27 +1,22 @@
 // src/utils/crypto.utils.ts
-
 import * as blake3 from 'blake3';
 import * as secp256k1 from 'secp256k1';
 import { createHash, randomBytes } from 'crypto';
 import * as bech32Hoosat from './bech32-hoosat';
 
-// ==================== TYPES ====================
-
+// ==================== TYPES (без изменений) ====================
 export interface UTXOEntry {
   amount: string;
   scriptPublicKey: {
-    script: string; // Только скрипт, БЕЗ версии
-    version: number; // Версия отдельно
+    script: string;
+    version: number;
   };
   blockDaaScore: string;
   isCoinbase: boolean;
 }
 
 export interface TransactionInput {
-  previousOutpoint: {
-    transactionId: string;
-    index: number;
-  };
+  previousOutpoint: { transactionId: string; index: number };
   signatureScript: string;
   sequence: string;
   sigOpCount: number;
@@ -30,10 +25,7 @@ export interface TransactionInput {
 
 export interface TransactionOutput {
   amount: string;
-  scriptPublicKey: {
-    scriptPublicKey: string;
-    version: number;
-  };
+  scriptPublicKey: { scriptPublicKey: string; version: number };
 }
 
 export interface Transaction {
@@ -48,16 +40,10 @@ export interface Transaction {
 }
 
 export interface UtxoForSigning {
-  outpoint: {
-    transactionId: string;
-    index: number;
-  };
+  outpoint: { transactionId: string; index: number };
   utxoEntry: {
     amount: string;
-    scriptPublicKey: {
-      script: string; // ВАЖНО: только скрипт без версии!
-      version: number;
-    };
+    scriptPublicKey: { script: string; version: number };
     blockDaaScore: string;
     isCoinbase: boolean;
   };
@@ -84,7 +70,6 @@ export interface SighashReusedValues {
 }
 
 // ==================== CONSTANTS ====================
-
 const HOOSAT_PARAMS = {
   ADDRESS_PREFIX: 'hoosat',
   SIGHASH_ALL: 0x01,
@@ -98,7 +83,6 @@ const HOOSAT_PARAMS = {
 } as const;
 
 // ==================== CRYPTO UTILITIES ====================
-
 export class CryptoUtils {
   // ==================== HASHING ====================
 
@@ -107,18 +91,18 @@ export class CryptoUtils {
   }
 
   static doubleBlake3Hash(data: Buffer): Buffer {
-    const firstHash = this.blake3Hash(data);
-    return this.blake3Hash(firstHash);
+    return this.blake3Hash(this.blake3Hash(data));
   }
 
   /**
-   * Blake3 Keyed Hash - КРИТИЧНО для Hoosat!
+   * Blake3 Keyed Hash для Hoosat
+   * КРИТИЧНО: Точная реализация из htn-core-lib
    */
   static blake3KeyedHash(key: Buffer | string, data: Buffer): Buffer {
     let keyBuffer: Uint8Array;
 
     if (typeof key === 'string') {
-      // ТОЧНО как у них в коде
+      // ✅ ТОЧНО как в htn-core-lib
       const encoder = new TextEncoder();
       const fixedSizeKey = new Uint8Array(32);
       encoder.encodeInto(key, fixedSizeKey);
@@ -195,18 +179,13 @@ export class CryptoUtils {
   }
 
   static isValidAddress(address: string): boolean {
-    if (!address || typeof address !== 'string') {
-      return false;
-    }
-
-    if (!address.startsWith('hoosat:')) {
-      return false;
-    }
+    if (!address || typeof address !== 'string') return false;
+    if (!address.startsWith('hoosat:')) return false;
 
     try {
       const decoded = bech32Hoosat.decode(address);
       return [0x00, 0x01, 0x08].includes(decoded.version);
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -224,13 +203,13 @@ export class CryptoUtils {
       ]);
     }
 
-    // P2PK ECDSA (version 0x01) - ИСПРАВЛЕНО!
+    // P2PK ECDSA (version 0x01)
     if (decoded.version === 0x01) {
       const dataLength = decoded.payload.length;
       return Buffer.concat([
         Buffer.from([dataLength]),
         decoded.payload,
-        Buffer.from([0xab]), // OP_CHECKSIGVERIFY (не 0xac!)
+        Buffer.from([0xab]), // ✅ OP_CHECKSIGECDSA (НЕ OP_CHECKSIG!)
       ]);
     }
 
@@ -247,8 +226,13 @@ export class CryptoUtils {
     throw new Error(`Unsupported address version: ${decoded.version}`);
   }
 
-  // Добавь этот метод в CryptoUtils
-  static getSignaturePreimage(
+  // ==================== TRANSACTION SIGNING ====================
+
+  /**
+   * Schnorr Signature Hash с Blake3 Keyed Hash
+   * ✅ ИСПРАВЛЕНО: Точное соответствие HTND
+   */
+  static getSignatureHashSchnorr(
     transaction: Transaction,
     inputIndex: number,
     utxo: UtxoForSigning,
@@ -274,102 +258,17 @@ export class CryptoUtils {
     indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
     buffers.push(indexBuf);
 
-    // 6. ScriptPubKey Version
+    // 6. ✅ PrevScriptPublicKey Version (uint16) - ОТДЕЛЬНО!
     const scriptVersionBuf = Buffer.alloc(2);
     scriptVersionBuf.writeUInt16LE(utxo.utxoEntry.scriptPublicKey.version, 0);
     buffers.push(scriptVersionBuf);
 
-    // 7. ScriptPubKey Script
+    // 7. ✅ PrevScriptPublicKey Script - БЕЗ ВЕРСИИ!
     const prevScript = Buffer.from(utxo.utxoEntry.scriptPublicKey.script, 'hex');
     buffers.push(this._encodeVarInt(prevScript.length));
     buffers.push(prevScript);
 
-    // 8. Amount
-    const amountBuf = Buffer.alloc(8);
-    amountBuf.writeBigUInt64LE(BigInt(utxo.utxoEntry.amount), 0);
-    buffers.push(amountBuf);
-
-    // 9. Sequence
-    const sequenceBuf = Buffer.alloc(8);
-    sequenceBuf.writeBigUInt64LE(BigInt(input.sequence), 0);
-    buffers.push(sequenceBuf);
-
-    // 10. SigOpCount
-    buffers.push(Buffer.from([input.sigOpCount]));
-
-    // 11. OutputsHash
-    buffers.push(this._getOutputsHash(transaction, inputIndex, hashType, reusedValues));
-
-    // 12. LockTime
-    const lockTimeBuf = Buffer.alloc(8);
-    lockTimeBuf.writeBigUInt64LE(BigInt(transaction.lockTime), 0);
-    buffers.push(lockTimeBuf);
-
-    // 13. SubnetworkID
-    buffers.push(Buffer.from(transaction.subnetworkId, 'hex'));
-
-    // 14. Gas
-    const gasBuf = Buffer.alloc(8);
-    gasBuf.writeBigUInt64LE(BigInt(transaction.gas), 0);
-    buffers.push(gasBuf);
-
-    // 15. PayloadHash
-    buffers.push(this._getPayloadHash(transaction, reusedValues));
-
-    // 16. SigHashType
-    buffers.push(Buffer.from([hashType]));
-
-    return Buffer.concat(buffers);
-  }
-
-  // ==================== TRANSACTION SIGNING (ИСПРАВЛЕНО!) ====================
-
-  /**
-   * Schnorr Signature Hash с Blake3 Keyed Hash
-   * Основано на HTND: domain/consensus/utils/consensushashing/sighash.go
-   */
-  static getSignatureHashSchnorr(
-    transaction: Transaction,
-    inputIndex: number,
-    utxo: UtxoForSigning,
-    reusedValues: SighashReusedValues = {}
-  ): Buffer {
-    const input = transaction.inputs[inputIndex];
-    const hashType = HOOSAT_PARAMS.SIGHASH_ALL;
-
-    const buffers: Buffer[] = [];
-
-    // 1. Version (uint16 - 2 bytes)
-    const versionBuf = Buffer.alloc(2);
-    versionBuf.writeUInt16LE(transaction.version, 0);
-    buffers.push(versionBuf);
-
-    // 2. PreviousOutputsHash
-    buffers.push(this._getPreviousOutputsHash(transaction, hashType, reusedValues));
-
-    // 3. SequencesHash
-    buffers.push(this._getSequencesHash(transaction, hashType, reusedValues));
-
-    // 4. SigOpCountsHash
-    buffers.push(this._getSigOpCountsHash(transaction, hashType, reusedValues));
-
-    // 5. Current Outpoint
-    buffers.push(Buffer.from(input.previousOutpoint.transactionId, 'hex').reverse());
-    const indexBuf = Buffer.alloc(4);
-    indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
-    buffers.push(indexBuf);
-
-    // 6. PrevScriptPublicKey Version (uint16) - ОТДЕЛЬНО!
-    const scriptVersionBuf = Buffer.alloc(2);
-    scriptVersionBuf.writeUInt16LE(utxo.utxoEntry.scriptPublicKey.version || 0, 0);
-    buffers.push(scriptVersionBuf);
-
-    // 7. PrevScriptPublicKey Script - БЕЗ ВЕРСИИ!
-    const prevScript = Buffer.from(utxo.utxoEntry.scriptPublicKey.script, 'hex');
-    buffers.push(this._encodeVarInt(prevScript.length));
-    buffers.push(prevScript);
-
-    // 8. UTXO Amount (uint64 - 8 bytes)
+    // 8. Amount (uint64)
     const amountBuf = Buffer.alloc(8);
     amountBuf.writeBigUInt64LE(BigInt(utxo.utxoEntry.amount), 0);
     buffers.push(amountBuf);
@@ -404,16 +303,15 @@ export class CryptoUtils {
     // 16. SigHashType (1 byte)
     buffers.push(Buffer.from([hashType]));
 
-    // Собираем все данные
     const dataToHash = Buffer.concat(buffers);
 
-    // Используем строку, она автоматически будет преобразована в 32-байтный ключ
+    // ✅ Blake3 Keyed Hash с правильным ключом
     return this.blake3KeyedHash('TransactionSigningHash', dataToHash);
   }
 
   /**
-   * ECDSA Signature Hash = Blake3(Schnorr Hash)
-   * ИСПРАВЛЕНО: Использует Blake3, НЕ SHA256!
+   * ECDSA Signature Hash
+   * ✅ ИСПРАВЛЕНО: SHA256("TransactionSigningHashECDSA" + schnorr_hash)
    */
   static getSignatureHashECDSA(
     transaction: Transaction,
@@ -422,8 +320,8 @@ export class CryptoUtils {
     reusedValues: SighashReusedValues = {}
   ): Buffer {
     const schnorrHash = this.getSignatureHashSchnorr(transaction, inputIndex, utxo, reusedValues);
-    console.log('Using SHA256 for ECDSA hash');
-    // ПРАВИЛЬНО: SHA256 с доменом "TransactionSigningHashECDSA"
+
+    // ✅ ПРАВИЛЬНО: SHA256 с доменом
     return createHash('sha256').update('TransactionSigningHashECDSA').update(schnorrHash).digest();
   }
 
@@ -434,16 +332,14 @@ export class CryptoUtils {
     utxo: UtxoForSigning,
     reusedValues: SighashReusedValues = {}
   ): TransactionSignature {
-    // Получаем ECDSA signature hash (который теперь == Schnorr hash)
     const sigHash = this.getSignatureHashECDSA(transaction, inputIndex, utxo, reusedValues);
 
-    // Подписываем - RAW формат, НЕ DER!
+    // ✅ RAW формат (64 bytes), НЕ DER!
     const signature = secp256k1.ecdsaSign(sigHash, privateKey);
-
     const publicKey = this.getPublicKey(privateKey);
 
     return {
-      signature: Buffer.from(signature.signature), // Raw 64 bytes
+      signature: Buffer.from(signature.signature),
       publicKey,
       sigHashType: HOOSAT_PARAMS.SIGHASH_ALL,
     };
@@ -587,9 +483,7 @@ export class CryptoUtils {
       const indexBuf = Buffer.alloc(4);
       indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
       buffers.push(indexBuf);
-
-      buffers.push(this._encodeVarInt(0)); // SignatureScript пустой для ID
-
+      buffers.push(this._encodeVarInt(0));
       const seqBuf = Buffer.alloc(8);
       seqBuf.writeBigUInt64LE(BigInt(input.sequence), 0);
       buffers.push(seqBuf);
@@ -642,8 +536,7 @@ export class CryptoUtils {
 
   static formatAmount(sompi: string | bigint): string {
     const amount = typeof sompi === 'string' ? BigInt(sompi) : sompi;
-    const htn = Number(amount) / 100000000;
-    return htn.toFixed(8);
+    return (Number(amount) / 100000000).toFixed(8);
   }
 
   static parseAmount(htn: string): string {
@@ -652,16 +545,12 @@ export class CryptoUtils {
   }
 
   static estimateTransactionSize(inputCount: number, outputCount: number): number {
-    const baseSize = 10;
-    const inputSize = 150;
-    const outputSize = 35;
-    return baseSize + inputCount * inputSize + outputCount * outputSize;
+    return 10 + inputCount * 150 + outputCount * 35;
   }
 
   static calculateFee(inputCount: number, outputCount: number, feePerByte = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
     const size = this.estimateTransactionSize(inputCount, outputCount);
-    const fee = Math.max(size * feePerByte, HOOSAT_PARAMS.MIN_FEE);
-    return fee.toString();
+    return Math.max(size * feePerByte, HOOSAT_PARAMS.MIN_FEE).toString();
   }
 }
 
@@ -686,6 +575,7 @@ export class TransactionBuilder {
 
     const scriptPublicKey = CryptoUtils.addressToScriptPublicKey(address);
 
+    // ✅ Version всегда 0 для ScriptPublicKey structure (не путать с версией адреса!)
     this.outputs.push({
       amount,
       scriptPublicKey: {
@@ -697,7 +587,6 @@ export class TransactionBuilder {
     return this;
   }
 
-  // НОВЫЙ МЕТОД для добавления output с готовым scriptPublicKey
   addOutputRaw(output: TransactionOutput): this {
     this.outputs.push(output);
     return this;
@@ -714,22 +603,17 @@ export class TransactionBuilder {
   }
 
   build(): Transaction {
-    if (this.inputs.length === 0) {
-      throw new Error('Transaction must have at least one input');
-    }
+    if (this.inputs.length === 0) throw new Error('Transaction must have at least one input');
+    if (this.outputs.length === 0) throw new Error('Transaction must have at least one output');
 
-    if (this.outputs.length === 0) {
-      throw new Error('Transaction must have at least one output');
-    }
-
-    const transaction: Transaction = {
-      version: 0, // ВАЖНО: версия 0 для Hoosat!
+    return {
+      version: 0,
       inputs: this.inputs.map(({ utxo }) => ({
         previousOutpoint: utxo.outpoint,
         signatureScript: '',
         sequence: '0',
         sigOpCount: 1,
-        utxoEntry: utxo.utxoEntry, // Сохраняем для подписи
+        utxoEntry: utxo.utxoEntry,
       })),
       outputs: this.outputs,
       lockTime: this.lockTime,
@@ -738,12 +622,12 @@ export class TransactionBuilder {
       payload: '',
       fee: this.fee,
     };
-
-    return transaction;
   }
 
   async sign(globalPrivateKey?: Buffer): Promise<Transaction> {
     const transaction = this.build();
+
+    console.log('\n🔐 === SIGNING PROCESS START ===\n');
 
     for (let i = 0; i < this.inputs.length; i++) {
       const { utxo, privateKey } = this.inputs[i];
@@ -753,34 +637,38 @@ export class TransactionBuilder {
         throw new Error(`No private key provided for input ${i}`);
       }
 
-      // DEBUG: выводим хеши
-      const preimage = CryptoUtils.getSignaturePreimage(transaction, i, utxo, this.reusedValues);
-      console.log('\n🔍 DEBUG Signature Hashes:');
-      console.log('Preimage:', preimage.toString('hex'));
+      console.log(`Input ${i} signing:`);
+      console.log(`  UTXO amount: ${utxo.utxoEntry.amount}`);
+      console.log(`  Script version: ${utxo.utxoEntry.scriptPublicKey.version}`);
+      console.log(`  Script: ${utxo.utxoEntry.scriptPublicKey.script}\n`);
 
+      // Получаем signature hash с debug
       const schnorrHash = CryptoUtils.getSignatureHashSchnorr(transaction, i, utxo, this.reusedValues);
-      console.log('Schnorr Hash:', schnorrHash.toString('hex'));
+      console.log(`  Schnorr Hash: ${schnorrHash.toString('hex')}`);
 
       const ecdsaHash = CryptoUtils.getSignatureHashECDSA(transaction, i, utxo, this.reusedValues);
-      console.log('ECDSA Hash:', ecdsaHash.toString('hex'));
+      console.log(`  ECDSA Hash: ${ecdsaHash.toString('hex')}`);
 
+      // Подписываем
       const signature = CryptoUtils.signTransactionInput(transaction, i, keyToUse, utxo, this.reusedValues);
-      console.log('Raw Signature:', signature.signature.toString('hex'));
+      console.log(`  Raw Signature: ${signature.signature.toString('hex')}`);
 
+      // ✅ Создаем SignatureScript: 0x41 + 64-byte sig + 0x01
       const sigWithType = Buffer.concat([signature.signature, Buffer.from([signature.sigHashType])]);
-      console.log('Signature + Type:', sigWithType.toString('hex'));
-
-      // ДЛЯ OP_CHECKSIGECDSA (0xab): только подпись, БЕЗ pubkey!
       const sigScript = Buffer.concat([Buffer.from([sigWithType.length]), sigWithType]);
-      console.log('Final SigScript:', sigScript.toString('hex'));
+
+      console.log(`  SigScript: ${sigScript.toString('hex')}`);
+      console.log(`  SigScript length: ${sigScript.length} bytes\n`);
 
       transaction.inputs[i].signatureScript = sigScript.toString('hex');
     }
 
-    // Удаляем utxoEntry из inputs
+    // Удаляем utxoEntry из inputs для финальной транзакции
     transaction.inputs.forEach(input => {
       delete input.utxoEntry;
     });
+
+    console.log('🔐 === SIGNING PROCESS COMPLETE ===\n');
 
     return transaction;
   }
@@ -805,12 +693,6 @@ export class TransactionBuilder {
     if (totalOutput + fee > totalInput) {
       throw new Error(`Insufficient funds: inputs ${totalInput}, outputs ${totalOutput}, fee ${fee}`);
     }
-
-    this.inputs.forEach(({ utxo }, index) => {
-      if (utxo.utxoEntry.isCoinbase) {
-        console.warn(`Input ${index} is coinbase UTXO - ensure it's mature`);
-      }
-    });
   }
 
   clear(): this {
