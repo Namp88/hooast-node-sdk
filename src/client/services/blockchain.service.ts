@@ -2,7 +2,7 @@ import { BaseService } from '@core/base.service';
 import { RequestType } from '@enums/request-type.enum';
 import { BaseResult } from '@models/result/base.result';
 import { buildResult } from '@helpers/build-result.helper';
-import { validateBlockHash } from '@utils/validation.utils';
+import { validateBlockHash } from '@helpers/validation.helper';
 import { GetSelectedTipHashResponse } from '@models/response/get-selected-tip-hash.response';
 import { GetBlockResponse } from '@models/response/get-block.response';
 import { GetSelectedTipHash } from '@models/result/get-selected-tip-hash.result';

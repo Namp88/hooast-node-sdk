@@ -1,9 +1,9 @@
-import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatCrypto } from '../src/crypto/crypto';
 import * as fs from 'fs';
 
 console.log('📝 Создание тестового кошелька\n');
 
-const wallet = CryptoUtils.generateKeyPair();
+const wallet = HoosatCrypto.generateKeyPair();
 
 console.log('Debug info:');
 console.log('Private key:', wallet.privateKey.toString('hex'));

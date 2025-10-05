@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatCrypto } from '../src/crypto/crypto';
 
 // Рабочий пример из переписки с разработчиком
 const workingTx = {
@@ -41,7 +41,7 @@ const workingTx = {
 console.log('=== WORKING TRANSACTION FROM DEVELOPER ===\n');
 
 // Вычисляем TX ID рабочей транзакции
-const workingTxId = CryptoUtils.getTransactionId(workingTx);
+const workingTxId = HoosatCrypto.getTransactionId(workingTx);
 console.log('Our TX ID calculation:', workingTxId);
 console.log('Should probably be different from what node calculates\n');
 

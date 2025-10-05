@@ -1,4 +1,4 @@
-import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatCrypto } from '../src/crypto/crypto';
 import { HoosatUtils } from '../src/utils/utils';
 
 /**
@@ -110,11 +110,11 @@ async function compareWithWorkingExample() {
     console.log(`  PubKey from working example: ${ecdsaPubkey.toString('hex')}`);
 
     // Создаем адрес из pubkey рабочего примера
-    const addressFromWorkingExample = CryptoUtils.publicKeyToAddressECDSA(ecdsaPubkey);
+    const addressFromWorkingExample = HoosatCrypto.publicKeyToAddressECDSA(ecdsaPubkey);
     console.log(`  Address from working example: ${addressFromWorkingExample}`);
 
     // Конвертируем обратно в script
-    const ourScript = CryptoUtils.addressToScriptPublicKey(addressFromWorkingExample);
+    const ourScript = HoosatCrypto.addressToScriptPublicKey(addressFromWorkingExample);
     const workingScript = workingExample.outputs[1].scriptPublicKey.scriptPublicKey;
 
     console.log(`  Our script:      ${ourScript.toString('hex')}`);
@@ -130,11 +130,11 @@ async function compareWithWorkingExample() {
     // Тестируем наш реальный кошелек
     console.log('  Testing our wallet address:');
     const privateKeyHex = '33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43';
-    const wallet = CryptoUtils.importKeyPair(privateKeyHex);
+    const wallet = HoosatCrypto.importKeyPair(privateKeyHex);
     console.log(`    Address: ${wallet.address}`);
     console.log(`    PubKey: ${wallet.publicKey.toString('hex')}`);
 
-    const walletScript = CryptoUtils.addressToScriptPublicKey(wallet.address);
+    const walletScript = HoosatCrypto.addressToScriptPublicKey(wallet.address);
     console.log(`    Script: ${walletScript.toString('hex')}`);
     console.log(`    Valid: ${HoosatUtils.isValidAddress(wallet.address) ? '✅' : '❌'}\n`);
   } catch (error: any) {
@@ -165,7 +165,7 @@ async function compareWithWorkingExample() {
   const key = 'TransactionSigningHash';
 
   try {
-    const hash = CryptoUtils.blake3KeyedHash(key, testData);
+    const hash = HoosatCrypto.blake3KeyedHash(key, testData);
     console.log(`  Input: "${testData.toString()}"`);
     console.log(`  Key: "${key}"`);
     console.log(`  Hash: ${hash.toString('hex')}`);

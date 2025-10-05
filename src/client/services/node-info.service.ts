@@ -7,7 +7,7 @@ import { buildResult } from '@helpers/build-result.helper';
 import { GetVirtualSelectedParentBlueScore } from '@models/result/get-virtual-selected-parent-blue-score.result';
 import { GetVirtualSelectedParentBlueScoreResponse } from '@models/response/get-virtual-selected-parent-blue-score.response';
 import { EstimateNetworkHashesPerSecond } from '@models/result/estimate-network-hashes-per-second.result';
-import { validateBlockHash, validateWindowSize } from '@utils/validation.utils';
+import { validateBlockHash, validateWindowSize } from '@helpers/validation.helper';
 import { EstimateNetworkHashesPerSecondResponse } from '@models/response/estimate-network-hashes-per-second.response';
 import { GetCoinSupply } from '@models/result/get-coin-supply.result';
 import { GetCoinSupplyResponse } from '@models/response/get-coin-supply.response';

@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatCrypto } from '../src/crypto/crypto';
 
 console.log('=== RECREATING WORKING TRANSACTION ===\n');
 
@@ -67,7 +67,7 @@ const utxoVar1 = {
   },
 };
 
-const schnorr1 = CryptoUtils.getSignatureHashSchnorr(transaction, 0, utxoVar1);
+const schnorr1 = HoosatCrypto.getSignatureHashSchnorr(transaction, 0, utxoVar1);
 const ecdsa1 = createHash('sha256').update('TransactionSigningHashECDSA').update(schnorr1).digest();
 
 console.log('VARIANT 1: Full script (0x21 + pubkey + 0xab)');
@@ -87,7 +87,7 @@ const utxoVar2 = {
   },
 };
 
-const schnorr2 = CryptoUtils.getSignatureHashSchnorr(transaction, 0, utxoVar2);
+const schnorr2 = HoosatCrypto.getSignatureHashSchnorr(transaction, 0, utxoVar2);
 const ecdsa2 = createHash('sha256').update('TransactionSigningHashECDSA').update(schnorr2).digest();
 
 console.log('\nVARIANT 2: Without final opcode (0x21 + pubkey)');
@@ -107,7 +107,7 @@ const utxoVar3 = {
   },
 };
 
-const schnorr3 = CryptoUtils.getSignatureHashSchnorr(transaction, 0, utxoVar3);
+const schnorr3 = HoosatCrypto.getSignatureHashSchnorr(transaction, 0, utxoVar3);
 const ecdsa3 = createHash('sha256').update('TransactionSigningHashECDSA').update(schnorr3).digest();
 
 console.log('\nVARIANT 3: Only pubkey (33 bytes)');

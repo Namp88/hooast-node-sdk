@@ -1,4 +1,4 @@
-import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatCrypto } from '../src/crypto/crypto';
 
 async function dumpPreimage() {
   const transaction = {
@@ -55,7 +55,7 @@ async function dumpPreimage() {
   console.log('to verify our preimage is correct.\n');
 
   // For now, calculate the hash
-  const schnorrHash = CryptoUtils.getSignatureHashSchnorr(transaction, 0, utxo);
+  const schnorrHash = HoosatCrypto.getSignatureHashSchnorr(transaction, 0, utxo);
   console.log('Schnorr hash:', schnorrHash.toString('hex'));
 }
 

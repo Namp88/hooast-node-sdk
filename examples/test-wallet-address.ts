@@ -1,5 +1,5 @@
-import { CryptoUtils } from '../src/utils/crypto.utils';
-import * as bech32Hoosat from '../src/utils/bech32-hoosat';
+import { HoosatCrypto } from '../src/crypto/crypto';
+import * as bech32Hoosat from '../src/libs/bech32-hoosat';
 import { HoosatUtils } from '../src/utils/utils';
 
 /**
@@ -11,7 +11,7 @@ async function testWalletAddress() {
   const privateKeyHex = '33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43';
 
   console.log('1️⃣ Importing wallet from private key...');
-  const wallet = CryptoUtils.importKeyPair(privateKeyHex);
+  const wallet = HoosatCrypto.importKeyPair(privateKeyHex);
 
   console.log(`   Private key: ${privateKeyHex}`);
   console.log(`   Public key:  ${wallet.publicKey.toString('hex')}`);
@@ -63,7 +63,7 @@ async function testWalletAddress() {
   // Конвертируем в ScriptPubKey
   console.log('5️⃣ Converting to ScriptPubKey...');
   try {
-    const scriptPubKey = CryptoUtils.addressToScriptPublicKey(wallet.address);
+    const scriptPubKey = HoosatCrypto.addressToScriptPublicKey(wallet.address);
     console.log(`   Script: ${scriptPubKey.toString('hex')}`);
     console.log(`   Length: ${scriptPubKey.length} bytes`);
 
@@ -92,7 +92,7 @@ async function testWalletAddress() {
   console.log('6️⃣ Round-trip test (pubkey → address → script → check)...');
   try {
     // Создаем адрес из pubkey
-    const addressFromPubkey = CryptoUtils.publicKeyToAddressECDSA(wallet.publicKey);
+    const addressFromPubkey = HoosatCrypto.publicKeyToAddressECDSA(wallet.publicKey);
     console.log(`   Generated address: ${addressFromPubkey}`);
     console.log(`   Original address:  ${wallet.address}`);
     console.log(`   Match: ${addressFromPubkey === wallet.address ? '✅' : '❌'}\n`);

@@ -1,4 +1,4 @@
-import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatCrypto } from '../src/crypto/crypto';
 import { createHash } from 'crypto';
 import { HoosatNode } from '../src';
 
@@ -8,7 +8,7 @@ async function testSubscriptVariants() {
     port: 42420,
   });
 
-  const wallet = CryptoUtils.importKeyPair('33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43');
+  const wallet = HoosatCrypto.importKeyPair('33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43');
   console.log('Wallet:', wallet.address);
 
   // Получаем UTXO
@@ -43,7 +43,7 @@ async function testSubscriptVariants() {
       {
         amount: '1000000',
         scriptPublicKey: {
-          scriptPublicKey: CryptoUtils.addressToScriptPublicKey(wallet.address).toString('hex'),
+          scriptPublicKey: HoosatCrypto.addressToScriptPublicKey(wallet.address).toString('hex'),
           version: 0,
         },
       },
@@ -68,7 +68,7 @@ async function testSubscriptVariants() {
     },
   };
 
-  const schnorr1 = CryptoUtils.getSignatureHashSchnorr(transaction, 0, utxoVar1);
+  const schnorr1 = HoosatCrypto.getSignatureHashSchnorr(transaction, 0, utxoVar1);
   const ecdsa1 = createHash('sha256').update('TransactionSigningHashECDSA').update(schnorr1).digest();
   console.log('Schnorr:', schnorr1.toString('hex'));
   console.log('ECDSA:  ', ecdsa1.toString('hex'));
@@ -88,7 +88,7 @@ async function testSubscriptVariants() {
     },
   };
 
-  const schnorr2 = CryptoUtils.getSignatureHashSchnorr(transaction, 0, utxoVar2);
+  const schnorr2 = HoosatCrypto.getSignatureHashSchnorr(transaction, 0, utxoVar2);
   const ecdsa2 = createHash('sha256').update('TransactionSigningHashECDSA').update(schnorr2).digest();
   console.log('Schnorr:', schnorr2.toString('hex'));
   console.log('ECDSA:  ', ecdsa2.toString('hex'));
@@ -107,7 +107,7 @@ async function testSubscriptVariants() {
     },
   };
 
-  const schnorr3 = CryptoUtils.getSignatureHashSchnorr(transaction, 0, utxoVar3);
+  const schnorr3 = HoosatCrypto.getSignatureHashSchnorr(transaction, 0, utxoVar3);
   const ecdsa3 = createHash('sha256').update('TransactionSigningHashECDSA').update(schnorr3).digest();
   console.log('Schnorr:', schnorr3.toString('hex'));
   console.log('ECDSA:  ', ecdsa3.toString('hex'));

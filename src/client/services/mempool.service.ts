@@ -4,7 +4,7 @@ import { BaseResult } from '@models/result/base.result';
 import { buildResult } from '@helpers/build-result.helper';
 import { GetMempoolEntry } from '@models/result/get-mempool-entry.result';
 import { GetMempoolEntryResponse } from '@models/response/get-mempool-entry.response';
-import { validateAddresses, validateTransactionId } from '@utils/validation.utils';
+import { validateAddresses, validateTransactionId } from '@helpers/validation.helper';
 import { GetMempoolEntries } from '@models/result/get-mempool-entries.result';
 import { GetMempoolEntriesResponse } from '@models/response/get-mempool-entries.response';
 import { GetMempoolEntriesByAddresses } from '@models/result/get-mempool-entries-by-addresses.result';

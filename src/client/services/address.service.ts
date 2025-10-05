@@ -4,7 +4,7 @@ import { BaseResult } from '@models/result/base.result';
 import { buildResult } from '@helpers/build-result.helper';
 import { GetUtxosByAddresses } from '@models/result/get-utxos-by-addresses.result';
 import { GetUtxosByAddressesResponse } from '@models/response/get-utxos-by-addresses.response';
-import { validateAddresses } from '@utils/validation.utils';
+import { validateAddresses } from '@helpers/validation.helper';
 import { GetBalanceByAddress } from '@models/result/get-balance-by-address.result';
 import { GetBalanceByAddressResponse } from '@models/response/get-balance-by-address.response';
 import { GetBalancesByAddresses } from '@models/result/get-balances-by-addresses.result';

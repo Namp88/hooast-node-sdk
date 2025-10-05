@@ -1,5 +1,5 @@
-import * as bech32Hoosat from '../src/utils/bech32-hoosat';
-import { CryptoUtils } from '../src/utils/crypto.utils';
+import * as bech32Hoosat from '../src/libs/bech32-hoosat';
+import { HoosatCrypto } from '../src/crypto/crypto';
 import { HoosatUtils } from '../src/utils/utils';
 
 // Проблемный адрес из ошибки
@@ -36,7 +36,7 @@ try {
   // Шаг 4: Конвертация в ScriptPublicKey
   console.log('4️⃣ Конвертация в ScriptPublicKey:');
   try {
-    const scriptPubKey = CryptoUtils.addressToScriptPublicKey(testAddress);
+    const scriptPubKey = HoosatCrypto.addressToScriptPublicKey(testAddress);
     console.log('   ✅ Конвертация успешна!');
     console.log(`   ScriptPubKey: ${scriptPubKey.toString('hex')}\n`);
   } catch (error) {

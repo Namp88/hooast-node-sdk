@@ -1,5 +1,5 @@
 import { HoosatNode } from '../src';
-import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatCrypto } from '../src/crypto/crypto';
 import { TransactionBuilder } from '../src/transaction/transaction.builder';
 import { HoosatUtils } from '../src/utils/utils';
 
@@ -26,7 +26,7 @@ async function testRealSigning() {
 
   // 2. Восстанавливаем тестовый кошелек
   const privateKeyHex = '33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43';
-  const wallet = CryptoUtils.importKeyPair(privateKeyHex);
+  const wallet = HoosatCrypto.importKeyPair(privateKeyHex);
 
   console.log('2️⃣ Wallet restored:');
   console.log(`   Address: ${wallet.address}`);
@@ -131,7 +131,7 @@ async function testRealSigning() {
     console.log('6️⃣ Signing transaction...\n');
     const signedTx = await builder.sign();
 
-    const txId = CryptoUtils.getTransactionId(signedTx);
+    const txId = HoosatCrypto.getTransactionId(signedTx);
     console.log(`✅ Transaction signed!`);
     console.log(`   TX ID: ${txId}\n`);
 

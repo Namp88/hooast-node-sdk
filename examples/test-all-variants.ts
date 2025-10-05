@@ -1,4 +1,4 @@
-import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatCrypto } from '../src/crypto/crypto';
 import { HoosatNode } from '../src';
 import { TransactionBuilder } from '../src/transaction/transaction.builder';
 import { HoosatUtils } from '../src/utils/utils';
@@ -9,7 +9,7 @@ async function testAllVariants() {
     port: 42420,
   });
 
-  const wallet = CryptoUtils.importKeyPair('33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43');
+  const wallet = HoosatCrypto.importKeyPair('33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43');
   console.log('🔑 Wallet:', wallet.address, '\n');
 
   const utxosRes = await node.getUtxosByAddresses([wallet.address]);
@@ -77,7 +77,7 @@ async function testAllVariants() {
 
       // Подписываем
       const signedTx = await builder.sign();
-      const txId = CryptoUtils.getTransactionId(signedTx);
+      const txId = HoosatCrypto.getTransactionId(signedTx);
 
       console.log('✅ Signed successfully');
       console.log('📝 TX ID:', txId);

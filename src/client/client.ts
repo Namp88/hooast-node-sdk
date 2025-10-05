@@ -23,20 +23,20 @@ import { SubmitTransaction } from '@models/result/submit-transaction.result';
 import { Transaction } from '@models/transaction/transaction.types';
 import { StreamingManager } from '@streaming/streaming-manager';
 import { CLIENT_DEFAULT_CONFIG } from '@constants/client-default-config.const';
-import { NetworkService } from '@services/network.service';
-import { BlockchainService } from '@services/blockchain.service';
-import { MempoolService } from '@services/mempool.service';
-import { AddressService } from '@services/address.service';
-import { NodeInfoService } from '@services/node-info.service';
-import { TransactionService } from '@services/transaction.service';
+import { NetworkService } from './services/network.service';
+import { BlockchainService } from './services/blockchain.service';
+import { MempoolService } from './services/mempool.service';
+import { AddressService } from './services/address.service';
+import { NodeInfoService } from './services/node-info.service';
+import { TransactionService } from './services/transaction.service';
 import { GetClientInfo } from '@models/result/get-client-info.result';
-import { validateAddresses } from '@utils/validation.utils';
+import { validateAddresses } from '@helpers/validation.helper';
 
 const GRPC_CONFIG = {
   MAX_MESSAGE_SIZE: 1024 * 1024 * 1024, // 1GB
 } as const;
 
-class HoosatNode extends EventEmitter {
+export class HoosatNode extends EventEmitter {
   private readonly _host: string;
   private readonly _port: number;
   private readonly _timeout: number;
@@ -76,7 +76,7 @@ class HoosatNode extends EventEmitter {
    */
   private _initializeClient(): void {
     try {
-      const PROTO_PATH = join(__dirname, 'protos', 'messages.proto');
+      const PROTO_PATH = join(__dirname, '..', 'protos', 'messages.proto');
 
       const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
         keepCase: true,
@@ -84,7 +84,7 @@ class HoosatNode extends EventEmitter {
         enums: String,
         defaults: true,
         oneofs: true,
-        includeDirs: [join(__dirname, 'protos')],
+        includeDirs: [join(__dirname, '..', 'protos')],
       });
 
       const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
@@ -425,5 +425,3 @@ class HoosatNode extends EventEmitter {
     this.removeAllListeners();
   }
 }
-
-export default HoosatNode;

@@ -1,4 +1,4 @@
-import CryptoUtils, { SighashReusedValues, Transaction, TransactionOutput, UtxoForSigning } from '../utils/crypto.utils';
+import { SighashReusedValues, Transaction, TransactionOutput, UtxoForSigning, HoosatCrypto } from '@crypto/crypto';
 import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
 import { HoosatUtils } from '@utils/utils';
 
@@ -19,7 +19,7 @@ export class TransactionBuilder {
       throw new Error(`Invalid address: ${address}`);
     }
 
-    const scriptPublicKey = CryptoUtils.addressToScriptPublicKey(address);
+    const scriptPublicKey = HoosatCrypto.addressToScriptPublicKey(address);
 
     // Version always 0 for ScriptPublicKey structure
     this.outputs.push({
@@ -89,14 +89,14 @@ export class TransactionBuilder {
       console.log(`  Script: ${utxo.utxoEntry.scriptPublicKey.script}\n`);
 
       // Получаем signature hash с debug
-      const schnorrHash = CryptoUtils.getSignatureHashSchnorr(transaction, i, utxo, this.reusedValues);
+      const schnorrHash = HoosatCrypto.getSignatureHashSchnorr(transaction, i, utxo, this.reusedValues);
       console.log(`  Schnorr Hash: ${schnorrHash.toString('hex')}`);
 
-      const ecdsaHash = CryptoUtils.getSignatureHashECDSA(transaction, i, utxo, this.reusedValues);
+      const ecdsaHash = HoosatCrypto.getSignatureHashECDSA(transaction, i, utxo, this.reusedValues);
       console.log(`  ECDSA Hash: ${ecdsaHash.toString('hex')}`);
 
       // Подписываем
-      const signature = CryptoUtils.signTransactionInput(transaction, i, keyToUse, utxo, this.reusedValues);
+      const signature = HoosatCrypto.signTransactionInput(transaction, i, keyToUse, utxo, this.reusedValues);
       console.log(`  Raw Signature: ${signature.signature.toString('hex')}`);
 
       // SignatureScript: 0x41 + 64-byte sig + 0x01
@@ -120,7 +120,7 @@ export class TransactionBuilder {
   }
 
   estimateFee(feePerByte = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
-    return CryptoUtils.calculateFee(this.inputs.length, this.outputs.length, feePerByte);
+    return HoosatCrypto.calculateFee(this.inputs.length, this.outputs.length, feePerByte);
   }
 
   getTotalInputAmount(): bigint {

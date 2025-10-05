@@ -1,7 +1,7 @@
 import * as blake3 from 'blake3';
 import * as secp256k1 from 'secp256k1';
 import { createHash, randomBytes } from 'crypto';
-import * as bech32Hoosat from './bech32-hoosat';
+import * as bech32Hoosat from '@libs/bech32-hoosat';
 import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
 
 // ==================== TYPES ====================
@@ -69,8 +69,7 @@ export interface SighashReusedValues {
   payloadHash?: Buffer;
 }
 
-// ==================== CRYPTO UTILITIES ====================
-export class CryptoUtils {
+export class HoosatCrypto {
   // ==================== HASHING ====================
 
   static blake3Hash(data: Buffer): Buffer {
@@ -551,5 +550,3 @@ export class CryptoUtils {
     return Math.max(size * feePerByte, HOOSAT_PARAMS.MIN_FEE).toString();
   }
 }
-
-export default CryptoUtils;

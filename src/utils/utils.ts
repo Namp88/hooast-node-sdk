@@ -1,4 +1,4 @@
-import * as bech32Hoosat from '@utils/bech32-hoosat';
+import * as bech32Hoosat from '@libs/bech32-hoosat';
 import { VALIDATION_PARAMS } from '@constants/validation-params.const';
 
 export class HoosatUtils {
