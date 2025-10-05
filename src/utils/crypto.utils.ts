@@ -260,7 +260,7 @@ export class CryptoUtils {
 
     // 6. ✅ PrevScriptPublicKey Version (uint16) - ОТДЕЛЬНО!
     const scriptVersionBuf = Buffer.alloc(2);
-    scriptVersionBuf.writeUInt16LE(utxo.utxoEntry.scriptPublicKey.version, 0);
+    scriptVersionBuf.writeUInt16LE(0, 0); // Always 0, not utxo.utxoEntry.scriptPublicKey.version!
     buffers.push(scriptVersionBuf);
 
     // 7. ✅ PrevScriptPublicKey Script - БЕЗ ВЕРСИИ!
@@ -459,8 +459,9 @@ export class CryptoUtils {
     amountBuf.writeBigUInt64LE(BigInt(output.amount), 0);
     buffers.push(amountBuf);
 
+    // КРИТИЧНО: Version тоже всегда 0 для outputs!
     const versionBuf = Buffer.alloc(2);
-    versionBuf.writeUInt16LE(output.scriptPublicKey.version, 0);
+    versionBuf.writeUInt16LE(0, 0); // Всегда 0, НЕ output.scriptPublicKey.version!
     buffers.push(versionBuf);
 
     const script = Buffer.from(output.scriptPublicKey.scriptPublicKey, 'hex');
