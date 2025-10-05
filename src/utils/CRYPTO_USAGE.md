@@ -203,7 +203,7 @@ async function completeWalletWorkflow() {
   // 3. Check balance
   const balance = await node.getBalance(wallet.address);
   if (balance.ok) {
-    console.log('Balance:', node.formatAmount(balance.result.balance), 'HTN');
+    console.log('Balance:', HoosatUtils.formatAmount(balance.result.balance), 'HTN');
   }
   
   // 4. Get UTXOs

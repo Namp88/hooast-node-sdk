@@ -1,11 +1,10 @@
 /**
  * Hoosat Bech32 implementation
- * ТОЧНАЯ ПОРТАЦИЯ из github.com/Hoosat-Oy/HTND/util/bech32
+ * Portable from github.com/Hoosat-Oy/HTND/util/bech32
  */
 
 const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 const CHECKSUM_LENGTH = 8;
-// ИСПРАВЛЕНО: Используем BigInt для 40-битных чисел
 const GENERATOR = [0x98f2bc8e61n, 0x79b76d99e2n, 0xf33e5fb3c4n, 0xae2eabe2a8n, 0x1e4f43e470n];
 
 /**
@@ -90,7 +89,6 @@ export function decode(encoded: string): { prefix: string; payload: Buffer; vers
 
 /**
  * Converts between bit groups
- * ИСПРАВЛЕНО: Правильная обработка масок для 5-бит значений
  */
 function convertBits(data: Buffer, fromBits: number, toBits: number, pad: boolean): Buffer {
   const regrouped: number[] = [];
@@ -164,7 +162,6 @@ function calculateChecksum(prefix: string, payload: Buffer): Buffer {
 
   const res: number[] = [];
   for (let i = 0; i < CHECKSUM_LENGTH; i++) {
-    // ИСПРАВЛЕНО: работаем через BigInt
     res.push(Number((polyModResult >> BigInt(5 * (CHECKSUM_LENGTH - 1 - i))) & 31n));
   }
 
@@ -172,7 +169,7 @@ function calculateChecksum(prefix: string, payload: Buffer): Buffer {
 }
 
 /**
- * Verifies checksum (ИСПРАВЛЕНО: polyMod возвращает BigInt)
+ * Verifies checksum (polyMod returns BigInt)
  */
 function verifyChecksum(prefix: string, payload: Buffer): boolean {
   const prefixLower5Bits = prefixToUint5Array(prefix);
@@ -185,8 +182,7 @@ function verifyChecksum(prefix: string, payload: Buffer): boolean {
 }
 
 /**
- * Converts prefix to uint5 array (ТОЧНАЯ ПОРТАЦИЯ из Go)
- * ВАЖНО: берет ТОЛЬКО младшие 5 бит, без expand!
+ * Converts prefix to uint5 array
  */
 function prefixToUint5Array(prefix: string): number[] {
   const result: number[] = [];
@@ -199,7 +195,6 @@ function prefixToUint5Array(prefix: string): number[] {
 
 /**
  * Polynomial modulus for checksum
- * ИСПРАВЛЕНО: Используем BigInt для корректной работы с 40-битными числами
  */
 function polyMod(values: number[]): bigint {
   let checksum = 1n;

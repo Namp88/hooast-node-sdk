@@ -1,5 +1,6 @@
 import * as bech32Hoosat from '../src/utils/bech32-hoosat';
 import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatUtils } from '../src/utils/utils';
 
 // Проблемный адрес из ошибки
 const testAddress = 'hoosat:qz95mwas8ja7ucsernv9z335rdxxqswff7wvzenl29qukn5qs3lsqfsa4pd74';
@@ -24,7 +25,7 @@ try {
 
   // Шаг 3: Валидация через CryptoUtils
   console.log('3️⃣ Валидация через CryptoUtils.isValidAddress:');
-  const isValid = CryptoUtils.isValidAddress(testAddress);
+  const isValid = HoosatUtils.isValidAddress(testAddress);
   console.log(`   Результат: ${isValid ? '✅ VALID' : '❌ INVALID'}\n`);
 
   if (!isValid) {
@@ -62,7 +63,7 @@ const testAddresses = [
 testAddresses.forEach(({ name, address }) => {
   try {
     const decoded = bech32Hoosat.decode(address);
-    const isValid = CryptoUtils.isValidAddress(address);
+    const isValid = HoosatUtils.isValidAddress(address);
     console.log(`   ${name}: ${isValid ? '✅' : '❌'} (version: 0x${decoded.version.toString(16)}, len: ${decoded.payload.length})`);
   } catch (error) {
     console.log(`   ${name}: ❌ Decode failed`);

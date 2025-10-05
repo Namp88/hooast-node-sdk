@@ -53,7 +53,7 @@ if (info.ok) {
 // Check an address balance
 const balance = await node.getBalance('hoosat:qz7ulu...');
 if (balance.ok) {
-  console.log('Balance:', node.formatAmount(balance.result.balance), 'HTN');
+  console.log('Balance:', HoosatUtils.formatAmount(balance.result.balance), 'HTN');
 }
 
 // Get network statistics
@@ -147,7 +147,7 @@ Get balance for a single address.
 ```typescript
 const balance = await node.getBalance('hoosat:qz7ulu...');
 if (balance.ok) {
-  const htn = node.formatAmount(balance.result.balance);
+  const htn = HoosatUtils.formatAmount(balance.result.balance);
   console.log(`Balance: ${htn} HTN`);
 }
 ```
@@ -164,7 +164,7 @@ const balances = await node.getBalances([
 if (balances.ok) {
   const total = balances.result.balances.reduce((sum, item) => 
     sum + BigInt(item.balance), 0n);
-  console.log('Total portfolio:', node.formatAmount(total), 'HTN');
+  console.log('Total portfolio:', HoosatUtils.formatAmount(total), 'HTN');
 }
 ```
 
@@ -177,7 +177,7 @@ if (utxos.ok) {
   console.log('Available UTXOs:', utxos.result.utxos.length);
   
   utxos.result.utxos.forEach(utxo => {
-    console.log(`UTXO: ${node.formatAmount(utxo.utxoEntry.amount)} HTN`);
+    console.log(`UTXO: ${HoosatUtils.formatAmount(utxo.utxoEntry.amount)} HTN`);
     console.log(`TX: ${utxo.outpoint.transactionId}`);
   });
 }
@@ -195,7 +195,7 @@ if (mempool.ok) {
   
   const totalFees = mempool.result.entries.reduce((sum, entry) => 
     sum + BigInt(entry.fee || '0'), 0n);
-  console.log('Total fees:', node.formatAmount(totalFees), 'HTN');
+  console.log('Total fees:', HoosatUtils.formatAmount(totalFees), 'HTN');
 }
 ```
 
@@ -254,8 +254,8 @@ Get coin supply information.
 ```typescript
 const supply = await node.getCoinSupply();
 if (supply.ok) {
-  const circulating = node.formatAmount(supply.result.circulatingSupply);
-  const max = node.formatAmount(supply.result.maxSupply);
+  const circulating = HoosatUtils.formatAmount(supply.result.circulatingSupply);
+  const max = HoosatUtils.formatAmount(supply.result.maxSupply);
   
   console.log(`Circulating: ${circulating} HTN`);
   console.log(`Max supply: ${max} HTN`);
@@ -283,13 +283,13 @@ node.on('utxoChanged', (change) => {
   
   // New UTXOs (incoming payments)
   change.changes.added.forEach(utxo => {
-    const amount = node.formatAmount(utxo.amount);
+    const amount = HoosatUtils.formatAmount(utxo.amount);
     console.log(`✅ Received: ${amount} HTN`);
   });
   
   // Spent UTXOs (outgoing payments)
   change.changes.removed.forEach(utxo => {
-    const amount = node.formatAmount(utxo.amount);
+    const amount = HoosatUtils.formatAmount(utxo.amount);
     console.log(`❌ Spent: ${amount} HTN`);
   });
 });
@@ -327,7 +327,7 @@ if (node.isValidAddress('hoosat:qz7ulu...')) {
 
 ```typescript
 // Convert sompi to HTN
-const htn = node.formatAmount('100000000'); // '1.00000000'
+const htn = HoosatUtils.formatAmount('100000000'); // '1.00000000'
 
 // Convert HTN to sompi
 const sompi = node.parseAmount('1.5'); // '150000000'
@@ -342,7 +342,7 @@ const transactions = await node.getTransactionsByAddress('hoosat:qz7ulu...');
 transactions.forEach(tx => {
   console.log(`${tx.type}: ${tx.transactionId}`);
   if (tx.type === 'confirmed') {
-    console.log(`Amount: ${node.formatAmount(tx.amount)} HTN`);
+    console.log(`Amount: ${HoosatUtils.formatAmount(tx.amount)} HTN`);
   }
 });
 ```
@@ -473,9 +473,9 @@ async function prepareTransaction(fromAddress: string, toAddress: string, amount
   const fee = 1000n; // 1000 sompi fee
   const change = totalInput - targetAmount - fee;
   
-  console.log(`Sending: ${node.formatAmount(targetAmount)} HTN`);
-  console.log(`Fee: ${node.formatAmount(fee)} HTN`);
-  console.log(`Change: ${node.formatAmount(change)} HTN`);
+  console.log(`Sending: ${HoosatUtils.formatAmount(targetAmount)} HTN`);
+  console.log(`Fee: ${HoosatUtils.formatAmount(fee)} HTN`);
+  console.log(`Change: ${HoosatUtils.formatAmount(change)} HTN`);
   
   return {
     inputs: selectedUtxos.map(utxo => utxo.outpoint),

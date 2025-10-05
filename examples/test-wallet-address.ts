@@ -1,5 +1,6 @@
 import { CryptoUtils } from '../src/utils/crypto.utils';
 import * as bech32Hoosat from '../src/utils/bech32-hoosat';
+import { HoosatUtils } from '../src/utils/utils';
 
 /**
  * Быстрая проверка адреса кошелька
@@ -18,7 +19,7 @@ async function testWalletAddress() {
 
   // Проверка валидности адреса
   console.log('2️⃣ Validating address...');
-  const isValid = CryptoUtils.isValidAddress(wallet.address);
+  const isValid = HoosatUtils.isValidAddress(wallet.address);
   console.log(`   Valid: ${isValid ? '✅' : '❌'}\n`);
 
   if (!isValid) {

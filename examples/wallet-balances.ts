@@ -1,4 +1,5 @@
 import { HoosatNode } from '../src';
+import { HoosatUtils } from '../src/utils/utils';
 
 async function demonstrateWalletBalances() {
   const node = new HoosatNode({
@@ -22,10 +23,10 @@ async function demonstrateWalletBalances() {
 
       console.log(`   Адрес: ${address.substring(0, 30)}...`);
       console.log(`   Баланс (raw): ${balance.balance} sompi`);
-      console.log(`   Баланс (HTN): ${node.formatAmount(balance.balance)} HTN`);
+      console.log(`   Баланс (HTN): ${HoosatUtils.sompiToAmount(balance.balance)} HTN`);
 
       // Анализ баланса
-      const balanceHTN = parseFloat(node.formatAmount(balance.balance));
+      const balanceHTN = parseFloat(HoosatUtils.sompiToAmount(balance.balance));
 
       if (balanceHTN === 0) {
         console.log('   Статус: 🔴 Адрес пустой');
@@ -68,7 +69,7 @@ async function demonstrateWalletBalances() {
       let totalBalance = 0n;
 
       balances.forEach((balance, index) => {
-        const balanceHTN = node.formatAmount(balance.balance);
+        const balanceHTN = HoosatUtils.sompiToAmount(balance.balance);
         const shortAddress = balance.address.substring(0, 30) + '...';
 
         console.log(`   ${index + 1}. ${shortAddress}`);
@@ -78,7 +79,7 @@ async function demonstrateWalletBalances() {
       });
 
       console.log('');
-      console.log(`   💎 Общий баланс: ${node.formatAmount(totalBalance.toString())} HTN`);
+      console.log(`   💎 Общий баланс: ${HoosatUtils.sompiToAmount(totalBalance.toString())} HTN`);
 
       // Статистика по балансам
       console.log('\n📊 Статистика:');
@@ -91,7 +92,7 @@ async function demonstrateWalletBalances() {
 
       if (nonZeroBalances.length > 0) {
         const avgBalance = totalBalance / BigInt(nonZeroBalances.length);
-        console.log(`   Средний баланс: ${node.formatAmount(avgBalance.toString())} HTN`);
+        console.log(`   Средний баланс: ${HoosatUtils.sompiToAmount(avgBalance.toString())} HTN`);
       }
     } else {
       console.error('   ❌ Ошибка получения балансов:', balancesResult.error);
@@ -168,8 +169,8 @@ async function analyzeWalletPortfolio(node: HoosatNode, addresses: string[]) {
   return {
     totalAddresses: addresses.length,
     activeAddresses,
-    totalBalance: node.formatAmount(totalBalance.toString()),
-    largestBalance: node.formatAmount(largestBalance.toString()),
+    totalBalance: HoosatUtils.sompiToAmount(totalBalance.toString()),
+    largestBalance: HoosatUtils.sompiToAmount(largestBalance.toString()),
     distribution,
   };
 }
@@ -202,7 +203,7 @@ async function monitorBalanceChanges(node: HoosatNode, addresses: string[]): Pro
 
           if (balance.balance !== previousBalance) {
             const change = BigInt(balance.balance) - BigInt(previousBalance);
-            const changeHTN = node.formatAmount(change.toString());
+            const changeHTN = HoosatUtils.sompiToAmount(change.toString());
             const direction = change > 0n ? '📈' : '📉';
             const shortAddress = balance.address.substring(0, 20) + '...';
 

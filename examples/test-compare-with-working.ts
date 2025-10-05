@@ -1,4 +1,5 @@
 import { CryptoUtils } from '../src/utils/crypto.utils';
+import { HoosatUtils } from '../src/utils/utils';
 
 /**
  * Тест сравнения с РАБОЧИМ примером от разработчика
@@ -60,7 +61,7 @@ async function compareWithWorkingExample() {
   workingExample.outputs.forEach((output, idx) => {
     const scriptBuf = Buffer.from(output.scriptPublicKey.scriptPublicKey, 'hex');
     console.log(`\n  Output ${idx}:`);
-    console.log(`    Amount: ${output.amount} sompi (${CryptoUtils.formatAmount(output.amount.toString())} HTN)`);
+    console.log(`    Amount: ${output.amount} sompi (${HoosatUtils.sompiToAmount(output.amount.toString())} HTN)`);
     console.log(`    Script: ${output.scriptPublicKey.scriptPublicKey}`);
     console.log(`    Length: ${scriptBuf.length} bytes`);
 
@@ -135,7 +136,7 @@ async function compareWithWorkingExample() {
 
     const walletScript = CryptoUtils.addressToScriptPublicKey(wallet.address);
     console.log(`    Script: ${walletScript.toString('hex')}`);
-    console.log(`    Valid: ${CryptoUtils.isValidAddress(wallet.address) ? '✅' : '❌'}\n`);
+    console.log(`    Valid: ${HoosatUtils.isValidAddress(wallet.address) ? '✅' : '❌'}\n`);
   } catch (error: any) {
     console.error(`  ❌ Error:`, error.message, '\n');
   }

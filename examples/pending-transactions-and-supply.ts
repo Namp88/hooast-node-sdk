@@ -1,4 +1,5 @@
 import { HoosatNode } from '../src';
+import { HoosatUtils } from '../src/utils/utils';
 
 async function demonstrateNewFeatures() {
   const node = new HoosatNode({
@@ -19,8 +20,8 @@ async function demonstrateNewFeatures() {
       const supply = supplyResult.result;
 
       console.log('✅ Информация об эмиссии:');
-      console.log(`   Максимальная эмиссия: ${node.formatAmount(supply.maxSupply)} HTN`);
-      console.log(`   В обращении: ${node.formatAmount(supply.circulatingSupply)} HTN`);
+      console.log(`   Максимальная эмиссия: ${HoosatUtils.sompiToAmount(supply.maxSupply)} HTN`);
+      console.log(`   В обращении: ${HoosatUtils.sompiToAmount(supply.circulatingSupply)} HTN`);
 
       // Расчет процента выпуска
       const circulatingBig = BigInt(supply.circulatingSupply);
@@ -31,7 +32,7 @@ async function demonstrateNewFeatures() {
 
       // Оставшиеся к выпуску
       const remaining = maxBig - circulatingBig;
-      console.log(`   Осталось к выпуску: ${node.formatAmount(remaining.toString())} HTN`);
+      console.log(`   Осталось к выпуску: ${HoosatUtils.sompiToAmount(remaining.toString())} HTN`);
 
       // Анализ инфляции
       console.log('\n📊 Анализ эмиссии:');
@@ -84,7 +85,7 @@ async function demonstrateNewFeatures() {
             console.log(`   📤 Исходящих: ${sendingCount}`);
 
             entry.sending.forEach((tx, index) => {
-              const fee = node.formatAmount(tx.fee);
+              const fee = HoosatUtils.sompiToAmount(tx.fee);
               const status = tx.isOrphan ? ' (orphan)' : '';
               console.log(`      ${index + 1}. ${tx.transaction.transactionId.substring(0, 20)}... (комиссия: ${fee} HTN)${status}`);
             });
@@ -200,7 +201,7 @@ async function analyzeMempoolFees(node: HoosatNode, addresses: string[]): Promis
 
     pendingResult.result.entries.forEach(entry => {
       entry.sending.forEach(tx => {
-        const feeHTN = parseFloat(node.formatAmount(tx.fee));
+        const feeHTN = parseFloat(HoosatUtils.sompiToAmount(tx.fee));
         allFees.push(feeHTN);
       });
     });
@@ -239,8 +240,8 @@ async function compareEmissionModels(node: HoosatNode): Promise<void> {
     }
 
     const supply = supplyResult.result;
-    const maxSupplyHTN = parseFloat(node.formatAmount(supply.maxSupply));
-    const circulatingHTN = parseFloat(node.formatAmount(supply.circulatingSupply));
+    const maxSupplyHTN = parseFloat(HoosatUtils.sompiToAmount(supply.maxSupply));
+    const circulatingHTN = parseFloat(HoosatUtils.sompiToAmount(supply.circulatingSupply));
 
     console.log('📊 Сравнение эмиссионных моделей:');
 

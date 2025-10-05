@@ -14,8 +14,15 @@
     "resolveJsonModule": true,
     "baseUrl": "./",
     "paths": {
+      "@constants/*": ["src/constants/*"],
       "@enums/*": ["src/enums/*"],
-      "@models/*": ["src/models/*"]
+      "@models/*": ["src/models/*"],
+      "@streaming/*": ["src/streaming/*"],
+      "@transaction/*": ["src/transaction/*"],
+      "@utils/*": ["src/utils/*"],
+      "@helpers/*": ["src/helpers/*"],
+      "@core/*": ["src/core/*"],
+      "@services/*": ["src/services/*"]
     }
   },
   "include": ["src/**/*"],

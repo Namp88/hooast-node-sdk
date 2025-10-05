@@ -1,5 +1,7 @@
 import { HoosatNode } from '../src';
-import { CryptoUtils, TransactionBuilder } from '../src/utils/crypto.utils';
+import { CryptoUtils } from '../src/utils/crypto.utils';
+import { TransactionBuilder } from '../src/transaction/transaction.builder';
+import { HoosatUtils } from '../src/utils/utils';
 
 async function testRealSigning() {
   console.log('🌐 Testing with Real Node\n');
@@ -39,7 +41,7 @@ async function testRealSigning() {
     return;
   }
 
-  console.log(`   Balance: ${node.formatAmount(balance.result.balance)} HTN\n`);
+  console.log(`   Balance: ${HoosatUtils.sompiToAmount(balance.result.balance)} HTN\n`);
 
   if (balance.result.balance === '0') {
     console.log('⚠️  No funds available for testing');
@@ -58,7 +60,7 @@ async function testRealSigning() {
   const utxo = utxos.result.utxos[0];
   console.log(`✅ Found ${utxos.result.utxos.length} UTXOs`);
   console.log(`   Using UTXO: ${utxo.outpoint.transactionId.slice(0, 20)}...`);
-  console.log(`   Amount: ${node.formatAmount(utxo.utxoEntry.amount)} HTN`);
+  console.log(`   Amount: ${HoosatUtils.sompiToAmount(utxo.utxoEntry.amount)} HTN`);
   console.log(`   ScriptPubKey: ${utxo.utxoEntry.scriptPublicKey.scriptPublicKey}`);
   console.log(`   Version: ${utxo.utxoEntry.scriptPublicKey.version}\n`);
 
@@ -87,7 +89,7 @@ async function testRealSigning() {
 
   try {
     const inputAmount = BigInt(utxo.utxoEntry.amount);
-    const sendAmount = BigInt(node.parseAmount(amountToSend));
+    const sendAmount = BigInt(HoosatUtils.amountToSompi(amountToSend));
     const fee = 100000n;
     const change = inputAmount - sendAmount - fee;
 
@@ -120,10 +122,10 @@ async function testRealSigning() {
     builder.setFee(fee.toString());
 
     console.log('\n📊 Transaction amounts:');
-    console.log(`   Input: ${node.formatAmount(inputAmount)} HTN`);
-    console.log(`   Send: ${node.formatAmount(sendAmount)} HTN`);
-    console.log(`   Fee: ${node.formatAmount(fee)} HTN`);
-    console.log(`   Change: ${node.formatAmount(change)} HTN\n`);
+    console.log(`   Input: ${HoosatUtils.sompiToAmount(inputAmount)} HTN`);
+    console.log(`   Send: ${HoosatUtils.sompiToAmount(sendAmount)} HTN`);
+    console.log(`   Fee: ${HoosatUtils.sompiToAmount(fee)} HTN`);
+    console.log(`   Change: ${HoosatUtils.sompiToAmount(change)} HTN\n`);
 
     // 6. Подписываем (с полным debug)
     console.log('6️⃣ Signing transaction...\n');
