@@ -36,7 +36,8 @@
     "test:real-tx": "tsx examples/test-real-transaction.ts",
     "test:send-real-htn": "tsx examples/send-real-htn.ts",
 
-    "test:bench32": "tsx examples/test-bech32.ts"
+    "test:bench32": "tsx examples/test-bech32.ts",
+    "test:pubkey": "tsx examples/test-pubkey-match.ts"
   },
   "keywords": [
     "hoosat",

@@ -5,6 +5,12 @@ console.log('📝 Создание тестового кошелька\n');
 
 const wallet = CryptoUtils.generateKeyPair();
 
+console.log('Debug info:');
+console.log('Private key:', wallet.privateKey.toString('hex'));
+console.log('Public key:', wallet.publicKey.toString('hex'));
+console.log('Address:', wallet.address);
+console.log('Address length:', wallet.address.length);
+
 console.log('✅ Кошелек создан:');
 console.log(`Address: ${wallet.address}`);
 console.log(`Private Key: ${wallet.privateKey.toString('hex')}\n`);

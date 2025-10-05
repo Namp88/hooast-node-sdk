@@ -3,23 +3,20 @@ import { CryptoUtils, TransactionBuilder } from '../src/utils/crypto.utils';
 
 /**
  * Полный пример отправки HTN с адреса
- * Все что нужно - это privateKey от адреса
+ * ИСПРАВЛЕННАЯ ВЕРСИЯ с правильным keyed blake3
  */
 async function sendHTN() {
-  // 1️⃣ Восстанавливаем кошелек из приватного ключа
-  const privateKeyHex = '4ca34b781f6eaeee59be8d9629516d9b1d16e587e57890d1b381c72fcb8a9e4a'; // Сохраненный при генерации
+  const privateKeyHex = '33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43';
   const wallet = CryptoUtils.importKeyPair(privateKeyHex);
 
   console.log('💼 Кошелек восстановлен:');
   console.log(`   Адрес: ${wallet.address}\n`);
 
-  // 2️⃣ Подключаемся к ноде
   const node = new HoosatNode({
     host: '54.38.176.95',
     port: 42420,
   });
 
-  // 3️⃣ Проверяем баланс
   console.log('💰 Проверяем баланс...');
   const balanceResult = await node.getBalance(wallet.address);
 
@@ -31,7 +28,6 @@ async function sendHTN() {
   const balance = balanceResult.result.balance;
   console.log(`   Баланс: ${node.formatAmount(balance)} HTN\n`);
 
-  // 4️⃣ Получаем UTXOs для создания транзакции
   console.log('📦 Получаем UTXOs...');
   const utxosResult = await node.getUtxosByAddresses([wallet.address]);
 
@@ -43,22 +39,19 @@ async function sendHTN() {
   const utxos = utxosResult.result.utxos;
   console.log(`   Найдено ${utxos.length} UTXO\n`);
 
-  // 5️⃣ Параметры отправки
-  const recipientAddress = 'hoosat:qz95mwas8ja7ucsernv9z335rdxxqswff7wvzenl29qukn5qs3lsqfsa4pd74'; // Куда отправляем
-  const amountToSend = '0.25'; // Сколько HTN отправить
+  const recipientAddress = 'hoosat:qz95mwas8ja7ucsernv9z335rdxxqswff7wvzenl29qukn5qs3lsqfsa4pd74';
+  const amountToSend = '0.25';
 
   console.log('📤 Создаем транзакцию:');
   console.log(`   Отправить: ${amountToSend} HTN`);
   console.log(`   На адрес: ${recipientAddress}\n`);
 
   try {
-    // 6️⃣ Создаем и подписываем транзакцию
     const transaction = await buildAndSignTransaction(wallet.privateKey, wallet.address, recipientAddress, amountToSend, utxos, node);
 
     console.log('✅ Транзакция создана и подписана!');
     console.log(`   TX ID: ${CryptoUtils.getTransactionId(transaction)}\n`);
 
-    // 7️⃣ Отправляем в сеть
     console.log('🌐 Отправляем в сеть...');
     const submitResult = await node.submitTransaction(transaction);
 
@@ -74,9 +67,6 @@ async function sendHTN() {
   }
 }
 
-/**
- * Создание и подписание транзакции
- */
 async function buildAndSignTransaction(
   privateKey: Buffer,
   fromAddress: string,
@@ -87,13 +77,9 @@ async function buildAndSignTransaction(
 ) {
   const builder = new TransactionBuilder();
 
-  // Конвертируем сумму в sompi
   const targetAmount = BigInt(node.parseAmount(amountHTN));
+  const estimatedFee = BigInt(CryptoUtils.calculateFee(utxos.length, 2));
 
-  // Оцениваем комиссию
-  const estimatedFee = BigInt(CryptoUtils.calculateFee(utxos.length, 2)); // 2 outputs (получатель + сдача)
-
-  // Выбираем UTXOs
   const { selectedUtxos, totalInput } = selectUtxosForAmount(utxos, targetAmount + estimatedFee);
 
   if (selectedUtxos.length === 0) {
@@ -105,14 +91,17 @@ async function buildAndSignTransaction(
   console.log(`      Комиссия: ${node.formatAmount(estimatedFee)} HTN`);
   console.log(`      UTXOs: ${selectedUtxos.length}`);
 
-  // Добавляем inputs
+  // КРИТИЧНО: Правильная структура scriptPublicKey из ответа ноды!
   selectedUtxos.forEach(utxo => {
     builder.addInput(
       {
         outpoint: utxo.outpoint,
         utxoEntry: {
           amount: utxo.utxoEntry.amount,
-          scriptPublicKey: utxo.utxoEntry.scriptPublicKey.scriptPublicKey,
+          scriptPublicKey: {
+            version: utxo.utxoEntry.scriptPublicKey.version,
+            script: utxo.utxoEntry.scriptPublicKey.scriptPublicKey, // ← ТУТ правильное поле!
+          },
           blockDaaScore: utxo.utxoEntry.blockDaaScore,
           isCoinbase: utxo.utxoEntry.isCoinbase,
         },
@@ -121,31 +110,21 @@ async function buildAndSignTransaction(
     );
   });
 
-  // Output для получателя
   builder.addOutput(toAddress, targetAmount.toString());
 
-  // Сдача (change) возвращаем себе
   const change = totalInput - targetAmount - estimatedFee;
   if (change > 0n) {
     builder.addOutput(fromAddress, change.toString());
     console.log(`      Сдача: ${node.formatAmount(change)} HTN`);
   }
 
-  // Устанавливаем комиссию
   builder.setFee(estimatedFee.toString());
-
-  // Валидируем перед подписью
   builder.validate();
 
-  // Подписываем
   return await builder.sign();
 }
 
-/**
- * Выбор UTXOs для суммы
- */
 function selectUtxosForAmount(utxos: any[], targetAmount: bigint): { selectedUtxos: any[]; totalInput: bigint } {
-  // Сортируем от большего к меньшему
   const sorted = [...utxos].sort((a, b) => {
     const amountA = BigInt(a.utxoEntry.amount);
     const amountB = BigInt(b.utxoEntry.amount);
@@ -168,5 +147,4 @@ function selectUtxosForAmount(utxos: any[], targetAmount: bigint): { selectedUtx
   return { selectedUtxos: selected, totalInput };
 }
 
-// Запуск
 sendHTN().catch(console.error);

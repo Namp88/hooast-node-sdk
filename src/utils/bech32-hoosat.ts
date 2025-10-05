@@ -1,35 +1,30 @@
 /**
  * Hoosat Bech32 implementation
- * Based on HTND/util/bech32/bech32.go
- *
- * ИСПРАВЛЕНО: Использует BigInt для корректной работы с большими числами
+ * ТОЧНАЯ ПОРТАЦИЯ из github.com/Hoosat-Oy/HTND/util/bech32
  */
 
 const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 const CHECKSUM_LENGTH = 8;
-const GENERATOR = [0x98f2bc8e61, 0x79b76d99e2, 0xf33e5fb3c4, 0xae2eabe2a8, 0x1e4f43e470];
+// ИСПРАВЛЕНО: Используем BigInt для 40-битных чисел
+const GENERATOR = [0x98f2bc8e61n, 0x79b76d99e2n, 0xf33e5fb3c4n, 0xae2eabe2a8n, 0x1e4f43e470n];
 
 /**
  * Encodes data to Hoosat Bech32 format
- * @param prefix - Address prefix (e.g., "hoosat")
- * @param payload - Raw payload bytes
- * @param version - Version byte (0x00 for Schnorr, 0x01 for ECDSA, 0x08 for ScriptHash)
  */
 export function encode(prefix: string, payload: Buffer, version: number): string {
-  // 1. Prepend version byte
+  // Prepend version byte
   const data = Buffer.concat([Buffer.from([version]), payload]);
 
-  // 2. Convert from 8-bit bytes to 5-bit values
+  // Convert from 8-bit to 5-bit
   const converted = convertBits(data, 8, 5, true);
 
-  // 3. Calculate checksum
+  // Calculate checksum
   const checksum = calculateChecksum(prefix, converted);
   const combined = Buffer.concat([converted, checksum]);
 
-  // 4. Encode to base32
+  // Encode to base32
   const base32String = encodeToBase32(combined);
 
-  // 5. Format with colon separator (not "1"!)
   return `${prefix}:${base32String}`;
 }
 
@@ -40,6 +35,14 @@ export function decode(encoded: string): { prefix: string; payload: Buffer; vers
   // Validation
   if (encoded.length < CHECKSUM_LENGTH + 2) {
     throw new Error(`Invalid bech32 string length ${encoded.length}`);
+  }
+
+  // ASCII validation
+  for (let i = 0; i < encoded.length; i++) {
+    const charCode = encoded.charCodeAt(i);
+    if (charCode < 33 || charCode > 126) {
+      throw new Error(`Invalid character in string: '${encoded[i]}'`);
+    }
   }
 
   // Must be lowercase or uppercase
@@ -67,7 +70,9 @@ export function decode(encoded: string): { prefix: string; payload: Buffer; vers
 
   // Verify checksum
   if (!verifyChecksum(prefix, decoded)) {
-    throw new Error('Checksum verification failed');
+    const checksum = dataString.slice(-CHECKSUM_LENGTH);
+    const expected = encodeToBase32(calculateChecksum(prefix, decoded.slice(0, -CHECKSUM_LENGTH)));
+    throw new Error(`Checksum failed. Expected ${expected}, got ${checksum}`);
   }
 
   // Remove checksum (last 8 bytes)
@@ -85,55 +90,44 @@ export function decode(encoded: string): { prefix: string; payload: Buffer; vers
 
 /**
  * Converts between bit groups
- * ИСПРАВЛЕНО: Более мягкая обработка padding
+ * ИСПРАВЛЕНО: Правильная обработка масок для 5-бит значений
  */
 function convertBits(data: Buffer, fromBits: number, toBits: number, pad: boolean): Buffer {
-  const result: number[] = [];
-  let accumulator = 0;
-  let bits = 0;
-  const maxValue = (1 << toBits) - 1;
+  const regrouped: number[] = [];
+  let nextByte = 0;
+  let filledBits = 0;
 
   for (const value of data) {
-    // Проверяем валидность входного значения
-    if (value < 0 || value >> fromBits !== 0) {
-      throw new Error(`Invalid value for ${fromBits}-bit conversion: ${value}`);
-    }
+    // Accumulate bits from input
+    nextByte = (nextByte << fromBits) | value;
+    filledBits += fromBits;
 
-    accumulator = (accumulator << fromBits) | value;
-    bits += fromBits;
-
-    while (bits >= toBits) {
-      bits -= toBits;
-      result.push((accumulator >> bits) & maxValue);
+    // Extract complete groups
+    while (filledBits >= toBits) {
+      filledBits -= toBits;
+      regrouped.push((nextByte >> filledBits) & ((1 << toBits) - 1));
+      nextByte &= (1 << filledBits) - 1;
     }
   }
 
-  if (pad) {
-    if (bits > 0) {
-      result.push((accumulator << (toBits - bits)) & maxValue);
-    }
-  } else {
-    // При декодировании (pad=false) игнорируем padding биты
-    // Проверяем только что нет значащих битов
-    if (bits >= fromBits) {
-      throw new Error('Invalid padding in conversion');
-    }
-    if (bits > 0 && ((accumulator << (toBits - bits)) & maxValue) !== 0) {
-      throw new Error('Non-zero padding bits');
-    }
+  // Handle remaining bits
+  if (pad && filledBits > 0) {
+    regrouped.push((nextByte << (toBits - filledBits)) & ((1 << toBits) - 1));
+  } else if (filledBits >= fromBits || (filledBits > 0 && nextByte !== 0)) {
+    throw new Error('Invalid padding in conversion');
   }
 
-  return Buffer.from(result);
+  return Buffer.from(regrouped);
 }
 
 /**
- * Encodes to base32 using Hoosat charset
+ * Encodes to base32
  */
 function encodeToBase32(data: Buffer): string {
   let result = '';
   for (const b of data) {
     if (b >= CHARSET.length) {
-      throw new Error(`Invalid value for base32: ${b}`);
+      return '';
     }
     result += CHARSET[b];
   }
@@ -141,7 +135,7 @@ function encodeToBase32(data: Buffer): string {
 }
 
 /**
- * Decodes from base32 using Hoosat charset
+ * Decodes from base32
  */
 function decodeFromBase32(str: string): Buffer {
   const result: number[] = [];
@@ -156,76 +150,70 @@ function decodeFromBase32(str: string): Buffer {
 }
 
 /**
- * Calculates checksum
- * ИСПРАВЛЕНО: Использует BigInt в polyMod
+ * Calculates checksum (ИСПРАВЛЕНО: используем BigInt для 40-бит)
  */
-function calculateChecksum(prefix: string, data: Buffer): Buffer {
-  const prefixValues = prefixToUint5Array(prefix);
-  const values = [
-    ...prefixValues,
-    0,
-    ...Array.from(data),
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0, // 8 zeros
-  ];
+function calculateChecksum(prefix: string, payload: Buffer): Buffer {
+  const prefixLower5Bits = prefixToUint5Array(prefix);
+  const payloadInts = Array.from(payload);
+  const templateZeroes = [0, 0, 0, 0, 0, 0, 0, 0];
 
-  const polyModResult = polyMod(values);
+  // Concatenate: prefix + 0 + payload + zeros
+  const concat = [...prefixLower5Bits, 0, ...payloadInts, ...templateZeroes];
 
-  const checksum: number[] = [];
+  const polyModResult = polyMod(concat);
+
+  const res: number[] = [];
   for (let i = 0; i < CHECKSUM_LENGTH; i++) {
-    // Используем BigInt для больших сдвигов
-    const shift = 5 * (CHECKSUM_LENGTH - 1 - i);
-    const value = Number((BigInt(polyModResult) >> BigInt(shift)) & 31n);
-    checksum.push(value);
+    // ИСПРАВЛЕНО: работаем через BigInt
+    res.push(Number((polyModResult >> BigInt(5 * (CHECKSUM_LENGTH - 1 - i))) & 31n));
   }
 
-  return Buffer.from(checksum);
+  return Buffer.from(res);
 }
 
 /**
- * Verifies checksum
+ * Verifies checksum (ИСПРАВЛЕНО: polyMod возвращает BigInt)
  */
-function verifyChecksum(prefix: string, data: Buffer): boolean {
-  const prefixValues = prefixToUint5Array(prefix);
-  const values = [...prefixValues, 0, ...Array.from(data)];
-  return polyMod(values) === 0;
+function verifyChecksum(prefix: string, payload: Buffer): boolean {
+  const prefixLower5Bits = prefixToUint5Array(prefix);
+  const payloadInts = Array.from(payload);
+
+  // Concatenate: prefix + 0 + payload
+  const dataToVerify = [...prefixLower5Bits, 0, ...payloadInts];
+
+  return polyMod(dataToVerify) === 0n; // BigInt сравнение
 }
 
 /**
- * Converts prefix string to uint5 array
+ * Converts prefix to uint5 array (ТОЧНАЯ ПОРТАЦИЯ из Go)
+ * ВАЖНО: берет ТОЛЬКО младшие 5 бит, без expand!
  */
 function prefixToUint5Array(prefix: string): number[] {
   const result: number[] = [];
-  for (const char of prefix) {
-    result.push(char.charCodeAt(0) & 31);
+  for (let i = 0; i < prefix.length; i++) {
+    const char = prefix.charCodeAt(i);
+    result.push(char & 31);
   }
   return result;
 }
 
 /**
- * Polynomial modulus for checksum calculation
- * ИСПРАВЛЕНО: Использует BigInt для корректной работы с 40-битными числами
+ * Polynomial modulus for checksum
+ * ИСПРАВЛЕНО: Используем BigInt для корректной работы с 40-битными числами
  */
-function polyMod(values: number[]): number {
-  let checksum = 1n; // BigInt для работы с большими числами!
+function polyMod(values: number[]): bigint {
+  let checksum = 1n;
 
   for (const value of values) {
     const topBits = checksum >> 35n;
-    checksum = ((checksum & 0x07fffffffffn) << 5n) ^ BigInt(value);
+    checksum = ((checksum & 0x07ffffffffn) << 5n) ^ BigInt(value);
 
     for (let i = 0; i < GENERATOR.length; i++) {
-      if ((topBits >> BigInt(i)) & 1n) {
-        checksum ^= BigInt(GENERATOR[i]);
+      if (((topBits >> BigInt(i)) & 1n) === 1n) {
+        checksum ^= GENERATOR[i];
       }
     }
   }
 
-  // Возвращаем как обычное число
-  return Number(checksum ^ 1n);
+  return checksum ^ 1n;
 }
