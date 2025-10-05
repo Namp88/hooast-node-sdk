@@ -248,19 +248,99 @@ export class CryptoUtils {
    *
    * @param address - Address string to validate
    * @returns True if valid, false otherwise
-   *
-   * @example
-   * ```typescript
-   * if (CryptoUtils.isValidAddress('hoosat:qz7ulu...')) {
-   *   console.log('Valid address');
-   * }
-   * ```
    */
   static isValidAddress(address: string): boolean {
+    if (!address || typeof address !== 'string') {
+      return false;
+    }
+
+    // Check basic format
+    if (!address.startsWith('hoosat:')) {
+      return false;
+    }
+
     try {
+      // Try to decode bech32
       const decoded = bech32.decode(address);
-      return decoded.prefix === HOOSAT_PARAMS.ADDRESS_PREFIX && decoded.words.length > 0;
-    } catch {
+
+      // Check prefix
+      if (decoded.prefix !== 'hoosat') {
+        return false;
+      }
+
+      // Check if we have data
+      if (!decoded.words || decoded.words.length === 0) {
+        return false;
+      }
+
+      // Convert from 5-bit to bytes to validate length
+      try {
+        const bytes = bech32.fromWords(decoded.words);
+
+        // Hoosat addresses should have 20 bytes of data (160 bits)
+        // This is the standard for P2PKH addresses
+        if (bytes.length !== 20) {
+          return false;
+        }
+
+        return true;
+      } catch (conversionError) {
+        // Conversion from 5-bit words failed
+        return false;
+      }
+    } catch (decodeError) {
+      // bech32 decode failed
+      return false;
+    }
+  }
+
+  /**
+   * More permissive address validation for testing
+   * Use this if the strict validation is too restrictive
+   */
+  static isValidAddressPermissive(address: string): boolean {
+    if (!address || typeof address !== 'string') {
+      return false;
+    }
+
+    // Check basic format
+    if (!address.startsWith('hoosat:')) {
+      return false;
+    }
+
+    // Check minimum length (hoosat: + some data)
+    if (address.length < 15) {
+      return false;
+    }
+
+    try {
+      // Try to decode bech32
+      const decoded = bech32.decode(address);
+
+      // Check prefix
+      if (decoded.prefix !== 'hoosat') {
+        return false;
+      }
+
+      // Check if we have data
+      if (!decoded.words || decoded.words.length === 0) {
+        return false;
+      }
+
+      // Don't validate exact length - just check it's reasonable
+      try {
+        const bytes = bech32.fromWords(decoded.words);
+
+        // Accept any reasonable length (10-32 bytes)
+        if (bytes.length < 10 || bytes.length > 32) {
+          return false;
+        }
+
+        return true;
+      } catch (conversionError) {
+        return false;
+      }
+    } catch (decodeError) {
       return false;
     }
   }
