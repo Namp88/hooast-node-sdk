@@ -33,7 +33,10 @@
     "test:crypto:real": "tsx examples/test-real-transaction.ts",
 
     "create:test-wallet": "tsx examples/create-test-wallet.ts",
-    "test:real-tx": "tsx examples/test-real-transaction.ts"
+    "test:real-tx": "tsx examples/test-real-transaction.ts",
+    "test:send-real-htn": "tsx examples/send-real-htn.ts",
+
+    "test:bench32": "tsx examples/test-bech32.ts"
   },
   "keywords": [
     "hoosat",

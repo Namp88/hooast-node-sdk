@@ -1,6 +1,8 @@
 /**
  * Hoosat Bech32 implementation
  * Based on HTND/util/bech32/bech32.go
+ *
+ * ИСПРАВЛЕНО: Использует BigInt для корректной работы с большими числами
  */
 
 const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
@@ -83,45 +85,42 @@ export function decode(encoded: string): { prefix: string; payload: Buffer; vers
 
 /**
  * Converts between bit groups
- * ТОЧНАЯ копия из HTND/util/bech32/bech32.go
+ * ИСПРАВЛЕНО: Более мягкая обработка padding
  */
 function convertBits(data: Buffer, fromBits: number, toBits: number, pad: boolean): Buffer {
   const result: number[] = [];
-  let nextByte = 0;
-  let filledBits = 0;
+  let accumulator = 0;
+  let bits = 0;
+  const maxValue = (1 << toBits) - 1;
 
-  for (const b of data) {
-    // Discard unused bits
-    let value = b << (8 - fromBits);
+  for (const value of data) {
+    // Проверяем валидность входного значения
+    if (value < 0 || value >> fromBits !== 0) {
+      throw new Error(`Invalid value for ${fromBits}-bit conversion: ${value}`);
+    }
 
-    let remainingFromBits = fromBits;
-    while (remainingFromBits > 0) {
-      const remainingToBits = toBits - filledBits;
+    accumulator = (accumulator << fromBits) | value;
+    bits += fromBits;
 
-      // Extract minimum of remaining bits
-      const toExtract = Math.min(remainingFromBits, remainingToBits);
-
-      // Add bits to nextByte
-      nextByte = (nextByte << toExtract) | (value >> (8 - toExtract));
-
-      // Update for next iteration
-      value = value << toExtract;
-      remainingFromBits -= toExtract;
-      filledBits += toExtract;
-
-      // If byte is full, add to result
-      if (filledBits === toBits) {
-        result.push(nextByte);
-        filledBits = 0;
-        nextByte = 0;
-      }
+    while (bits >= toBits) {
+      bits -= toBits;
+      result.push((accumulator >> bits) & maxValue);
     }
   }
 
-  // Pad if needed
-  if (pad && filledBits > 0) {
-    nextByte = nextByte << (toBits - filledBits);
-    result.push(nextByte);
+  if (pad) {
+    if (bits > 0) {
+      result.push((accumulator << (toBits - bits)) & maxValue);
+    }
+  } else {
+    // При декодировании (pad=false) игнорируем padding биты
+    // Проверяем только что нет значащих битов
+    if (bits >= fromBits) {
+      throw new Error('Invalid padding in conversion');
+    }
+    if (bits > 0 && ((accumulator << (toBits - bits)) & maxValue) !== 0) {
+      throw new Error('Non-zero padding bits');
+    }
   }
 
   return Buffer.from(result);
@@ -158,6 +157,7 @@ function decodeFromBase32(str: string): Buffer {
 
 /**
  * Calculates checksum
+ * ИСПРАВЛЕНО: Использует BigInt в polyMod
  */
 function calculateChecksum(prefix: string, data: Buffer): Buffer {
   const prefixValues = prefixToUint5Array(prefix);
@@ -179,7 +179,10 @@ function calculateChecksum(prefix: string, data: Buffer): Buffer {
 
   const checksum: number[] = [];
   for (let i = 0; i < CHECKSUM_LENGTH; i++) {
-    checksum.push((polyModResult >> (5 * (CHECKSUM_LENGTH - 1 - i))) & 31);
+    // Используем BigInt для больших сдвигов
+    const shift = 5 * (CHECKSUM_LENGTH - 1 - i);
+    const value = Number((BigInt(polyModResult) >> BigInt(shift)) & 31n);
+    checksum.push(value);
   }
 
   return Buffer.from(checksum);
@@ -207,21 +210,22 @@ function prefixToUint5Array(prefix: string): number[] {
 
 /**
  * Polynomial modulus for checksum calculation
+ * ИСПРАВЛЕНО: Использует BigInt для корректной работы с 40-битными числами
  */
 function polyMod(values: number[]): number {
-  let checksum = 1;
+  let checksum = 1n; // BigInt для работы с большими числами!
 
   for (const value of values) {
-    const topBits = checksum >>> 35; // Используй >>> (unsigned shift)
-    checksum = ((checksum & 0x07ffffffff) << 5) ^ value;
+    const topBits = checksum >> 35n;
+    checksum = ((checksum & 0x07fffffffffn) << 5n) ^ BigInt(value);
 
     for (let i = 0; i < GENERATOR.length; i++) {
-      if ((topBits >>> i) & 1) {
-        // Используй >>> везде
-        checksum ^= GENERATOR[i];
+      if ((topBits >> BigInt(i)) & 1n) {
+        checksum ^= BigInt(GENERATOR[i]);
       }
     }
   }
 
-  return checksum ^ 1;
+  // Возвращаем как обычное число
+  return Number(checksum ^ 1n);
 }

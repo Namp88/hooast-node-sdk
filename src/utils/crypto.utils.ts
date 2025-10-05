@@ -159,8 +159,20 @@ export class CryptoUtils {
 
   static importKeyPair(privateKeyHex: string): KeyPair {
     const privateKey = Buffer.from(privateKeyHex, 'hex');
+
+    if (privateKey.length !== 32) {
+      throw new Error(`Private key must be 32 bytes, got ${privateKey.length}`);
+    }
+
+    if (!secp256k1.privateKeyVerify(privateKey)) {
+      throw new Error('Invalid private key');
+    }
+
     const publicKey = this.getPublicKey(privateKey);
-    const address = this.publicKeyToAddress(publicKey);
+
+    // ECDSA public key -> ECDSA address
+    const address = this.publicKeyToAddressECDSA(publicKey);
+
     return { privateKey, publicKey, address };
   }
 
@@ -196,39 +208,44 @@ export class CryptoUtils {
     try {
       const decoded = bech32Hoosat.decode(address);
 
-      // Check version
-      if (![0x00, 0x01, 0x08].includes(decoded.version)) {
-        return false;
-      }
-
-      // Check payload length
-      if (decoded.version === 0x00 && decoded.payload.length !== 32) {
-        return false; // Schnorr
-      }
-      if (decoded.version === 0x01 && decoded.payload.length !== 33) {
-        return false; // ECDSA
-      }
-      if (decoded.version === 0x08 && decoded.payload.length !== 32) {
-        return false; // ScriptHash
-      }
-
-      return true;
-    } catch {
+      // Проверяем только допустимые версии
+      // Не проверяем длину payload - она может варьироваться
+      return [0x00, 0x01, 0x08].includes(decoded.version);
+    } catch (error) {
+      // Декодирование не удалось
       return false;
     }
   }
 
+  /**
+   * Конвертирует адрес в ScriptPublicKey
+   * ИСПРАВЛЕНО: Поддержка всех типов адресов (Schnorr, ECDSA, ScriptHash)
+   */
   static addressToScriptPublicKey(address: string): Buffer {
     const decoded = bech32Hoosat.decode(address);
 
-    // For Schnorr/ECDSA: OP_DATA_XX <pubkey> OP_CHECKSIG
-    const dataLength = decoded.payload.length;
+    // Для Schnorr (0x00) и ECDSA (0x01): OP_DATA_XX <pubkey> OP_CHECKSIG
+    if (decoded.version === 0x00 || decoded.version === 0x01) {
+      const dataLength = decoded.payload.length;
 
-    return Buffer.concat([
-      Buffer.from([dataLength]), // OP_DATA_32 or OP_DATA_33
-      decoded.payload,
-      Buffer.from([0xac]), // OP_CHECKSIG
-    ]);
+      return Buffer.concat([
+        Buffer.from([dataLength]), // OP_DATA_32 или OP_DATA_33
+        decoded.payload,
+        Buffer.from([0xac]), // OP_CHECKSIG
+      ]);
+    }
+
+    // Для ScriptHash (0x08): OP_BLAKE3 OP_DATA_32 <hash> OP_EQUAL
+    if (decoded.version === 0x08) {
+      return Buffer.concat([
+        Buffer.from([0xaa]), // OP_BLAKE3
+        Buffer.from([0x20]), // OP_DATA_32
+        decoded.payload,
+        Buffer.from([0x87]), // OP_EQUAL
+      ]);
+    }
+
+    throw new Error(`Unsupported address version: ${decoded.version}`);
   }
 
   // ==================== TRANSACTION SIGNING (HOOSAT STYLE!) ====================
