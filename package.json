@@ -53,10 +53,14 @@
   ],
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
-    "@grpc/proto-loader": "^0.8.0"
+    "@grpc/proto-loader": "^0.8.0",
+    "blake3": "^2.1.7",
+    "secp256k1": "^5.0.0",
+    "bech32": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.6.2",
+    "@types/secp256k1": "^4.0.6",
     "copyfiles": "^2.4.1",
     "prettier": "^3.6.2",
     "tsx": "^4.20.6",
