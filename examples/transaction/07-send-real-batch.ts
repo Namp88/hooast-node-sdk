@@ -27,6 +27,11 @@ async function main() {
       label: 'Recipient 1',
     },
     {
+      address: 'hoosat:qr97kz9ujwylwxd8jkh9zs0nexlkkuu0v3aj0a6htvapan0a0arjugmlqf5ur',
+      amount: '0.003',
+      label: 'Recipient 2',
+    },
+    {
       address: 'hoosat:qzr0pvne29vrvp2pud5j5qxx0xyuv0mjvw9qdswsu5q7z5ulgmxswemhkklu2',
       amount: '0.003',
       label: 'Recipient 3',
@@ -182,7 +187,7 @@ async function main() {
   console.log(`  Urgent: ${recommendations.urgent.feeRate} sompi/byte\n`);
 
   // Get selected fee rate
-  const selectedFeeRate = 20;
+  const selectedFeeRate = recommendations[FEE_PRIORITY].feeRate;
   console.log(`✅ Selected ${FEE_PRIORITY} priority: ${selectedFeeRate} sompi/byte\n`);
 
   // ==================== STEP 6: CALCULATE CORRECT FEE USING MASS ====================

@@ -1,5 +1,4 @@
 import { HoosatNode } from '@client/client';
-import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
 import { HoosatCrypto } from '@crypto/crypto';
 
 /**
@@ -39,7 +38,10 @@ export interface FeeRecommendations {
 
 /**
  * Dynamic fee estimator based on current network conditions
- * Analyzes mempool to recommend optimal fee rates
+ *
+ * NOTE: This analyzes mempool to provide fee RATE recommendations.
+ * The actual fee is calculated by HoosatCrypto.calculateFee() using
+ * mass-based formula: fee = (mass/10) × feeRate
  */
 export class FeeEstimator {
   private _node: HoosatNode;

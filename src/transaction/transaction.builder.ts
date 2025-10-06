@@ -60,12 +60,27 @@ export class TransactionBuilder {
    * @param amount - Amount in sompi as string
    * @returns This builder instance for chaining
    * @throws Error if address is invalid
+   * @throws Error if more than 2 recipient outputs (current limitation)
+   *
+   * @remarks
+   * Current configuration limits batch transactions to maximum 2 recipients.
+   * Change outputs added via addChangeOutput() don't count toward this limit.
+   *
    * @example
    * builder.addOutput('hoosat:qz7ulu...', '100000000');
+   * builder.addOutput('hoosat:qr97kz...', '50000000'); // max 2 recipients
    */
   addOutput(address: string, amount: string): this {
     if (!HoosatUtils.isValidAddress(address)) {
       throw new Error(`Invalid address: ${address}`);
+    }
+
+    const recipientOutputs = this._outputs.length;
+    if (recipientOutputs >= 2) {
+      throw new Error(
+        'Batch transaction limited to maximum 2 recipients due to current configuration. ' +
+          'For more recipients, send multiple transactions.'
+      );
     }
 
     const scriptPublicKey = HoosatCrypto.addressToScriptPublicKey(address);
