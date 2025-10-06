@@ -3,14 +3,14 @@ export { HoosatWallet } from '@wallet/wallet';
 export { HoosatCrypto } from '@crypto/crypto';
 export { HoosatUtils } from '@utils/utils';
 export { TransactionBuilder } from '@transaction/transaction.builder';
-export { FeeEstimator, FeePriority } from '@transaction/fee-estimator';
+export { FeeEstimator, FeePriority } from '@transaction/fee.estimator';
 
 export type { NodeConfig } from './models/node-config.model';
 export type { Transaction, TransactionInput, TransactionOutput, UtxoEntry, UtxoForSigning } from '@models/transaction/transaction.types';
 export type { StreamingUtxoEntry, StreamingUtxoChange, StreamingUtxoChanges } from '@models/streaming/streaming.types';
 export type { KeyPair, TransactionSignature } from '@crypto/models';
 export type { TransactionBuilderOptions } from '@transaction/transaction.builder';
-export type { FeeEstimate, FeeRecommendations } from '@transaction/fee-estimator';
+export type { FeeEstimate, FeeRecommendations } from '@transaction/fee.estimator';
 
 export type { BaseResult } from '@models/result/base.result';
 export type { GetInfo } from '@models/result/get-info.result';

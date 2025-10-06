@@ -1,5 +1,4 @@
-import { HoosatNode } from '../client/client';
-import { HOOSAT_PARAMS } from '../constants/hoosat-params.conts';
+import { HoosatNode } from '@client/client';
 
 /**
  * Fee priority levels
@@ -48,40 +47,6 @@ export class FeeEstimator {
 
   constructor(node: HoosatNode) {
     this._node = node;
-  }
-
-  /**
-   * Estimates recommended fee rate for a given priority level
-   *
-   * @param priority - Fee priority level
-   * @param inputs - Number of transaction inputs
-   * @param outputs - Number of transaction outputs
-   * @param forceRefresh - Force mempool re-analysis (bypass cache)
-   * @returns Fee estimate with recommended rate and total fee
-   *
-   * @example
-   * const estimate = await feeEstimator.estimateFee('normal', 2, 2);
-   * console.log(`Recommended fee rate: ${estimate.feeRate} sompi/byte`);
-   * console.log(`Total fee: ${estimate.totalFee} sompi`);
-   */
-  async estimateFee(
-    priority: FeePriority = FeePriority.Normal,
-    inputs: number,
-    outputs: number,
-    forceRefresh = false
-  ): Promise<FeeEstimate> {
-    const recommendations = await this.getRecommendations(forceRefresh);
-
-    const estimate = recommendations[priority];
-
-    // Calculate total fee for this transaction size
-    const txSize = 10 + inputs * 150 + outputs * 35;
-    const calculatedFee = Math.max(txSize * estimate.feeRate, HOOSAT_PARAMS.MIN_FEE);
-
-    return {
-      ...estimate,
-      totalFee: calculatedFee.toString(),
-    };
   }
 
   /**

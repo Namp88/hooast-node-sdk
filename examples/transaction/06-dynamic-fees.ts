@@ -62,7 +62,7 @@ async function main() {
 
   if (recommendations.mempoolSize === 0) {
     console.log('ℹ️  Mempool is empty - network has low activity');
-    console.log('   Using minimal fees (1 sompi/byte) for fast confirmation\n');
+    console.log('   Using minimal fees (3 sompi/byte) for fast confirmation\n');
   } else if (recommendations.mempoolSize < 10) {
     console.log('⚠️  Mempool has very few transactions (< 10)');
     console.log('   Using conservative fallback rates to avoid anomalies');
@@ -188,11 +188,11 @@ async function main() {
       console.log('1. ✅ Fee rates are calculated from current mempool');
       console.log('2. ✅ Recommendations update every minute (cached)');
       console.log('3. ✅ Choose priority based on urgency:');
-      console.log('     • Low: No rush, save on fees');
-      console.log('     • Normal: Standard confirmation time');
-      console.log('     • High: Fast confirmation needed');
-      console.log('     • Urgent: Highest priority, fastest');
-      console.log('4. ✅ Empty mempool = use minimal fees');
+      console.log('     • Low: No rush, save on fees (2+ sompi/byte)');
+      console.log('     • Normal: Standard confirmation (3+ sompi/byte)');
+      console.log('     • High: Fast confirmation needed (5+ sompi/byte)');
+      console.log('     • Urgent: Highest priority, fastest (10+ sompi/byte)');
+      console.log('4. ✅ Empty/small mempool = use conservative defaults');
       console.log('5. ✅ Busy mempool = consider higher fees');
       console.log();
 
@@ -213,6 +213,9 @@ async function main() {
 
       console.log('🎯 Pro Tips:');
       console.log('─────────────────────────────────────');
+      console.log('• Network enforces minimum 2047 sompi total fee');
+      console.log('• For small transactions, MIN_FEE (3000) applies');
+      console.log('• Empty mempool defaults: 2-10 sompi/byte');
       console.log('• Use FeePriority.Low during off-peak hours');
       console.log('• Use FeePriority.High when network is busy');
       console.log('• Monitor mempool size to gauge network activity');

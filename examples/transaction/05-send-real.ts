@@ -380,7 +380,7 @@ async function main() {
     if (mempoolEntry.ok && mempoolEntry.result) {
       console.log('✅ Transaction found in mempool');
       console.log(`   Fee: ${HoosatUtils.sompiToAmount(mempoolEntry.result!.fee!.toString())} HTN`);
-      console.log(`   Size: ${mempoolEntry.result!.mass} bytes`);
+      console.log(`   Size: ${mempoolEntry.result.mass} bytes`);
       console.log();
       console.log('Transaction is waiting to be included in a block...');
     } else {

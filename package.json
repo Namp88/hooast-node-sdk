@@ -33,12 +33,11 @@
     "example:transaction:estimate-fee": "tsx watch examples/transaction/04-estimate-fee.ts",
     "example:transaction:send-real": "tsx watch examples/transaction/05-send-real.ts",
     "example:transaction:dynamic-fees": "tsx watch examples/transaction/06-dynamic-fees.ts",
+    "example:transaction:send-real-batch": "tsx watch examples/transaction/07-send-real-batch.ts",
 
     "example:utils:amount-conversion": "tsx watch examples/utils/01-amount-conversion.ts",
     "example:utils:validation": "tsx watch examples/utils/02-validation.ts",
-    "example:utils:formatting": "tsx watch examples/utils/03-formatting.ts",
-
-    "test:send-real-htn": "tsx watch --no-cache examples/send-real-htn.ts"
+    "example:utils:formatting": "tsx watch examples/utils/03-formatting.ts"
   },
   "keywords": [
     "hoosat",
