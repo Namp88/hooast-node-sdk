@@ -55,31 +55,48 @@ export class TransactionBuilder {
   }
 
   /**
-   * Adds an output to the transaction
+   * Adds an output to the transaction (for recipients only)
+   *
+   * ⚠️ Use addChangeOutput() for change to avoid spam protection check
+   *
    * @param address - Recipient address
    * @param amount - Amount in sompi as string
    * @returns This builder instance for chaining
    * @throws Error if address is invalid
-   * @throws Error if more than 2 recipient outputs (current limitation)
+   * @throws Error if exceeds spam protection limit (max 2 recipients)
    *
    * @remarks
-   * Current configuration limits batch transactions to maximum 2 recipients.
-   * Change outputs added via addChangeOutput() don't count toward this limit.
+   * **Spam Protection:** Hoosat inherits anti-dust-attack protection from Kaspa.
+   * Transactions are limited to 3 total outputs (2 recipients + 1 change) to prevent
+   * spam attacks. This is a hardcoded network rule, not a configuration setting.
+   *
+   * **Important:** This validation only counts recipient outputs, not change.
+   * Always use `addChangeOutput()` for change outputs.
    *
    * @example
-   * builder.addOutput('hoosat:qz7ulu...', '100000000');
-   * builder.addOutput('hoosat:qr97kz...', '50000000'); // max 2 recipients
+   * // ✅ Correct usage
+   * builder.addOutput('hoosat:qz7ulu...', '100000000');     // recipient 1
+   * builder.addOutput('hoosat:qr97kz...', '50000000');      // recipient 2
+   * builder.addChangeOutput(wallet.address);                // change (no check)
+   *
+   * @example
+   * // ❌ Wrong - manually adding change
+   * builder.addOutput(wallet.address, changeAmount); // ← will trigger spam check!
    */
   addOutput(address: string, amount: string): this {
     if (!HoosatUtils.isValidAddress(address)) {
       throw new Error(`Invalid address: ${address}`);
     }
 
+    // Count recipient outputs (change is added via addChangeOutput/addOutputRaw)
     const recipientOutputs = this._outputs.length;
+
     if (recipientOutputs >= 2) {
       throw new Error(
-        'Batch transaction limited to maximum 2 recipients due to current configuration. ' +
-          'For more recipients, send multiple transactions.'
+        'Maximum 2 recipients per transaction due to spam protection. ' +
+          'This anti-dust-attack mechanism limits outputs to 3 total (2 recipients + 1 change). ' +
+          'Inherited from Kaspa Golang. For more recipients, send multiple transactions. ' +
+          'Note: Use addChangeOutput() for change, not addOutput().'
       );
     }
 
@@ -98,6 +115,8 @@ export class TransactionBuilder {
 
   /**
    * Adds change output with automatic amount calculation
+   * Change outputs bypass spam protection check
+   *
    * @param changeAddress - Address to receive change
    * @returns This builder instance for chaining
    * @throws Error if insufficient funds or invalid address
@@ -120,14 +139,25 @@ export class TransactionBuilder {
 
     // Only add change output if amount is meaningful (> dust threshold)
     if (changeAmount > BigInt(HOOSAT_PARAMS.MIN_FEE)) {
-      this.addOutput(changeAddress, changeAmount.toString());
+      // Use addOutputRaw to bypass spam protection check for change
+      const scriptPublicKey = HoosatCrypto.addressToScriptPublicKey(changeAddress);
+
+      this.addOutputRaw({
+        amount: changeAmount.toString(),
+        scriptPublicKey: {
+          scriptPublicKey: scriptPublicKey.toString('hex'),
+          version: 0,
+        },
+      });
     }
 
     return this;
   }
 
   /**
-   * Adds a raw output to the transaction
+   * Adds a raw output to the transaction (bypasses validation)
+   * Use for change outputs or advanced scenarios
+   *
    * @param output - Pre-formatted transaction output
    * @returns This builder instance for chaining
    * @example

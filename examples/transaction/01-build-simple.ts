@@ -15,6 +15,7 @@
  *       It demonstrates transaction building and signing only.
  */
 import { HoosatCrypto, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
+import { HOOSAT_PARAMS } from '../../src/constants/hoosat-params.conts';
 
 function main() {
   console.log('🔨 Build Simple Transaction\n');
@@ -78,7 +79,7 @@ function main() {
 
   // Transaction amounts
   const amountToSend = '50000000'; // 0.5 HTN
-  const fee = '1000'; // 0.00001 HTN
+  const fee = HOOSAT_PARAMS.MIN_FEE; // 0.00001 HTN
   const inputAmount = BigInt(mockUtxo.utxoEntry.amount);
   const sendAmount = BigInt(amountToSend);
   const feeAmount = BigInt(fee);
@@ -104,7 +105,7 @@ function main() {
   console.log('✅ Added change output');
 
   // Set fee
-  builder.setFee(fee);
+  builder.setFee(String(fee));
   console.log('✅ Set fee');
   console.log();
 

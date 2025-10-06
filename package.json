@@ -28,7 +28,7 @@
     "example:streaming:subscribe-utxos": "tsx watch examples/streaming/01-subscribe-utxos.ts",
 
     "example:transaction:build-sample": "tsx watch examples/transaction/01-build-simple.ts",
-    "example:transaction:build-change": "tsx watch examples/transaction/02-build-with-change.ts",
+    "example:transaction:build-with-change": "tsx watch examples/transaction/02-build-with-change.ts",
     "example:transaction:multiple-inputs": "tsx watch examples/transaction/03-multiple-inputs.ts",
     "example:transaction:estimate-fee": "tsx watch examples/transaction/04-estimate-fee.ts",
     "example:transaction:send-real": "tsx watch examples/transaction/05-send-real.ts",

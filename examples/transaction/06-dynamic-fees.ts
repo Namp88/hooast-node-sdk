@@ -45,7 +45,7 @@ async function main() {
   console.log('═════════════════════════════════════');
 
   const feeEstimator = new FeeEstimator(node);
-  console.log('✅ Fee estimator created\n');
+  console.log('✅ Fee estimator created (MASS-based calculation)\n');
 
   // ==================== ANALYZE MEMPOOL ====================
   console.log('3️⃣  Analyze Current Mempool');
@@ -60,36 +60,23 @@ async function main() {
   console.log(`  Median Fee Rate:  ${recommendations.medianFeeRate} sompi/byte`);
   console.log();
 
-  if (recommendations.mempoolSize === 0) {
-    console.log('ℹ️  Mempool is empty - network has low activity');
-    console.log('   Using minimal fees (3 sompi/byte) for fast confirmation\n');
-  } else if (recommendations.mempoolSize < 10) {
-    console.log('⚠️  Mempool has very few transactions (< 10)');
-    console.log('   Using conservative fallback rates to avoid anomalies');
-    console.log('   Actual samples analyzed: 0 (too few for reliable stats)\n');
-  } else if (recommendations.mempoolSize > 100) {
-    console.log('⚠️  Mempool is busy - network has high activity');
-    console.log('   Consider using higher fee rates for faster confirmation\n');
-  } else {
-    console.log('✅ Mempool has normal activity\n');
-  }
-
-  // ==================== FEE RECOMMENDATIONS ====================
-  console.log('4️⃣  Fee Rate Recommendations');
+  // ==================== PRIORITY LEVELS ====================
+  console.log('4️⃣  Fee Recommendations by Priority');
   console.log('═════════════════════════════════════');
-  console.log('Priority | Fee Rate      | Percentile | Description');
+
+  console.log('Priority | Fee Rate      | Percentile | Recommended For');
   console.log('---------|---------------|------------|------------------');
   console.log(
-    `Low      | ${recommendations.low.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.low.percentile}th        | Slow, cheapest`
+    `Low      | ${recommendations.low.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.low.percentile}th         | Not urgent`
   );
   console.log(
-    `Normal   | ${recommendations.normal.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.normal.percentile}th        | Standard speed`
+    `Normal   | ${recommendations.normal.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.normal.percentile}th         | Standard use`
   );
   console.log(
-    `High     | ${recommendations.high.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.high.percentile}th        | Fast confirmation`
+    `High     | ${recommendations.high.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.high.percentile}th         | Fast confirmation`
   );
   console.log(
-    `Urgent   | ${recommendations.urgent.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.urgent.percentile}th        | Highest priority`
+    `Urgent   | ${recommendations.urgent.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.urgent.percentile}th         | Critical only`
   );
   console.log();
 
@@ -123,12 +110,13 @@ async function main() {
   console.log('═════════════════════════════════════');
   console.log('Using Normal priority...\n');
 
+  // ⚠️ Updated scenarios to respect 2-recipient limit
   const scenarios = [
-    { name: 'Simple (1→2)', inputs: 1, outputs: 2 },
-    { name: 'Standard (2→2)', inputs: 2, outputs: 2 },
-    { name: 'Multi-send (1→5)', inputs: 1, outputs: 5 },
+    { name: 'Simple (1→1)', inputs: 1, outputs: 1 },
+    { name: 'Standard (1→2)', inputs: 1, outputs: 2 },
+    { name: 'Batch (1→2)', inputs: 1, outputs: 2 }, // Max 2 recipients
     { name: 'Consolidate (5→1)', inputs: 5, outputs: 1 },
-    { name: 'Complex (5→5)', inputs: 5, outputs: 5 },
+    { name: 'Large Batch (5→2)', inputs: 5, outputs: 2 }, // Max 2 recipients
   ];
 
   console.log('Type             | Fee (sompi) | Fee (HTN)');
@@ -139,102 +127,103 @@ async function main() {
 
     const feeHTN = HoosatUtils.sompiToAmount(estimate.totalFee);
 
-    console.log(`${scenario.name.padEnd(16)} | ${estimate.totalFee.padStart(11)} | ${feeHTN}`);
+    console.log(`${scenario.name.padEnd(16)} | ${estimate.totalFee.padStart(11)} | ${feeHTN.padStart(11)}`);
   }
+
+  console.log();
+  console.log('⚠️  Important Notes:');
+  console.log('   • Output count includes recipients + change output');
+  console.log('   • Current node limitation: max 2 recipient outputs per tx');
+  console.log('   • For more recipients, send multiple transactions');
+  console.log('   • MASS-based fee calculation accounts for ScriptPubKey cost');
   console.log();
 
-  // ==================== REAL-TIME MONITORING ====================
-  console.log('7️⃣  Real-time Fee Monitoring');
+  // ==================== NETWORK CONGESTION ANALYSIS ====================
+  console.log('7️⃣  Network Congestion Analysis');
   console.log('═════════════════════════════════════');
-  console.log('Monitoring mempool for 30 seconds...\n');
 
-  const monitoringDuration = 30000; // 30 seconds
-  const checkInterval = 5000; // Check every 5 seconds
-  const startTime = Date.now();
+  const mempoolSize = recommendations.mempoolSize;
+  const avgFee = recommendations.averageFeeRate;
 
-  console.log('Time  | Mempool | Median Fee | Normal Rate');
-  console.log('------|---------|------------|-------------');
+  let congestionLevel = 'Low';
+  let recommendation = 'Use Low or Normal priority';
 
-  const printStatus = async (elapsed: number) => {
-    const recs = await feeEstimator.getRecommendations(true); // Force refresh
+  if (mempoolSize > 100) {
+    congestionLevel = 'High';
+    recommendation = 'Use High or Urgent priority for faster confirmation';
+  } else if (mempoolSize > 50) {
+    congestionLevel = 'Medium';
+    recommendation = 'Use Normal or High priority';
+  }
 
-    const timeStr = `${Math.floor(elapsed / 1000)}s`.padEnd(5);
-    const mempoolStr = recs.mempoolSize.toString().padStart(7);
-    const medianStr = `${recs.medianFeeRate} sompi/byte`.padStart(10);
-    const normalStr = `${recs.normal.feeRate} sompi/byte`.padStart(11);
+  console.log(`Current Congestion: ${congestionLevel}`);
+  console.log(`Mempool Size:       ${mempoolSize} transactions`);
+  console.log(`Average Fee Rate:   ${avgFee} sompi/byte`);
+  console.log();
+  console.log(`Recommendation: ${recommendation}`);
+  console.log();
 
-    console.log(`${timeStr} | ${mempoolStr} | ${medianStr} | ${normalStr}`);
-  };
+  // ==================== CACHE MANAGEMENT ====================
+  console.log('8️⃣  Cache Management');
+  console.log('═════════════════════════════════════');
 
-  // Initial status
-  await printStatus(0);
+  console.log('Fee estimates are cached for 60 seconds');
+  console.log('This avoids excessive mempool queries');
+  console.log();
 
-  // Monitor for specified duration
-  const intervalId = setInterval(async () => {
-    const elapsed = Date.now() - startTime;
+  console.log('Cache control:');
+  console.log('  • Force refresh: await feeEstimator.getRecommendations(true)');
+  console.log('  • Clear cache:   feeEstimator.clearCache()');
+  console.log('  • Change TTL:    feeEstimator.setCacheDuration(120000)');
+  console.log();
 
-    if (elapsed >= monitoringDuration) {
-      clearInterval(intervalId);
-      console.log();
-      console.log('✅ Monitoring complete!\n');
+  // Test cache
+  console.log('Testing cache...');
+  const start = Date.now();
+  await feeEstimator.getRecommendations(); // Should use cache
+  const elapsed = Date.now() - start;
+  console.log(`  Cached response in ${elapsed}ms ✅`);
+  console.log();
 
-      // ==================== SUMMARY ====================
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log('   📈 SUMMARY');
-      console.log('═══════════════════════════════════════════════════════════\n');
+  // ==================== BEST PRACTICES ====================
+  console.log('9️⃣  Best Practices');
+  console.log('═════════════════════════════════════');
 
-      console.log('Key Takeaways:');
-      console.log('─────────────────────────────────────');
-      console.log('1. ✅ Fee rates are calculated from current mempool');
-      console.log('2. ✅ Recommendations update every minute (cached)');
-      console.log('3. ✅ Choose priority based on urgency:');
-      console.log('     • Low: No rush, save on fees (2+ sompi/byte)');
-      console.log('     • Normal: Standard confirmation (3+ sompi/byte)');
-      console.log('     • High: Fast confirmation needed (5+ sompi/byte)');
-      console.log('     • Urgent: Highest priority, fastest (10+ sompi/byte)');
-      console.log('4. ✅ Empty/small mempool = use conservative defaults');
-      console.log('5. ✅ Busy mempool = consider higher fees');
-      console.log();
+  console.log('When to use each priority:');
+  console.log();
+  console.log('Low Priority:');
+  console.log('  • Non-urgent transactions');
+  console.log('  • When mempool is empty (<10 transactions)');
+  console.log('  • Saves on fees, may take longer to confirm');
+  console.log();
+  console.log('Normal Priority:');
+  console.log('  • Most transactions');
+  console.log('  • Balanced between speed and cost');
+  console.log('  • Good for typical network conditions');
+  console.log();
+  console.log('High Priority:');
+  console.log('  • Important transactions');
+  console.log('  • When mempool is congested (>50 transactions)');
+  console.log('  • Need faster confirmation');
+  console.log();
+  console.log('Urgent Priority:');
+  console.log('  • Critical transactions only');
+  console.log('  • Maximum fee, fastest confirmation');
+  console.log('  • High network congestion (>100 transactions)');
+  console.log();
 
-      console.log('Usage in Your Code:');
-      console.log('─────────────────────────────────────');
-      console.log('```typescript');
-      console.log('const feeEstimator = new FeeEstimator(node);');
-      console.log('const estimate = await feeEstimator.estimateFee(');
-      console.log("  FeePriority.Normal, // or 'normal'");
-      console.log('  2, // inputs');
-      console.log('  2  // outputs');
-      console.log(');');
-      console.log('');
-      console.log('// Use the recommended fee');
-      console.log('builder.setFee(estimate.totalFee);');
-      console.log('```');
-      console.log();
+  console.log('Tips:');
+  console.log('  • Check mempool size before choosing priority');
+  console.log('  • Higher inputs = higher fees (more signature operations)');
+  console.log('  • Change outputs add cost, minimize when possible');
+  console.log('  • MASS calculation ensures correct fee for node acceptance');
+  console.log();
 
-      console.log('🎯 Pro Tips:');
-      console.log('─────────────────────────────────────');
-      console.log('• Network enforces minimum 2047 sompi total fee');
-      console.log('• For small transactions, MIN_FEE (3000) applies');
-      console.log('• Empty mempool defaults: 2-10 sompi/byte');
-      console.log('• Use FeePriority.Low during off-peak hours');
-      console.log('• Use FeePriority.High when network is busy');
-      console.log('• Monitor mempool size to gauge network activity');
-      console.log('• Cache is updated every 60 seconds automatically');
-      console.log('• Force refresh with getRecommendations(true)');
-      console.log();
-
-      // Disconnect
-      node.disconnect();
-      console.log('✅ Disconnected from node\n');
-
-      return;
-    }
-
-    await printStatus(elapsed);
-  }, checkInterval);
+  // Cleanup
+  node.disconnect();
+  console.log('✅ Disconnected from node\n');
 }
 
-// Run example
 main().catch(error => {
   console.error('\n❌ Fatal error:', error);
   process.exit(1);

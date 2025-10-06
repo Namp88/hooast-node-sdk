@@ -14,6 +14,7 @@
  * Note: This example uses mock UTXO data and does NOT broadcast to network.
  */
 import { HoosatCrypto, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
+import { HOOSAT_PARAMS } from '../../src/constants/hoosat-params.conts';
 
 function main() {
   console.log('💰 Build Transaction with Automatic Change\n');
@@ -63,7 +64,6 @@ function main() {
 
   const builder1 = new TransactionBuilder();
 
-  // Transaction parameters
   const sendAmount1 = '75000000'; // 0.75 HTN
   const fee1 = '1000'; // 0.00001 HTN
 
@@ -82,8 +82,18 @@ function main() {
 
   builder1.addInput(mockUtxo1, wallet.privateKey);
   builder1.addOutput(recipient1, sendAmount1);
-  builder1.addOutput(wallet.address, manualChange.toString()); // Manual change
   builder1.setFee(fee1.toString());
+
+  // ⚠️ Note: Using addOutputRaw to bypass spam protection for manual change
+  // Normally you should use addChangeOutput() instead!
+  const changeScriptPubKey = HoosatCrypto.addressToScriptPublicKey(wallet.address);
+  builder1.addOutputRaw({
+    amount: manualChange.toString(),
+    scriptPublicKey: {
+      scriptPublicKey: changeScriptPubKey.toString('hex'),
+      version: 0,
+    },
+  });
 
   const tx1 = builder1.sign();
   const txId1 = HoosatCrypto.getTransactionId(tx1);
@@ -91,6 +101,9 @@ function main() {
   console.log('✅ Transaction built with manual change');
   console.log(`   TX ID: ${HoosatUtils.truncateHash(txId1)}`);
   console.log(`   Outputs: ${tx1.outputs.length} (1 recipient + 1 change)`);
+  console.log();
+  console.log('⚠️  Note: Manual method uses addOutputRaw() to bypass validation');
+  console.log('   This is NOT recommended - use addChangeOutput() instead!');
   console.log();
 
   // ==================== SCENARIO 2: AUTOMATIC CHANGE ====================
@@ -120,16 +133,16 @@ function main() {
   const builder2 = new TransactionBuilder();
 
   const sendAmount2 = '100000000'; // 1 HTN
-  const fee2 = '1000'; // 0.00001 HTN
+  const fee2 = HOOSAT_PARAMS.MIN_FEE; // 0.00001 HTN
 
   console.log('Transaction Setup:');
   console.log(`  Send to recipient: ${HoosatUtils.sompiToAmount(sendAmount2)} HTN`);
-  console.log(`  Fee:               ${HoosatUtils.sompiToAmount(fee2)} HTN`);
+  console.log(`  Fee:               ${HoosatUtils.sompiToAmount(String(fee2))} HTN`);
   console.log();
 
   builder2.addInput(mockUtxo2, wallet.privateKey);
   builder2.addOutput(recipient1, sendAmount2);
-  builder2.setFee(fee2);
+  builder2.setFee(String(fee2));
 
   // Automatic change calculation
   console.log('🔄 Calling addChangeOutput() - automatic calculation...');
@@ -180,19 +193,19 @@ function main() {
 
   const send1 = '150000000'; // 1.5 HTN to recipient1
   const send2 = '100000000'; // 1 HTN to recipient2
-  const fee3 = '1000';
+  const fee3 = HOOSAT_PARAMS.MIN_FEE;
 
   console.log('Transaction Setup:');
   console.log(`  Input:             ${HoosatUtils.sompiToAmount(mockUtxo3.utxoEntry.amount)} HTN`);
   console.log(`  To Recipient 1:    ${HoosatUtils.sompiToAmount(send1)} HTN`);
   console.log(`  To Recipient 2:    ${HoosatUtils.sompiToAmount(send2)} HTN`);
-  console.log(`  Fee:               ${HoosatUtils.sompiToAmount(fee3)} HTN`);
+  console.log(`  Fee:               ${HoosatUtils.sompiToAmount(String(fee3))} HTN`);
   console.log();
 
   builder3.addInput(mockUtxo3, wallet.privateKey);
   builder3.addOutput(recipient1, send1);
   builder3.addOutput(recipient2, send2);
-  builder3.setFee(fee3);
+  builder3.setFee(String(fee3));
   builder3.addChangeOutput(wallet.address);
 
   const expectedChange = BigInt(mockUtxo3.utxoEntry.amount) - BigInt(send1) - BigInt(send2) - BigInt(fee3);
@@ -232,13 +245,13 @@ function main() {
 
   // Send almost everything, leaving only dust as change
   const send4 = '9998000'; // 0.09998 HTN
-  const fee4 = '1000'; // 0.00001 HTN
+  const fee4 = HOOSAT_PARAMS.MIN_FEE; // 0.00001 HTN
   // Change would be: 10000000 - 9998000 - 1000 = 1000 sompi (dust)
 
   console.log('Transaction Setup:');
   console.log(`  Input:             ${HoosatUtils.sompiToAmount(mockUtxo4.utxoEntry.amount)} HTN`);
   console.log(`  Send:              ${HoosatUtils.sompiToAmount(send4)} HTN`);
-  console.log(`  Fee:               ${HoosatUtils.sompiToAmount(fee4)} HTN`);
+  console.log(`  Fee:               ${HoosatUtils.sompiToAmount(String(fee4))} HTN`);
 
   const dustChange = BigInt(mockUtxo4.utxoEntry.amount) - BigInt(send4) - BigInt(fee4);
   console.log(`  Dust Change:       ${HoosatUtils.sompiToAmount(dustChange)} HTN (${dustChange} sompi)`);
@@ -246,7 +259,7 @@ function main() {
 
   builder4.addInput(mockUtxo4, wallet.privateKey);
   builder4.addOutput(recipient1, send4);
-  builder4.setFee(fee4);
+  builder4.setFee(String(fee4));
   builder4.addChangeOutput(wallet.address); // Won't create output if dust
 
   const tx4 = builder4.sign();
@@ -286,19 +299,19 @@ function main() {
   const builder5 = new TransactionBuilder();
 
   const send5 = '15000000'; // 0.15 HTN (more than we have!)
-  const fee5 = '1000';
+  const fee5 = HOOSAT_PARAMS.MIN_FEE;
 
   console.log('Attempting insufficient transaction:');
   console.log(`  Input:  ${HoosatUtils.sompiToAmount(mockUtxo5.utxoEntry.amount)} HTN`);
   console.log(`  Send:   ${HoosatUtils.sompiToAmount(send5)} HTN`);
-  console.log(`  Fee:    ${HoosatUtils.sompiToAmount(fee5)} HTN`);
+  console.log(`  Fee:    ${HoosatUtils.sompiToAmount(String(fee5))} HTN`);
   console.log(`  Total:  ${HoosatUtils.sompiToAmount(BigInt(send5) + BigInt(fee5))} HTN`);
   console.log();
 
   try {
     builder5.addInput(mockUtxo5, wallet.privateKey);
     builder5.addOutput(recipient1, send5);
-    builder5.setFee(fee5);
+    builder5.setFee(String(fee5));
     builder5.addChangeOutput(wallet.address); // This will throw error
 
     console.log('❌ This should not happen!');
