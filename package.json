@@ -11,11 +11,6 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
 
-    "example:node:connect": "tsx examples/node/01-connect.ts",
-    "example:node:blockchain-info": "tsx examples/node/02-blockchain-info.ts",
-    "example:node:blocks": "tsx examples/node/03-blocks.ts",
-    "example:node:mempool": "tsx examples/node/04-mempool.ts",
-
     "example:address:balance": "tsx examples/address/01-balance.ts",
     "example:address:balancec-multiple": "tsx examples/address/02-balances-multiple.ts",
     "example:address:utxos": "tsx examples/address/03-utxos.ts",
@@ -25,11 +20,22 @@
     "example:crypto:address-types": "tsx watch examples/crypto/03-address-types.ts",
     "example:crypto:hashing": "tsx watch examples/crypto/04-hashing.ts",
 
+    "example:node:connect": "tsx examples/node/01-connect.ts",
+    "example:node:blockchain-info": "tsx examples/node/02-blockchain-info.ts",
+    "example:node:blocks": "tsx examples/node/03-blocks.ts",
+    "example:node:mempool": "tsx examples/node/04-mempool.ts",
+
+    "example:streaming:subscribe-utxos": "tsx watch examples/streaming/01-subscribe-utxos.ts",
+
+    "example:transaction:build-sample": "tsx watch examples/transaction/01-build-simple.ts",
+    "example:transaction:build-change": "tsx watch examples/transaction/02-build-with-change.ts",
+    "example:transaction:multiple-inputs": "tsx watch examples/transaction/03-multiple-inputs.ts",
+    "example:transaction:estimate-fee": "tsx watch examples/transaction/04-estimate-fee.ts",
+    "example:transaction:send-real": "tsx watch examples/transaction/05-send-real.ts",
+
     "example:utils:amount-conversion": "tsx watch examples/utils/01-amount-conversion.ts",
     "example:utils:validation": "tsx watch examples/utils/02-validation.ts",
     "example:utils:formatting": "tsx watch examples/utils/03-formatting.ts",
-
-    "example:streaming:subscribe-utxos": "tsx watch examples/streaming/01-subscribe-utxos.ts",
 
     "test:send-real-htn": "tsx watch --no-cache examples/send-real-htn.ts"
   },

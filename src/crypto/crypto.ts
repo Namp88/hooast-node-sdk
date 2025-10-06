@@ -242,7 +242,7 @@ export class HoosatCrypto {
    * @example
    * const fee = HoosatCrypto.calculateFee(2, 2, 1);
    */
-  static calculateFee(inputCount: number, outputCount: number, feePerByte = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
+  static calculateFee(inputCount: number, outputCount: number, feePerByte: number = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
     const size = this.estimateTransactionSize(inputCount, outputCount);
     return Math.max(size * feePerByte, HOOSAT_PARAMS.MIN_FEE).toString();
   }
