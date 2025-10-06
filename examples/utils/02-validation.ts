@@ -21,10 +21,18 @@ function main() {
   console.log('─────────────────────────────────────');
 
   const addressTests = [
-    { address: 'hoosat:qz7ulu8mmmul6hdcnssmjnt28h2xfer8dz9nfqamvvh86ngef4q8dvzxcjdqe', expected: true, note: 'Valid Schnorr' },
-    { address: 'hoosat:qyp2uxq7rl0a95npw0yay62chv22l4f33hd8nween6g5jcge4lk57tqsfw88n2d', expected: true, note: 'Valid ECDSA' },
-    { address: 'kaspa:qz7ulu...', expected: false, note: 'Wrong prefix' },
-    { address: 'hoosat:', expected: false, note: 'Incomplete' },
+    // Mainnet addresses
+    { address: 'hoosat:qz7ulu8mmmul6hdcnssmjnt28h2xfer8dz9nfqamvvh86ngef4q8dvzxcjdqe', expected: true, note: 'Valid Mainnet Schnorr' },
+    { address: 'hoosat:qyp2uxq7rl0a95npw0yay62chv22l4f33hd8nween6g5jcge4lk57tqsfw88n2d', expected: true, note: 'Valid Mainnet ECDSA' },
+
+    // Testnet addresses
+    { address: 'hoosattest:qreey20hdmz0h8dkae92cvtgx9e4cp464dqn922vmnmcs6llv4r7uylr2nvgc', expected: true, note: 'Valid Testnet ECDSA' },
+    { address: 'hoosattest:qz7ulu8mmmul6hdcnssmjnt28h2xfer8dz9nfqamvvh86ngef4q8dvx72zy9w', expected: true, note: 'Valid Testnet Schnorr' },
+
+    // Invalid addresses
+    { address: 'kaspa:qz7ulu...', expected: false, note: 'Wrong prefix (kaspa)' },
+    { address: 'hoosat:', expected: false, note: 'Incomplete mainnet' },
+    { address: 'hoosattest:', expected: false, note: 'Incomplete testnet' },
     { address: 'invalid_address', expected: false, note: 'Invalid format' },
   ];
 
@@ -32,7 +40,28 @@ function main() {
     const isValid = HoosatUtils.isValidAddress(address);
     const icon = isValid === expected ? '✅' : '❌';
     const truncated = address.length > 30 ? HoosatUtils.truncateAddress(address) : address;
-    console.log(`${icon} ${truncated.padEnd(30)} - ${note}`);
+    const network = HoosatUtils.getAddressNetwork(address);
+    const networkStr = network ? ` [${network}]` : '';
+    console.log(`${icon} ${truncated.padEnd(35)}${networkStr.padEnd(12)} - ${note}`);
+  });
+
+  console.log('\n');
+
+  // ==================== NETWORK DETECTION ====================
+  console.log('1.5️⃣ Network Detection:');
+  console.log('─────────────────────────────────────');
+
+  const networkTests = [
+    { address: 'hoosat:qz7ulu8mmmul6hdcnssmjnt28h2xfer8dz9nfqamvvh86ngef4q8dvzxcjdqe', expected: 'mainnet' },
+    { address: 'hoosattest:qreey20hdmz0h8dkae92cvtgx9e4cp464dqn922vmnmcs6llv4r7uylr2nvgc', expected: 'testnet' },
+    { address: 'invalid', expected: null },
+  ];
+
+  networkTests.forEach(({ address, expected }) => {
+    const network = HoosatUtils.getAddressNetwork(address);
+    const icon = network === expected ? '✅' : '❌';
+    const truncated = address.length > 30 ? HoosatUtils.truncateAddress(address) : address;
+    console.log(`${icon} ${truncated.padEnd(35)} → ${network || 'null'}`);
   });
 
   console.log('\n');
@@ -41,17 +70,29 @@ function main() {
   console.log('2️⃣  Multiple Address Validation:');
   console.log('─────────────────────────────────────');
 
-  const validAddresses = [
+  const validMainnetAddresses = [
     'hoosat:qz7ulu8mmmul6hdcnssmjnt28h2xfer8dz9nfqamvvh86ngef4q8dvzxcjdqe',
     'hoosat:qq8xdvhkh5k8rvqvpp4z0w9t62q36qltvwa9j2fvvz8d2rw07vl7c7ux7nz0l',
   ];
 
-  const invalidAddresses = ['hoosat:qz7ulu...', 'invalid'];
+  const validTestnetAddresses = [
+    'hoosattest:qreey20hdmz0h8dkae92cvtgx9e4cp464dqn922vmnmcs6llv4r7uylr2nvgc',
+    'hoosattest:qz7ulu8mmmul6hdcnssmjnt28h2xfer8dz9nfqamvvh86ngef4q8dvx72zy9w',
+  ];
 
-  console.log(`All valid addresses:   ${HoosatUtils.isValidAddresses(validAddresses) ? '✅' : '❌'}`);
-  console.log(`Mixed addresses:       ${HoosatUtils.isValidAddresses([...validAddresses, ...invalidAddresses]) ? '✅' : '❌'}`);
-  console.log(`Check unique:          ${HoosatUtils.isValidAddresses(validAddresses, true) ? '✅' : '❌'}`);
-  console.log(`With duplicates:       ${HoosatUtils.isValidAddresses([validAddresses[0], validAddresses[0]], true) ? '✅' : '❌'}`);
+  const invalidAddresses = ['hoosat:qz7ulu...', 'invalid'];
+  const mixedNetworkAddresses = [...validMainnetAddresses, ...validTestnetAddresses];
+
+  console.log(`All mainnet addresses:      ${HoosatUtils.isValidAddresses(validMainnetAddresses) ? '✅' : '❌'}`);
+  console.log(`All testnet addresses:      ${HoosatUtils.isValidAddresses(validTestnetAddresses) ? '✅' : '❌'}`);
+  console.log(
+    `Mixed network addresses:    ${HoosatUtils.isValidAddresses(mixedNetworkAddresses) ? '✅' : '❌'} (valid - different networks OK)`
+  );
+  console.log(`With invalid addresses:     ${HoosatUtils.isValidAddresses([...validMainnetAddresses, ...invalidAddresses]) ? '✅' : '❌'}`);
+  console.log(`Check unique (no duplicates): ${HoosatUtils.isValidAddresses(validMainnetAddresses, true) ? '✅' : '❌'}`);
+  console.log(
+    `With duplicates:            ${HoosatUtils.isValidAddresses([validMainnetAddresses[0], validMainnetAddresses[0]], true) ? '✅' : '❌'}`
+  );
 
   console.log('\n');
 

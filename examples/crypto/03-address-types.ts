@@ -100,14 +100,54 @@ function main() {
 
   console.log('\n');
 
+  // ==================== NETWORK PREFIXES ====================
+  console.log('4. Network Prefixes (Mainnet vs Testnet)');
+  console.log('─────────────────────────────────────');
+
+  console.log('Hoosat supports two networks with different prefixes:\n');
+
+  // Generate same private key for both networks
+  const privateKey = Buffer.from('0'.repeat(63) + '1', 'hex');
+  const mainnetWallet = HoosatCrypto.importKeyPair(privateKey.toString('hex'), 'mainnet');
+  const testnetWallet = HoosatCrypto.importKeyPair(privateKey.toString('hex'), 'testnet');
+
+  console.log('Same Private Key on Different Networks:');
+  console.log(`Private Key: ${privateKey.toString('hex')}`);
+  console.log();
+
+  console.log('Mainnet:');
+  console.log(`  Prefix:  hoosat:`);
+  console.log(`  Address: ${mainnetWallet.address}`);
+  console.log(`  Network: ${HoosatUtils.getAddressNetwork(mainnetWallet.address)}`);
+  console.log(`  Valid:   ${HoosatUtils.isValidAddress(mainnetWallet.address) ? 'Yes' : 'No'}`);
+  console.log();
+
+  console.log('Testnet:');
+  console.log(`  Prefix:  hoosattest:`);
+  console.log(`  Address: ${testnetWallet.address}`);
+  console.log(`  Network: ${HoosatUtils.getAddressNetwork(testnetWallet.address)}`);
+  console.log(`  Valid:   ${HoosatUtils.isValidAddress(testnetWallet.address) ? 'Yes' : 'No'}`);
+  console.log();
+
+  console.log('Real Testnet Example:');
+  const realTestnetAddr = 'hoosattest:qypaq8aera9ewdgqfd4xmz3z6hzyfkdg3cshwdeckn0gwn3vsd3zc8cmr0hd3s5';
+  console.log(`Address: ${realTestnetAddr}`);
+  console.log(`Valid:   ${HoosatUtils.isValidAddress(realTestnetAddr) ? 'Yes' : 'No'}`);
+  console.log(`Type:    ${HoosatUtils.getAddressType(realTestnetAddr)?.toUpperCase()}`);
+  console.log(`Network: ${HoosatUtils.getAddressNetwork(realTestnetAddr)}`);
+
+  console.log('\n');
+
   // ==================== COMPARISON ====================
-  console.log('Comparison Table');
+  console.log('Updated Comparison Table');
   console.log('═════════════════════════════════════');
-  console.log('Type      | Version | Pubkey Size | Use Case');
-  console.log('----------|---------|-------------|------------------');
-  console.log('Schnorr   | 0x00    | 32 bytes    | Standard (future)');
-  console.log('ECDSA     | 0x01    | 33 bytes    | Standard (current)');
-  console.log('P2SH      | 0x08    | 32 bytes    | Multi-sig, complex');
+  console.log('Type      | Version | Pubkey Size | Use Case          | Networks');
+  console.log('----------|---------|-------------|-------------------|----------');
+  console.log('Schnorr   | 0x00    | 32 bytes    | Standard (future) | Both');
+  console.log('ECDSA     | 0x01    | 33 bytes    | Standard (current)| Both');
+  console.log('P2SH      | 0x08    | 32 bytes    | Multi-sig, complex| Both');
+  console.log('═════════════════════════════════════');
+  console.log('Networks: Mainnet (hoosat:) and Testnet (hoosattest:)');
   console.log('═════════════════════════════════════\n');
 
   // ==================== VALIDATION ====================
@@ -128,14 +168,18 @@ function main() {
   console.log('\n');
 
   // ==================== PRACTICAL NOTES ====================
-  console.log('Practical Notes');
+  console.log('Updated Practical Notes');
   console.log('─────────────────────────────────────');
   console.log('1. ECDSA (0x01) is currently used by default');
   console.log('2. generateKeyPair() creates ECDSA addresses');
   console.log('3. Both Schnorr and ECDSA use secp256k1 curve');
   console.log('4. P2SH allows for complex spending conditions');
   console.log('5. Address type determined by version byte');
-  console.log('6. All addresses use Bech32 encoding with "hoosat:" prefix');
+  console.log('6. All addresses use Bech32 encoding');
+  console.log('7. Mainnet prefix: "hoosat:"');
+  console.log('8. Testnet prefix: "hoosattest:"');
+  console.log('9. Same private key = different addresses on different networks');
+  console.log('10. Always verify network before sending funds');
   console.log('─────────────────────────────────────\n');
 }
 
