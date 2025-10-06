@@ -10,30 +10,28 @@
     "dev": "tsc --watch",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "example:get-notify-utxos-changed-subscribe": "tsx watch examples/get-notify-utxos-changed-subscribe.ts",
-    "example:get-current-network": "tsx watch examples/get-current-network.ts",
-    "example:get-peer-addresses": "tsx watch examples/get-peer-addresses.ts",
-    "example:get-selected-tip-hash": "tsx watch examples/get-selected-tip-hash.ts",
-    "example:get-mempool-entry": "tsx watch examples/get-mempool-entry.ts",
-    "example:get-mempool-entries": "tsx watch examples/get-mempool-entries.ts",
-    "example:get-block": "tsx watch examples/get-block.ts",
-    "example:get-blocks": "tsx watch examples/get-blocks.ts",
-    "example:get-block-count": "tsx watch examples/get-block-count.ts",
-    "example:get-block-dag-info": "tsx watch examples/get-block-dag-info.ts",
-    "example:utxos-and-blue-score": "tsx watch examples/utxos-and-blue-score.ts",
-    "example:get-info": "tsx watch examples/get-info.ts",
-    "example:network-hashrate": "tsx watch examples/network-hashrate.ts",
-    "example:wallet-balances": "tsx watch examples/wallet-balances.ts",
-    "example:pending-transactions-and-supply": "tsx watch examples/pending-transactions-and-supply.ts",
-    "example:send-transaction": "tsx watch examples/send-transaction.ts",
 
-    "debug:preimage": "tsx examples/debug-schnorr-preimage.ts",
+    "example:node:connect": "tsx examples/node/01-connect.ts",
+    "example:node:blockchain-info": "tsx examples/node/02-blockchain-info.ts",
+    "example:node:blocks": "tsx examples/node/03-blocks.ts",
+    "example:node:mempool": "tsx examples/node/04-mempool.ts",
 
-    "create:test-wallet": "tsx watch examples/create-test-wallet.ts",
-    "test:send-real-htn": "tsx watch --no-cache examples/send-real-htn.ts",
-    "test:motoko": "tsx examples/test-motoko-comparison.ts",
+    "example:address:balance": "tsx examples/address/01-balance.ts",
+    "example:address:balancec-multiple": "tsx examples/address/02-balances-multiple.ts",
+    "example:address:utxos": "tsx examples/address/03-utxos.ts",
 
-    "test:bench32": "tsx examples/test-bech32.ts"
+    "example:crypto:generate-keypair": "tsx watch examples/crypto/01-generate-keypair.ts",
+    "example:crypto:import-keypair": "tsx watch examples/crypto/02-import-keypair.ts",
+    "example:crypto:address-types": "tsx watch examples/crypto/03-address-types.ts",
+    "example:crypto:hashing": "tsx watch examples/crypto/04-hashing.ts",
+
+    "example:utils:amount-conversion": "tsx watch examples/utils/01-amount-conversion.ts",
+    "example:utils:validation": "tsx watch examples/utils/02-validation.ts",
+    "example:utils:formatting": "tsx watch examples/utils/03-formatting.ts",
+
+    "example:streaming:subscribe-utxos": "tsx watch examples/streaming/01-subscribe-utxos.ts",
+
+    "test:send-real-htn": "tsx watch --no-cache examples/send-real-htn.ts"
   },
   "keywords": [
     "hoosat",
