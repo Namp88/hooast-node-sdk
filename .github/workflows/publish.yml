@@ -39,7 +39,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      # 6. Extract version from tag (v0.1.0 -> 0.1.0)
+      # 6. Extract version from tag for release notes
       - name: Get version from tag
         id: get_version
         run: |
@@ -47,17 +47,13 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Publishing version: $VERSION"
 
-      # 7. Update package.json version (without git operations)
-      - name: Update package.json version
-        run: npm version ${{ steps.get_version.outputs.VERSION }} --no-git-tag-version
-
-      # 8. Publish to npm
+      # 7. Publish to npm
       - name: Publish to NPM
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # 9. Create GitHub Release (optional but recommended)
+      # 8. Create GitHub Release (optional but recommended)
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
