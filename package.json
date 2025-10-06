@@ -11,31 +11,29 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
 
+    "release:patch": "npm version patch && git push --follow-tags",
+    "release:minor": "npm version minor && git push --follow-tags",
+    "release:major": "npm version major && git push --follow-tags",
+    "publish": "git push --follow-tags",
+
     "example:address:balance": "tsx examples/address/01-balance.ts",
     "example:address:balances-multiple": "tsx examples/address/02-balances-multiple.ts",
     "example:address:utxos": "tsx examples/address/03-utxos.ts",
-
     "example:crypto:generate-keypair": "tsx watch examples/crypto/01-generate-keypair.ts",
     "example:crypto:import-keypair": "tsx watch examples/crypto/02-import-keypair.ts",
     "example:crypto:address-types": "tsx watch examples/crypto/03-address-types.ts",
     "example:crypto:hashing": "tsx watch examples/crypto/04-hashing.ts",
-
     "example:error-handling:network-errors": "tsx watch examples/error-handling/01-network-errors.ts",
     "example:error-handling:transaction-errors": "tsx watch examples/error-handling/02-transaction-errors.ts",
     "example:error-handling:retry-strategies": "tsx watch examples/error-handling/03-retry-strategies.ts",
-
     "example:monitoring:track-balance-changes": "tsx watch examples/monitoring/01-track-balance-changes.ts",
     "example:monitoring:network-stats": "tsx watch examples/monitoring/02-network-stats.ts",
-
     "example:advanced:multi-recipient-batching": "tsx watch examples/advanced/01-multi-recipient-batching.ts",
-
     "example:node:connect": "tsx examples/node/01-connect.ts",
     "example:node:blockchain-info": "tsx examples/node/02-blockchain-info.ts",
     "example:node:blocks": "tsx examples/node/03-blocks.ts",
     "example:node:mempool": "tsx examples/node/04-mempool.ts",
-
     "example:streaming:subscribe-utxos": "tsx watch examples/streaming/01-subscribe-utxos.ts",
-
     "example:transaction:build-simple": "tsx watch examples/transaction/01-build-simple.ts",
     "example:transaction:build-with-change": "tsx watch examples/transaction/02-build-with-change.ts",
     "example:transaction:multiple-inputs": "tsx watch examples/transaction/03-multiple-inputs.ts",
@@ -45,7 +43,6 @@
     "example:transaction:send-real-batch": "tsx watch examples/transaction/07-send-real-batch.ts",
     "example:transaction:consolidate-utxos": "tsx watch examples/transaction/08-consolidate-utxos.ts",
     "example:transaction:split-utxo": "tsx watch examples/transaction/09-split-utxo.ts",
-
     "example:utils:amount-conversion": "tsx watch examples/utils/01-amount-conversion.ts",
     "example:utils:validation": "tsx watch examples/utils/02-validation.ts",
     "example:utils:formatting": "tsx watch examples/utils/03-formatting.ts"
