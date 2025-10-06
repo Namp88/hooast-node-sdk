@@ -1,10 +1,9 @@
-import { BaseService } from '@core/base.service';
+import { BaseService } from '@client/services/base.service';
 import { RequestType } from '@enums/request-type.enum';
 import { BaseResult } from '@models/result/base.result';
 import { buildResult } from '@helpers/build-result.helper';
 import { GetUtxosByAddresses } from '@models/result/get-utxos-by-addresses.result';
 import { GetUtxosByAddressesResponse } from '@models/response/get-utxos-by-addresses.response';
-import { validateAddresses } from '@helpers/validation.helper';
 import { GetBalanceByAddress } from '@models/result/get-balance-by-address.result';
 import { GetBalanceByAddressResponse } from '@models/response/get-balance-by-address.response';
 import { GetBalancesByAddresses } from '@models/result/get-balances-by-addresses.result';
@@ -14,7 +13,9 @@ import { HoosatUtils } from '@utils/utils';
 export class AddressService extends BaseService {
   async getUtxosByAddresses(addresses: string[]): Promise<BaseResult<GetUtxosByAddresses>> {
     try {
-      validateAddresses(addresses);
+      if (!HoosatUtils.isValidAddresses(addresses)) {
+        throw new Error('Some of addresses has invalid format');
+      }
 
       const { getUtxosByAddressesResponse } = await this._request<GetUtxosByAddressesResponse>(RequestType.GetUtxosByAddressesRequest, {
         addresses,
@@ -52,7 +53,9 @@ export class AddressService extends BaseService {
 
   async getBalances(addresses: string[]): Promise<BaseResult<GetBalancesByAddresses>> {
     try {
-      validateAddresses(addresses);
+      if (!HoosatUtils.isValidAddresses(addresses)) {
+        throw new Error('Some of addresses has invalid format');
+      }
 
       const { getBalancesByAddressesResponse } = await this._request<GetBalancesByAddressesResponse>(
         RequestType.GetBalancesByAddressesRequest,

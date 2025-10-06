@@ -16,7 +16,6 @@
     "paths": {
       "@client/*": ["src/client/*"],
       "@constants/*": ["src/constants/*"],
-      "@core/*": ["src/core/*"],
       "@crypto/*": ["src/crypto/*"],
       "@enums/*": ["src/enums/*"],
       "@helpers/*": ["src/helpers/*"],

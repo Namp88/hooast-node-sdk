@@ -1,8 +1,10 @@
 import { EventEmitter } from 'events';
 import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
-import { HoosatCrypto, KeyPair, Transaction, TransactionOutput } from '@crypto/crypto';
+import { HoosatCrypto } from '@crypto/crypto';
 import { HoosatUtils } from '@utils/utils';
 import { HoosatNode } from '@client/client';
+import { Transaction, TransactionOutput } from '@models/transaction/transaction.types';
+import { KeyPair } from '@crypto/models';
 
 /**
  * Wallet configuration options
@@ -41,6 +43,7 @@ export interface SendTransactionOptions {
 export class HooastWallet extends EventEmitter {
   private readonly _node: HoosatNode;
   private readonly _keyPair: KeyPair;
+
   private _utxos: WalletUtxo[] = [];
   private _balance: bigint = 0n;
 

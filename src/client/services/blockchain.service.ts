@@ -1,8 +1,7 @@
-import { BaseService } from '@core/base.service';
+import { BaseService } from '@client/services/base.service';
 import { RequestType } from '@enums/request-type.enum';
 import { BaseResult } from '@models/result/base.result';
 import { buildResult } from '@helpers/build-result.helper';
-import { validateBlockHash } from '@helpers/validation.helper';
 import { GetSelectedTipHashResponse } from '@models/response/get-selected-tip-hash.response';
 import { GetBlockResponse } from '@models/response/get-block.response';
 import { GetSelectedTipHash } from '@models/result/get-selected-tip-hash.result';
@@ -13,6 +12,7 @@ import { GetBlockCount } from '@models/result/get-block-count.result';
 import { GetBlockCountResponse } from '@models/response/get-block-count.response';
 import { GetBlockDagInfo } from '@models/result/get-block-dag-info.result';
 import { GetBlockDagInfoResponse } from '@models/response/get-block-dag-info.response';
+import { HoosatUtils } from '@utils/utils';
 
 export class BlockchainService extends BaseService {
   async getSelectedTipHash(): Promise<BaseResult<GetSelectedTipHash>> {
@@ -31,7 +31,9 @@ export class BlockchainService extends BaseService {
 
   async getBlock(blockHash: string, includeTransactions = true): Promise<BaseResult<GetBlock>> {
     try {
-      validateBlockHash(blockHash);
+      if (!HoosatUtils.isValidBlockHash(blockHash)) {
+        throw new Error('Invalid block hash');
+      }
 
       const { getBlockResponse } = await this._request<GetBlockResponse>(RequestType.GetBlockRequest, {
         hash: blockHash,
@@ -48,7 +50,9 @@ export class BlockchainService extends BaseService {
 
   async getBlocks(lowHash: string, includeTransactions = false): Promise<BaseResult<GetBlocks>> {
     try {
-      validateBlockHash(lowHash);
+      if (!HoosatUtils.isValidBlockHash(lowHash)) {
+        throw new Error('Invalid block hash');
+      }
 
       const { getBlocksResponse } = await this._request<GetBlocksResponse>(RequestType.GetBlocksRequest, {
         lowHash,

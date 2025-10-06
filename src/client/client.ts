@@ -30,7 +30,7 @@ import { AddressService } from './services/address.service';
 import { NodeInfoService } from './services/node-info.service';
 import { TransactionService } from './services/transaction.service';
 import { GetClientInfo } from '@models/result/get-client-info.result';
-import { validateAddresses } from '@helpers/validation.helper';
+import { HoosatUtils } from '@utils/utils';
 
 const GRPC_CONFIG = {
   MAX_MESSAGE_SIZE: 1024 * 1024 * 1024, // 1GB
@@ -345,8 +345,11 @@ export class HoosatNode extends EventEmitter {
    * ```
    */
   async subscribeToUtxoChanges(addresses: string[]): Promise<void> {
-    validateAddresses(addresses);
-    return this._streamingManager!.subscribeToUtxoChanges(addresses);
+    if (HoosatUtils.isValidAddresses(addresses)) {
+      return this._streamingManager!.subscribeToUtxoChanges(addresses);
+    } else {
+      throw new Error('Some of addresses has invalid format');
+    }
   }
 
   /**
@@ -365,9 +368,10 @@ export class HoosatNode extends EventEmitter {
    * ```
    */
   async unsubscribeFromUtxoChanges(addresses?: string[]): Promise<void> {
-    if (addresses) {
-      validateAddresses(addresses);
+    if (addresses && !HoosatUtils.isValidAddresses(addresses)) {
+      throw new Error('Some of addresses has invalid format');
     }
+
     return this._streamingManager!.unsubscribeFromUtxoChanges(addresses);
   }
 

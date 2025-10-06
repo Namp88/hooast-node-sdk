@@ -1,19 +1,21 @@
-import { BaseService } from '@core/base.service';
+import { BaseService } from '@client/services/base.service';
 import { RequestType } from '@enums/request-type.enum';
 import { BaseResult } from '@models/result/base.result';
 import { buildResult } from '@helpers/build-result.helper';
 import { GetMempoolEntry } from '@models/result/get-mempool-entry.result';
 import { GetMempoolEntryResponse } from '@models/response/get-mempool-entry.response';
-import { validateAddresses, validateTransactionId } from '@helpers/validation.helper';
 import { GetMempoolEntries } from '@models/result/get-mempool-entries.result';
 import { GetMempoolEntriesResponse } from '@models/response/get-mempool-entries.response';
 import { GetMempoolEntriesByAddresses } from '@models/result/get-mempool-entries-by-addresses.result';
 import { GetMempoolEntriesByAddressesResponse } from '@models/response/get-mempool-entries-by-addresses.response';
+import { HoosatUtils } from '@utils/utils';
 
 export class MempoolService extends BaseService {
   async getMempoolEntry(txId: string, includeOrphanPool = true, filterTransactionPool = false): Promise<BaseResult<GetMempoolEntry>> {
     try {
-      validateTransactionId(txId);
+      if (!HoosatUtils.isValidTransactionId(txId)) {
+        throw new Error('TransactionId must be a valid Hoosat.');
+      }
 
       const { getMempoolEntryResponse } = await this._request<GetMempoolEntryResponse>(RequestType.GetMempoolEntryRequest, {
         txId,
@@ -57,7 +59,9 @@ export class MempoolService extends BaseService {
     filterTransactionPool = false
   ): Promise<BaseResult<GetMempoolEntriesByAddresses>> {
     try {
-      validateAddresses(addresses);
+      if (!HoosatUtils.isValidAddresses(addresses)) {
+        throw new Error('Some of addresses has invalid format');
+      }
 
       const { getMempoolEntriesByAddressesResponse } = await this._request<GetMempoolEntriesByAddressesResponse>(
         RequestType.GetMempoolEntriesByAddressesRequest,

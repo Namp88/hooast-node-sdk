@@ -5,11 +5,12 @@ export interface TransactionInput {
   };
   signatureScript: string;
   sequence: string;
-  sigOpCount?: number;
+  sigOpCount: number;
+  utxoEntry?: UtxoEntry; // Optional (for crypto operations)
 }
 
 export interface TransactionOutput {
-  amount: string; // sompi
+  amount: string;
   scriptPublicKey: {
     version: number;
     scriptPublicKey: string;
@@ -22,6 +23,25 @@ export interface Transaction {
   outputs: TransactionOutput[];
   lockTime: string;
   subnetworkId: string;
-  gas?: string;
-  payload?: string;
+  gas: string;
+  payload: string;
+  fee?: string; // Optional (for TransactionBuilder)
+}
+
+export interface UtxoEntry {
+  amount: string;
+  scriptPublicKey: {
+    script: string;
+    version: number;
+  };
+  blockDaaScore: string;
+  isCoinbase: boolean;
+}
+
+export interface UtxoForSigning {
+  outpoint: {
+    transactionId: string;
+    index: number;
+  };
+  utxoEntry: UtxoEntry;
 }

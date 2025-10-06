@@ -3,86 +3,42 @@ import * as secp256k1 from 'secp256k1';
 import { createHash, randomBytes } from 'crypto';
 import * as bech32Hoosat from '@libs/bech32-hoosat';
 import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
-
-// ==================== TYPES ====================
-export interface UTXOEntry {
-  amount: string;
-  scriptPublicKey: {
-    script: string;
-    version: number;
-  };
-  blockDaaScore: string;
-  isCoinbase: boolean;
-}
-
-export interface TransactionInput {
-  previousOutpoint: { transactionId: string; index: number };
-  signatureScript: string;
-  sequence: string;
-  sigOpCount: number;
-  utxoEntry?: UTXOEntry;
-}
-
-export interface TransactionOutput {
-  amount: string;
-  scriptPublicKey: { scriptPublicKey: string; version: number };
-}
-
-export interface Transaction {
-  version: number;
-  inputs: TransactionInput[];
-  outputs: TransactionOutput[];
-  lockTime: string;
-  subnetworkId: string;
-  gas: string;
-  payload: string;
-  fee?: string;
-}
-
-export interface UtxoForSigning {
-  outpoint: { transactionId: string; index: number };
-  utxoEntry: {
-    amount: string;
-    scriptPublicKey: { script: string; version: number };
-    blockDaaScore: string;
-    isCoinbase: boolean;
-  };
-}
-
-export interface KeyPair {
-  privateKey: Buffer;
-  publicKey: Buffer;
-  address: string;
-}
-
-export interface TransactionSignature {
-  signature: Buffer;
-  publicKey: Buffer;
-  sigHashType: number;
-}
-
-export interface SighashReusedValues {
-  previousOutputsHash?: Buffer;
-  sequencesHash?: Buffer;
-  sigOpCountsHash?: Buffer;
-  outputsHash?: Buffer;
-  payloadHash?: Buffer;
-}
+import { Transaction, UtxoForSigning } from '@models/transaction/transaction.types';
+import { KeyPair, SighashReusedValues, TransactionSignature } from '@crypto/models';
 
 export class HoosatCrypto {
   // ==================== HASHING ====================
 
+  /**
+   * Computes Blake3 hash (single pass)
+   * @param data - Data to hash
+   * @returns 32-byte hash
+   * @example
+   * const hash = HoosatCrypto.blake3Hash(Buffer.from('hello'));
+   */
   static blake3Hash(data: Buffer): Buffer {
     return Buffer.from(blake3.hash(data));
   }
 
+  /**
+   * Computes double Blake3 hash (for transaction IDs)
+   * @param data - Data to hash
+   * @returns 32-byte double hash
+   * @example
+   * const doubleHash = HoosatCrypto.doubleBlake3Hash(txData);
+   */
   static doubleBlake3Hash(data: Buffer): Buffer {
     return this.blake3Hash(this.blake3Hash(data));
   }
 
   /**
-   * Blake3 Keyed Hash для Hoosat
-   * КРИТИЧНО: Точная реализация из htn-core-lib
+   * Computes Blake3 keyed hash (Hoosat-specific)
+   * Used internally for signature hashing
+   * @param key - 32-byte key or string (auto-padded with zeros)
+   * @param data - Data to hash
+   * @returns 32-byte keyed hash
+   * @example
+   * const hash = HoosatCrypto.blake3KeyedHash('TransactionSigningHash', data);
    */
   static blake3KeyedHash(key: Buffer | string, data: Buffer): Buffer {
     let keyBuffer: Uint8Array;
@@ -101,6 +57,13 @@ export class HoosatCrypto {
     return Buffer.from(blake3.keyedHash(Buffer.from(keyBuffer), data));
   }
 
+  /**
+   * Calculates transaction ID (double Blake3 hash)
+   * @param transaction - Signed transaction object
+   * @returns 64-character hex transaction ID
+   * @example
+   * const txId = HoosatCrypto.getTransactionId(signedTx);
+   */
   static getTransactionId(transaction: Transaction): string {
     const txData = this.serializeTransactionForID(transaction);
     const hash = this.doubleBlake3Hash(txData);
@@ -109,6 +72,13 @@ export class HoosatCrypto {
 
   // ==================== KEY MANAGEMENT ====================
 
+  /**
+   * Generates a new ECDSA key pair with Hoosat address
+   * @returns KeyPair object containing privateKey, publicKey, and address
+   * @example
+   * const wallet = HoosatCrypto.generateKeyPair();
+   * console.log(wallet.address); // hoosat:qyp...
+   */
   static generateKeyPair(): KeyPair {
     let privateKey: Buffer;
     let publicKey: Buffer;
@@ -123,6 +93,13 @@ export class HoosatCrypto {
     return { privateKey, publicKey, address };
   }
 
+  /**
+   * Derives public key from private key
+   * @param privateKey - 32-byte private key buffer
+   * @returns 33-byte compressed ECDSA public key
+   * @example
+   * const publicKey = HoosatCrypto.getPublicKey(privateKey);
+   */
   static getPublicKey(privateKey: Buffer): Buffer {
     if (!secp256k1.privateKeyVerify(privateKey)) {
       throw new Error('Invalid private key');
@@ -130,6 +107,13 @@ export class HoosatCrypto {
     return Buffer.from(secp256k1.publicKeyCreate(privateKey, true));
   }
 
+  /**
+   * Imports wallet from hex-encoded private key
+   * @param privateKeyHex - 64-character hex string (32 bytes)
+   * @throws Error if private key is invalid
+   * @example
+   * const wallet = HoosatCrypto.importKeyPair('33a4a81e...');
+   */
   static importKeyPair(privateKeyHex: string): KeyPair {
     const privateKey = Buffer.from(privateKeyHex, 'hex');
 
@@ -147,8 +131,15 @@ export class HoosatCrypto {
     return { privateKey, publicKey, address };
   }
 
-  // ==================== ADDRESS GENERATION ====================
+  // ==================== ADDRESS OPERATIONS ====================
 
+  /**
+   * Converts Schnorr public key to Hoosat address (version 0x00)
+   * @param publicKey - 32-byte Schnorr public key
+   * @returns Bech32-encoded address
+   * @example
+   * const address = HoosatCrypto.publicKeyToAddress(schnorrPubkey);
+   */
   static publicKeyToAddress(publicKey: Buffer): string {
     if (publicKey.length !== 32) {
       throw new Error(`Schnorr public key must be 32 bytes, got ${publicKey.length}`);
@@ -156,6 +147,14 @@ export class HoosatCrypto {
     return bech32Hoosat.encode('hoosat', publicKey, 0x00);
   }
 
+  /**
+   * Converts ECDSA public key to Hoosat address (version 0x01)
+   * @param publicKey - 33-byte compressed ECDSA public key
+   * @returns Bech32-encoded address with 'hoosat:' prefix
+   * @example
+   * const address = HoosatCrypto.publicKeyToAddressECDSA(pubkey);
+   * // hoosat:qyp2uxq7rl0a95npw0yay62chv22l4f33hd8nween6g5jcge4lk57tqsfw88n2d
+   */
   static publicKeyToAddressECDSA(publicKey: Buffer): string {
     if (publicKey.length !== 33) {
       throw new Error(`ECDSA public key must be 33 bytes, got ${publicKey.length}`);
@@ -163,6 +162,15 @@ export class HoosatCrypto {
     return bech32Hoosat.encode('hoosat', publicKey, 0x01);
   }
 
+  /**
+   * Converts Hoosat address to ScriptPublicKey for transaction outputs
+   * @param address - Bech32-encoded Hoosat address
+   * @returns Script buffer (format: length + pubkey + opcode)
+   * @throws Error for unsupported address versions
+   * @example
+   * const script = HoosatCrypto.addressToScriptPublicKey('hoosat:qyp...');
+   * // For ECDSA: 0x21 + 33-byte pubkey + 0xAB (OP_CHECKSIGECDSA)
+   */
   static addressToScriptPublicKey(address: string): Buffer {
     const decoded = bech32Hoosat.decode(address);
 
@@ -182,7 +190,7 @@ export class HoosatCrypto {
       return Buffer.concat([
         Buffer.from([dataLength]),
         decoded.payload,
-        Buffer.from([0xab]), // ✅ OP_CHECKSIGECDSA (НЕ OP_CHECKSIG!)
+        Buffer.from([0xab]), // OP_CHECKSIGECDSA
       ]);
     }
 
@@ -199,10 +207,45 @@ export class HoosatCrypto {
     throw new Error(`Unsupported address version: ${decoded.version}`);
   }
 
+  // ==================== TRANSACTION UTILITIES ====================
+
+  /**
+   * Estimates transaction size in bytes
+   * @param inputCount - Number of inputs
+   * @param outputCount - Number of outputs
+   * @returns Estimated size in bytes
+   * @example
+   * const size = HoosatCrypto.estimateTransactionSize(2, 2);
+   */
+  static estimateTransactionSize(inputCount: number, outputCount: number): number {
+    return 10 + inputCount * 150 + outputCount * 35;
+  }
+
+  /**
+   * Calculates recommended transaction fee
+   * @param inputCount - Number of inputs
+   * @param outputCount - Number of outputs
+   * @param feePerByte - Fee rate (default: 1 sompi/byte)
+   * @returns Fee amount in sompi as string
+   * @example
+   * const fee = HoosatCrypto.calculateFee(2, 2, 1);
+   */
+  static calculateFee(inputCount: number, outputCount: number, feePerByte = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
+    const size = this.estimateTransactionSize(inputCount, outputCount);
+    return Math.max(size * feePerByte, HOOSAT_PARAMS.MIN_FEE).toString();
+  }
+
   // ==================== TRANSACTION SIGNING ====================
 
   /**
-   * Schnorr Signature Hash с Blake3 Keyed Hash
+   * Computes Schnorr signature hash (intermediate step)
+   * Uses Blake3 keyed hash with "TransactionSigningHash" domain
+   * @param transaction - Transaction to sign
+   * @param inputIndex - Index of input to sign (0-based)
+   * @param utxo - UTXO being spent
+   * @param reusedValues - Cache for hash optimization (optional)
+   * @returns 32-byte signature hash
+   * @internal Exposed for testing/debugging only
    */
   static getSignatureHashSchnorr(
     transaction: Transaction,
@@ -218,73 +261,64 @@ export class HoosatCrypto {
     versionBuf.writeUInt16LE(transaction.version, 0);
     buffers.push(versionBuf);
 
-    // 2-4. Hashes
     buffers.push(this._getPreviousOutputsHash(transaction, hashType, reusedValues));
     buffers.push(this._getSequencesHash(transaction, hashType, reusedValues));
     buffers.push(this._getSigOpCountsHash(transaction, hashType, reusedValues));
 
-    // 5. Current Outpoint
     buffers.push(Buffer.from(input.previousOutpoint.transactionId, 'hex'));
     const indexBuf = Buffer.alloc(4);
     indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
     buffers.push(indexBuf);
 
-    // 6. ✅ PrevScriptPublicKey Version - ВСЕГДА 0!
     const scriptVersionBuf = Buffer.alloc(2);
-    scriptVersionBuf.writeUInt16LE(0, 0); // ✅ Исправлено: всегда 0!
+    scriptVersionBuf.writeUInt16LE(0, 0);
     buffers.push(scriptVersionBuf);
 
-    // 7. ✅ PrevScriptPublicKey Script - длина как UInt64LE!
     const prevScript = Buffer.from(utxo.utxoEntry.scriptPublicKey.script, 'hex');
     const scriptLengthBuf = Buffer.alloc(8);
-    scriptLengthBuf.writeBigUInt64LE(BigInt(prevScript.length), 0); // ✅ Исправлено: UInt64LE вместо VarInt!
+    scriptLengthBuf.writeBigUInt64LE(BigInt(prevScript.length), 0);
     buffers.push(scriptLengthBuf);
     buffers.push(prevScript);
 
-    // 8. Amount (uint64)
     const amountBuf = Buffer.alloc(8);
     amountBuf.writeBigUInt64LE(BigInt(utxo.utxoEntry.amount), 0);
     buffers.push(amountBuf);
 
-    // 9. Sequence (uint64)
     const sequenceBuf = Buffer.alloc(8);
     sequenceBuf.writeBigUInt64LE(BigInt(input.sequence), 0);
     buffers.push(sequenceBuf);
 
-    // 10. SigOpCount (1 byte)
     buffers.push(Buffer.from([input.sigOpCount]));
 
-    // 11. OutputsHash
     buffers.push(this._getOutputsHash(transaction, inputIndex, hashType, reusedValues));
 
-    // 12. LockTime (uint64)
     const lockTimeBuf = Buffer.alloc(8);
     lockTimeBuf.writeBigUInt64LE(BigInt(transaction.lockTime), 0);
     buffers.push(lockTimeBuf);
 
-    // 13. SubnetworkID (20 bytes)
     buffers.push(Buffer.from(transaction.subnetworkId, 'hex'));
 
-    // 14. Gas (uint64)
     const gasBuf = Buffer.alloc(8);
     gasBuf.writeBigUInt64LE(BigInt(transaction.gas), 0);
     buffers.push(gasBuf);
 
-    // 15. PayloadHash
     buffers.push(this._getPayloadHash(transaction, reusedValues));
 
-    // 16. SigHashType (1 byte)
     buffers.push(Buffer.from([hashType]));
 
     const dataToHash = Buffer.concat(buffers);
-
-    // ✅ Blake3 Keyed Hash с правильным ключом
     return this.blake3KeyedHash('TransactionSigningHash', dataToHash);
   }
 
   /**
-   * ECDSA Signature Hash
-   * SHA256("TransactionSigningHashECDSA" + schnorr_hash)
+   * Computes ECDSA signature hash (final step)
+   * Formula: SHA256(SHA256("TransactionSigningHashECDSA") + schnorrHash)
+   * @param transaction - Transaction to sign
+   * @param inputIndex - Index of input to sign (0-based)
+   * @param utxo - UTXO being spent
+   * @param reusedValues - Cache for hash optimization (optional)
+   * @returns 32-byte ECDSA signature hash
+   * @internal Exposed for testing/debugging only
    */
   static getSignatureHashECDSA(
     transaction: Transaction,
@@ -300,6 +334,16 @@ export class HoosatCrypto {
     return createHash('sha256').update(preimage).digest();
   }
 
+  /**
+   * Signs single transaction input with ECDSA
+   * @param transaction - Transaction to sign
+   * @param inputIndex - Index of input to sign (0-based)
+   * @param privateKey - 32-byte private key
+   * @param utxo - UTXO being spent (includes scriptPubKey)
+   * @param reusedValues - Cache for hash optimization (optional)
+   * @returns Signature object with 64-byte raw signature + pubkey
+   * @internal Used by TransactionBuilder
+   */
   static signTransactionInput(
     transaction: Transaction,
     inputIndex: number,
@@ -309,7 +353,6 @@ export class HoosatCrypto {
   ): TransactionSignature {
     const sigHash = this.getSignatureHashECDSA(transaction, inputIndex, utxo, reusedValues);
 
-    // ✅ RAW формат (64 bytes), НЕ DER!
     const signature = secp256k1.ecdsaSign(sigHash, privateKey);
     const publicKey = this.getPublicKey(privateKey);
 
@@ -320,6 +363,16 @@ export class HoosatCrypto {
     };
   }
 
+  /**
+   * Verifies ECDSA signature for transaction input
+   * @param transaction - Transaction containing the input
+   * @param inputIndex - Index of input to verify
+   * @param signature - 64-byte raw ECDSA signature
+   * @param publicKey - 33-byte compressed public key
+   * @param utxo - UTXO that was spent
+   * @returns true if signature is valid
+   * @internal Used for testing/validation
+   */
   static verifyTransactionSignature(
     transaction: Transaction,
     inputIndex: number,
@@ -350,7 +403,6 @@ export class HoosatCrypto {
         indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
         buffers.push(indexBuf);
       }
-      // ✅ KEYED HASH!
       reused.previousOutputsHash = this.blake3KeyedHash('TransactionSigningHash', Buffer.concat(buffers));
     }
 
@@ -373,7 +425,6 @@ export class HoosatCrypto {
         seqBuf.writeBigUInt64LE(BigInt(input.sequence), 0);
         buffers.push(seqBuf);
       }
-      // ✅ KEYED HASH!
       reused.sequencesHash = this.blake3KeyedHash('TransactionSigningHash', Buffer.concat(buffers));
     }
 
@@ -387,7 +438,6 @@ export class HoosatCrypto {
 
     if (!reused.sigOpCountsHash) {
       const sigOpCounts = tx.inputs.map(input => input.sigOpCount);
-      // ✅ KEYED HASH!
       reused.sigOpCountsHash = this.blake3KeyedHash('TransactionSigningHash', Buffer.from(sigOpCounts));
     }
 
@@ -403,7 +453,7 @@ export class HoosatCrypto {
       if (inputIndex >= tx.outputs.length) {
         return Buffer.alloc(32, 0);
       }
-      // ✅ KEYED HASH для сериализации одного output
+
       const buffers: Buffer[] = [];
       const output = tx.outputs[inputIndex];
 
@@ -468,12 +518,10 @@ export class HoosatCrypto {
   static serializeTransactionForID(transaction: Transaction): Buffer {
     const buffers: Buffer[] = [];
 
-    // Version (uint16)
     const versionBuf = Buffer.alloc(2);
     versionBuf.writeUInt16LE(transaction.version, 0);
     buffers.push(versionBuf);
 
-    // Inputs length как UInt64LE
     const inputsLengthBuf = Buffer.alloc(8);
     inputsLengthBuf.writeBigUInt64LE(BigInt(transaction.inputs.length), 0);
     buffers.push(inputsLengthBuf);
@@ -484,36 +532,30 @@ export class HoosatCrypto {
       indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
       buffers.push(indexBuf);
 
-      // SignatureScript length как UInt64LE
       const sigScript = Buffer.from(input.signatureScript, 'hex');
       const sigScriptLengthBuf = Buffer.alloc(8);
       sigScriptLengthBuf.writeBigUInt64LE(BigInt(sigScript.length), 0);
       buffers.push(sigScriptLengthBuf);
       buffers.push(sigScript);
 
-      // Sequence (uint64)
       const seqBuf = Buffer.alloc(8);
       seqBuf.writeBigUInt64LE(BigInt(input.sequence), 0);
       buffers.push(seqBuf);
     }
 
-    // Outputs length как UInt64LE
     const outputsLengthBuf = Buffer.alloc(8);
     outputsLengthBuf.writeBigUInt64LE(BigInt(transaction.outputs.length), 0);
     buffers.push(outputsLengthBuf);
 
     for (const output of transaction.outputs) {
-      // Amount (uint64)
       const amountBuf = Buffer.alloc(8);
       amountBuf.writeBigUInt64LE(BigInt(output.amount), 0);
       buffers.push(amountBuf);
 
-      // Version (uint16)
       const versionBuf = Buffer.alloc(2);
       versionBuf.writeUInt16LE(output.scriptPublicKey.version, 0);
       buffers.push(versionBuf);
 
-      // Script length как UInt64LE
       const script = Buffer.from(output.scriptPublicKey.scriptPublicKey, 'hex');
       const scriptLengthBuf = Buffer.alloc(8);
       scriptLengthBuf.writeBigUInt64LE(BigInt(script.length), 0);
@@ -521,34 +563,19 @@ export class HoosatCrypto {
       buffers.push(script);
     }
 
-    // LockTime (uint64)
     const lockTimeBuf = Buffer.alloc(8);
     lockTimeBuf.writeBigUInt64LE(BigInt(transaction.lockTime), 0);
     buffers.push(lockTimeBuf);
 
-    // SubnetworkID (20 bytes)
     buffers.push(Buffer.from(transaction.subnetworkId, 'hex'));
 
-    // Gas (uint64)
     const gasBuf = Buffer.alloc(8);
     gasBuf.writeBigUInt64LE(BigInt(transaction.gas || '0'), 0);
     buffers.push(gasBuf);
 
-    // Payload (32 bytes)
     const payload = transaction.payload ? Buffer.from(transaction.payload, 'hex') : Buffer.alloc(32, 0);
     buffers.push(payload);
 
     return Buffer.concat(buffers);
-  }
-
-  // ==================== UTILITY METHODS ====================
-
-  static estimateTransactionSize(inputCount: number, outputCount: number): number {
-    return 10 + inputCount * 150 + outputCount * 35;
-  }
-
-  static calculateFee(inputCount: number, outputCount: number, feePerByte = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
-    const size = this.estimateTransactionSize(inputCount, outputCount);
-    return Math.max(size * feePerByte, HOOSAT_PARAMS.MIN_FEE).toString();
   }
 }

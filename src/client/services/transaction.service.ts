@@ -1,4 +1,4 @@
-import { BaseService } from '@core/base.service';
+import { BaseService } from '@client/services/base.service';
 import { Transaction } from '@models/transaction/transaction.types';
 import { BaseResult } from '@models/result/base.result';
 import { SubmitTransaction } from '@models/result/submit-transaction.result';

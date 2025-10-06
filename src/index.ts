@@ -1,9 +1,11 @@
 import { HoosatNode } from '@client/client';
 import { HooastWallet } from '@wallet/wallet';
+import { NodeConfig } from '@models/node-config.model';
 
 // Types
-export * from './models/node-config.model';
-export * from './models/transaction/transaction.types';
+export type { NodeConfig } from './models/node-config.model';
+export type { Transaction, TransactionInput, TransactionOutput, UtxoEntry, UtxoForSigning } from '@models/transaction/transaction.types';
+export type { KeyPair, TransactionSignature, SighashReusedValues } from '@crypto/models';
 
 export { HoosatNode } from '@client/client';
 export { HooastWallet } from '@wallet/wallet';
@@ -27,7 +29,7 @@ export class HoosatSDK {
    * Creates a new wallet with auto-generated keys
    * @param node - HoosatNode instance or connection params
    */
-  static createWallet(node: HoosatNode | { host?: string; port?: number }): HooastWallet {
+  static createWallet(node: HoosatNode | NodeConfig): HooastWallet {
     const nodeInstance = node instanceof HoosatNode ? node : new HoosatNode(node);
 
     return HooastWallet.createNew(nodeInstance);

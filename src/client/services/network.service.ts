@@ -1,4 +1,4 @@
-import { BaseService } from '@core/base.service';
+import { BaseService } from '@client/services/base.service';
 import { RequestType } from '@enums/request-type.enum';
 import { BaseResult } from '@models/result/base.result';
 import { buildResult } from '@helpers/build-result.helper';

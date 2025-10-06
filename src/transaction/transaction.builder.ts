@@ -1,6 +1,8 @@
-import { SighashReusedValues, Transaction, TransactionOutput, UtxoForSigning, HoosatCrypto } from '@crypto/crypto';
+import { HoosatCrypto } from '@crypto/crypto';
 import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
 import { HoosatUtils } from '@utils/utils';
+import { Transaction, TransactionOutput, UtxoForSigning } from '@models/transaction/transaction.types';
+import { SighashReusedValues } from '@crypto/models';
 
 export class TransactionBuilder {
   private inputs: Array<{ utxo: UtxoForSigning; privateKey?: Buffer }> = [];

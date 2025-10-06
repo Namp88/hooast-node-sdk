@@ -18,7 +18,7 @@ export abstract class BaseService {
    * @param params - Parameters for the command
    * @returns Promise with the response
    */
-  protected async _request<T = any>(command: RequestType, params: any = {}): Promise<T> {
+  protected async _request<T>(command: RequestType, params: any = {}): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Request ${command} timed out after ${this._timeout}ms`));
