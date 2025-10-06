@@ -1,7 +1,7 @@
 {
-  "name": "@hoosat/node-sdk",
+  "name": "@hoosat/sdk",
   "version": "0.1.0",
-  "description": "TypeScript SDK for communicating with Hoosat nodes via gRPC",
+  "description": "Comprehensive TypeScript SDK for Hoosat blockchain: node communication, cryptographic utilities, real-time streaming, and transaction building",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -27,8 +27,11 @@
     "example:pending-transactions-and-supply": "tsx watch examples/pending-transactions-and-supply.ts",
     "example:send-transaction": "tsx watch examples/send-transaction.ts",
 
+    "debug:preimage": "tsx examples/debug-schnorr-preimage.ts",
+
     "create:test-wallet": "tsx watch examples/create-test-wallet.ts",
     "test:send-real-htn": "tsx watch --no-cache examples/send-real-htn.ts",
+    "test:motoko": "tsx examples/test-motoko-comparison.ts",
 
     "test:bench32": "tsx examples/test-bech32.ts"
   },
@@ -45,12 +48,12 @@
   "author": "Andrei Kliubchenko, namp2988@gmail.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Namp88/hooast-node-sdk.git"
+    "url": "https://github.com/Namp88/hooast-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/Namp88/hooast-node-sdk/issues"
+    "url": "https://github.com/Namp88/hooast-sdk/issues"
   },
-  "homepage": "https://github.com/Namp88/hooast-node-sdk#readme",
+  "homepage": "https://github.com/Namp88/hooast-sdk#readme",
   "files": [
     "dist",
     "README.md",

@@ -224,7 +224,7 @@ export class HoosatCrypto {
     buffers.push(this._getSigOpCountsHash(transaction, hashType, reusedValues));
 
     // 5. Current Outpoint
-    buffers.push(Buffer.from(input.previousOutpoint.transactionId, 'hex').reverse());
+    buffers.push(Buffer.from(input.previousOutpoint.transactionId, 'hex'));
     const indexBuf = Buffer.alloc(4);
     indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
     buffers.push(indexBuf);
@@ -284,7 +284,7 @@ export class HoosatCrypto {
 
   /**
    * ECDSA Signature Hash
-   * ✅ ИСПРАВЛЕНО: SHA256("TransactionSigningHashECDSA" + schnorr_hash)
+   * SHA256("TransactionSigningHashECDSA" + schnorr_hash)
    */
   static getSignatureHashECDSA(
     transaction: Transaction,
@@ -294,8 +294,10 @@ export class HoosatCrypto {
   ): Buffer {
     const schnorrHash = this.getSignatureHashSchnorr(transaction, inputIndex, utxo, reusedValues);
 
-    // ✅ ПРАВИЛЬНО: SHA256 с доменом
-    return createHash('sha256').update('TransactionSigningHashECDSA').update(schnorrHash).digest();
+    const domainHash = createHash('sha256').update('TransactionSigningHashECDSA').digest();
+    const preimage = Buffer.concat([domainHash, schnorrHash]);
+
+    return createHash('sha256').update(preimage).digest();
   }
 
   static signTransactionInput(
@@ -343,7 +345,7 @@ export class HoosatCrypto {
     if (!reused.previousOutputsHash) {
       const buffers: Buffer[] = [];
       for (const input of tx.inputs) {
-        buffers.push(Buffer.from(input.previousOutpoint.transactionId, 'hex').reverse());
+        buffers.push(Buffer.from(input.previousOutpoint.transactionId, 'hex'));
         const indexBuf = Buffer.alloc(4);
         indexBuf.writeUInt32LE(input.previousOutpoint.index, 0);
         buffers.push(indexBuf);
