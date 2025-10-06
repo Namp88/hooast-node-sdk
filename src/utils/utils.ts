@@ -1,5 +1,6 @@
 import * as bech32Hoosat from '@libs/bech32-hoosat';
 import { VALIDATION_PARAMS } from '@constants/validation-params.const';
+import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
 
 export class HoosatUtils {
   // ==================== AMOUNT CONVERSION ====================
@@ -47,18 +48,23 @@ export class HoosatUtils {
   // ==================== ADDRESS VALIDATION ====================
 
   /**
-   * Validates a Hoosat address format
+   * Validates a Hoosat address format (both mainnet and testnet)
    * @param address - HTN address as string
    * @returns True if valid, false otherwise
    * @example
-   * HoosatUtils.isValidAddress('hoosat:qz7ulu...') // true
+   * HoosatUtils.isValidAddress('hoosat:qz7ulu...') // mainnet - true
+   * HoosatUtils.isValidAddress('hoosattest:qreey20...') // testnet - true
    */
   static isValidAddress(address: string): boolean {
     if (!address || typeof address !== 'string') {
       return false;
     }
 
-    if (!address.startsWith(VALIDATION_PARAMS.ADDRESS_PREFIX)) {
+    // Check both mainnet and testnet prefixes
+    const hasValidPrefix =
+      address.startsWith(HOOSAT_PARAMS.MAINNET_ADDRESS_PREFIX) || address.startsWith(HOOSAT_PARAMS.TESTNET_ADDRESS_PREFIX);
+
+    if (!hasValidPrefix) {
       return false;
     }
 
@@ -136,6 +142,30 @@ export class HoosatUtils {
       default:
         return null;
     }
+  }
+
+  /**
+   * Gets the network type from a Hoosat address
+   * @param address - HTN address as string
+   * @returns Network type: 'mainnet' | 'testnet' | null if invalid
+   * @example
+   * HoosatUtils.getAddressNetwork('hoosat:qz7ulu...') // 'mainnet'
+   * HoosatUtils.getAddressNetwork('hoosattest:qreey20...') // 'testnet'
+   */
+  static getAddressNetwork(address: string): 'mainnet' | 'testnet' | null {
+    if (!address || typeof address !== 'string') {
+      return null;
+    }
+
+    if (address.startsWith(HOOSAT_PARAMS.MAINNET_ADDRESS_PREFIX)) {
+      return 'mainnet';
+    }
+
+    if (address.startsWith(HOOSAT_PARAMS.TESTNET_ADDRESS_PREFIX)) {
+      return 'testnet';
+    }
+
+    return null;
   }
 
   // ==================== HASH VALIDATION ====================

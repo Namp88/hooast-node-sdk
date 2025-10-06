@@ -2,7 +2,7 @@ import * as blake3 from 'blake3';
 import * as secp256k1 from 'secp256k1';
 import { createHash, randomBytes } from 'crypto';
 import * as bech32Hoosat from '@libs/bech32-hoosat';
-import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
+import { HOOSAT_PARAMS, HoosatNetwork } from '@constants/hoosat-params.conts';
 import { Transaction, UtxoForSigning } from '@models/transaction/transaction.types';
 import { KeyPair, SighashReusedValues, TransactionSignature } from '@crypto/models';
 
@@ -74,12 +74,13 @@ export class HoosatCrypto {
 
   /**
    * Generates a new ECDSA key pair with Hoosat address
+   * @param network - Network type: 'mainnet' or 'testnet' (default: 'mainnet')
    * @returns KeyPair object containing privateKey, publicKey, and address
    * @example
-   * const wallet = HoosatCrypto.generateKeyPair();
-   * console.log(wallet.address); // hoosat:qyp...
+   * const mainnetWallet = HoosatCrypto.generateKeyPair();
+   * const testnetWallet = HoosatCrypto.generateKeyPair('testnet');
    */
-  static generateKeyPair(): KeyPair {
+  static generateKeyPair(network: HoosatNetwork = 'mainnet'): KeyPair {
     let privateKey: Buffer;
     let publicKey: Buffer;
 
@@ -88,7 +89,7 @@ export class HoosatCrypto {
     } while (!secp256k1.privateKeyVerify(privateKey));
 
     publicKey = Buffer.from(secp256k1.publicKeyCreate(privateKey, true));
-    const address = this.publicKeyToAddressECDSA(publicKey);
+    const address = this.publicKeyToAddressECDSA(publicKey, network);
 
     return { privateKey, publicKey, address };
   }
@@ -110,11 +111,13 @@ export class HoosatCrypto {
   /**
    * Imports wallet from hex-encoded private key
    * @param privateKeyHex - 64-character hex string (32 bytes)
+   * @param network - Network type: 'mainnet' or 'testnet' (default: 'mainnet')
    * @throws Error if private key is invalid
    * @example
-   * const wallet = HoosatCrypto.importKeyPair('33a4a81e...');
+   * const mainnetWallet = HoosatCrypto.importKeyPair('33a4a81e...');
+   * const testnetWallet = HoosatCrypto.importKeyPair('33a4a81e...', 'testnet');
    */
-  static importKeyPair(privateKeyHex: string): KeyPair {
+  static importKeyPair(privateKeyHex: string, network: HoosatNetwork = 'mainnet'): KeyPair {
     const privateKey = Buffer.from(privateKeyHex, 'hex');
 
     if (privateKey.length !== 32) {
@@ -126,7 +129,7 @@ export class HoosatCrypto {
     }
 
     const publicKey = this.getPublicKey(privateKey);
-    const address = this.publicKeyToAddressECDSA(publicKey);
+    const address = this.publicKeyToAddressECDSA(publicKey, network);
 
     return { privateKey, publicKey, address };
   }
@@ -136,30 +139,39 @@ export class HoosatCrypto {
   /**
    * Converts Schnorr public key to Hoosat address (version 0x00)
    * @param publicKey - 32-byte Schnorr public key
+   * @param network - Network type: 'mainnet' or 'testnet' (default: 'mainnet')
    * @returns Bech32-encoded address
    * @example
-   * const address = HoosatCrypto.publicKeyToAddress(schnorrPubkey);
+   * const mainnetAddr = HoosatCrypto.publicKeyToAddress(schnorrPubkey);
+   * const testnetAddr = HoosatCrypto.publicKeyToAddress(schnorrPubkey, 'testnet');
    */
-  static publicKeyToAddress(publicKey: Buffer): string {
+  static publicKeyToAddress(publicKey: Buffer, network: HoosatNetwork = 'mainnet'): string {
     if (publicKey.length !== 32) {
       throw new Error(`Schnorr public key must be 32 bytes, got ${publicKey.length}`);
     }
-    return bech32Hoosat.encode('hoosat', publicKey, 0x00);
+
+    const prefix = network === 'testnet' ? HOOSAT_PARAMS.TESTNET_PREFIX : HOOSAT_PARAMS.MAINNET_PREFIX;
+
+    return bech32Hoosat.encode(prefix, publicKey, 0x00);
   }
 
   /**
    * Converts ECDSA public key to Hoosat address (version 0x01)
    * @param publicKey - 33-byte compressed ECDSA public key
-   * @returns Bech32-encoded address with 'hoosat:' prefix
+   * @param network - Network type: 'mainnet' or 'testnet' (default: 'mainnet')
+   * @returns Bech32-encoded address with network prefix
    * @example
-   * const address = HoosatCrypto.publicKeyToAddressECDSA(pubkey);
-   * // hoosat:qyp2uxq7rl0a95npw0yay62chv22l4f33hd8nween6g5jcge4lk57tqsfw88n2d
+   * const mainnetAddr = HoosatCrypto.publicKeyToAddressECDSA(pubkey);
+   * const testnetAddr = HoosatCrypto.publicKeyToAddressECDSA(pubkey, 'testnet');
    */
-  static publicKeyToAddressECDSA(publicKey: Buffer): string {
+  static publicKeyToAddressECDSA(publicKey: Buffer, network: HoosatNetwork = 'mainnet'): string {
     if (publicKey.length !== 33) {
       throw new Error(`ECDSA public key must be 33 bytes, got ${publicKey.length}`);
     }
-    return bech32Hoosat.encode('hoosat', publicKey, 0x01);
+
+    const prefix = network === 'testnet' ? HOOSAT_PARAMS.TESTNET_PREFIX : HOOSAT_PARAMS.MAINNET_PREFIX;
+
+    return bech32Hoosat.encode(prefix, publicKey, 0x01);
   }
 
   /**

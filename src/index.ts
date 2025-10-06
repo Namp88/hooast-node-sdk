@@ -31,3 +31,4 @@ export type { EstimateNetworkHashesPerSecond } from '@models/result/estimate-net
 export type { GetCoinSupply } from '@models/result/get-coin-supply.result';
 export type { SubmitTransaction } from '@models/result/submit-transaction.result';
 export type { GetClientInfo } from '@models/result/get-client-info.result';
+export type { HoosatNetwork } from '@constants/hoosat-params.conts';
