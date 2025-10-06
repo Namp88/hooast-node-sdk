@@ -1,6 +1,6 @@
-# @hoosat/sdk
+# hoosat-sdk
 
-[![npm version](https://badge.fury.io/js/@hoosat%2Fnode-sdk.svg)](https://badge.fury.io/js/@hoosat%2Fnode-sdk)
+[![npm version](https://badge.fury.io/js/hoosat-sdk.svg)](https://badge.fury.io/js/hoosat-sdk)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -32,7 +32,7 @@ Comprehensive TypeScript SDK for [Hoosat](https://hoosat.fi) blockchain. Full-fe
 ## 📦 Installation
 
 ```bash
-npm install @hoosat/sdk
+npm install hoosat-sdk
 ```
 
 ## 🚀 Quick Start
@@ -40,7 +40,7 @@ npm install @hoosat/sdk
 ### Connect to Node
 
 ```typescript
-import { HoosatNode } from '@hoosat/sdk';
+import { HoosatNode } from 'hoosat-sdk';
 
 const node = new HoosatNode({
   host: '54.38.176.95',
@@ -60,7 +60,7 @@ if (info.ok) {
 ### Generate Wallet
 
 ```typescript
-import { HoosatCrypto } from '@hoosat/sdk';
+import { HoosatCrypto } from 'hoosat-sdk';
 
 // Generate new keypair
 const wallet = HoosatCrypto.generateKeyPair();
@@ -74,7 +74,7 @@ const imported = HoosatCrypto.importKeyPair('your_private_key_hex');
 ### Check Balance
 
 ```typescript
-import { HoosatUtils } from '@hoosat/sdk';
+import { HoosatUtils } from 'hoosat-sdk';
 
 const result = await node.getBalance('hoosat:qz7ulu...');
 if (result.ok) {
@@ -86,7 +86,7 @@ if (result.ok) {
 ### Build & Send Transaction
 
 ```typescript
-import { TransactionBuilder, FeeEstimator, FeePriority } from '@hoosat/sdk';
+import { TransactionBuilder, FeeEstimator, FeePriority } from 'hoosat-sdk';
 
 // Estimate fee
 const feeEstimator = new FeeEstimator(node);
@@ -566,7 +566,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - [Hoosat Official Website](https://hoosat.fi)
 - [GitHub Repository](https://github.com/Namp88/hoosat-sdk)
-- [NPM Package](https://www.npmjs.com/package/@hoosat/sdk)
+- [NPM Package](https://www.npmjs.com/package/hoosat-sdk)
 - [Issues & Support](https://github.com/Namp88/hoosat-sdk/issues)
 
 ## 📞 Support
