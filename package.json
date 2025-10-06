@@ -1,6 +1,6 @@
 {
   "name": "hoosat-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Comprehensive TypeScript SDK for Hoosat blockchain: node communication, cryptographic utilities, real-time streaming, and transaction building",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,11 +10,9 @@
     "dev": "tsc --watch",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-
     "release:patch": "npm version patch && git push origin main --follow-tags",
     "release:minor": "npm version minor && git push origin main --follow-tags",
     "release:major": "npm version major && git push origin main --follow-tags",
-
     "example:address:balance": "tsx examples/address/01-balance.ts",
     "example:address:balances-multiple": "tsx examples/address/02-balances-multiple.ts",
     "example:address:utxos": "tsx examples/address/03-utxos.ts",
