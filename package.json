@@ -1,6 +1,6 @@
 {
   "name": "hoosat-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Comprehensive TypeScript SDK for Hoosat blockchain: node communication, cryptographic utilities, real-time streaming, and transaction building",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
