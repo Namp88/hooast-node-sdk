@@ -242,7 +242,6 @@ async function main() {
   console.log();
   console.log(`  Inputs:  ${numInputs}`);
   console.log(`  Outputs: ${numOutputs}`);
-  console.log(`  Est. Size: ~${HoosatCrypto.estimateTransactionSize(numInputs, numOutputs)} bytes\n`);
 
   // ==================== STEP 7: SIGN TRANSACTION ====================
   console.log('7️⃣  Sign Transaction');

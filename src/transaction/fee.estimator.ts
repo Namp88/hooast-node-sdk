@@ -1,4 +1,6 @@
 import { HoosatNode } from '@client/client';
+import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
+import { HoosatCrypto } from '@crypto/crypto';
 
 /**
  * Fee priority levels
@@ -47,6 +49,38 @@ export class FeeEstimator {
 
   constructor(node: HoosatNode) {
     this._node = node;
+  }
+
+  /**
+   * Estimates fee for a transaction using MASS-BASED calculation
+   * This correctly accounts for ScriptPubKey mass (10x more expensive than tx bytes)
+   *
+   * @param priority - Fee priority level
+   * @param inputs - Number of inputs
+   * @param outputs - Number of outputs
+   * @param forceRefresh - Force mempool re-analysis
+   * @returns Fee estimate with totalFee in sompi
+   *
+   * @example
+   * const estimate = await feeEstimator.estimateFee(FeePriority.Normal, 2, 2);
+   * console.log(`Fee rate: ${estimate.feeRate} sompi/byte`);
+   * console.log(`Total fee: ${estimate.totalFee} sompi`);
+   */
+  async estimateFee(
+    priority: FeePriority = FeePriority.Normal,
+    inputs: number,
+    outputs: number,
+    forceRefresh = false
+  ): Promise<FeeEstimate> {
+    const recommendations = await this.getRecommendations(forceRefresh);
+    const estimate = recommendations[priority];
+
+    const totalFee = HoosatCrypto.calculateFee(inputs, outputs, estimate.feeRate);
+
+    return {
+      ...estimate,
+      totalFee,
+    };
   }
 
   /**

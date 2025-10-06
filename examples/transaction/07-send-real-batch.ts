@@ -6,12 +6,6 @@
  * This version uses the correct mass-based fee calculation from htn-core
  */
 import { FeeEstimator, FeePriority, HoosatCrypto, HoosatNode, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
-import {
-  calculateFeeFromMass,
-  calculateTransactionMass,
-  compareCalculationMethods,
-  printMassCalculation,
-} from '../../src/transaction/mass.calculator';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -33,18 +27,13 @@ async function main() {
       label: 'Recipient 1',
     },
     {
-      address: 'hoosat:qr97kz9ujwylwxd8jkh9zs0nexlkkuu0v3aj0a6htvapan0a0arjugmlqf5ur',
-      amount: '0.005',
-      label: 'Recipient 2',
-    },
-    {
       address: 'hoosat:qzr0pvne29vrvp2pud5j5qxx0xyuv0mjvw9qdswsu5q7z5ulgmxswemhkklu2',
       amount: '0.003',
       label: 'Recipient 3',
     },
   ];
 
-  const FEE_PRIORITY = FeePriority.Normal;
+  const FEE_PRIORITY = FeePriority.High;
 
   console.log(`Node:       ${NODE_HOST}:${NODE_PORT}`);
   console.log(`Priority:   ${FEE_PRIORITY}`);
@@ -193,7 +182,7 @@ async function main() {
   console.log(`  Urgent: ${recommendations.urgent.feeRate} sompi/byte\n`);
 
   // Get selected fee rate
-  const selectedFeeRate = recommendations[FEE_PRIORITY].feeRate;
+  const selectedFeeRate = 20;
   console.log(`✅ Selected ${FEE_PRIORITY} priority: ${selectedFeeRate} sompi/byte\n`);
 
   // ==================== STEP 6: CALCULATE CORRECT FEE USING MASS ====================
@@ -215,13 +204,6 @@ async function main() {
   // Start with 1 input and calculate mass-based fee
   let numInputs = 1;
 
-  // Show comparison between old and new methods
-  console.log('📊 Comparison: Old SDK vs Mass-Based Calculation\n');
-  compareCalculationMethods(numInputs, numOutputs, selectedFeeRate);
-
-  // Calculate using mass-based method
-  printMassCalculation(numInputs, numOutputs, selectedFeeRate);
-
   // ==================== STEP 7: SELECT UTXOs ====================
   console.log('7️⃣  Select UTXOs for Transaction');
   console.log('═════════════════════════════════════');
@@ -236,7 +218,7 @@ async function main() {
 
     // Recalculate fee with current number of inputs using MASS
     numInputs = selectedUtxos.length;
-    const feeString = calculateFeeFromMass(numInputs, numOutputs, selectedFeeRate);
+    const feeString = HoosatCrypto.calculateFee(numInputs, numOutputs, selectedFeeRate);
     const estimatedFeeBigInt = BigInt(feeString);
 
     console.log(`  Testing with ${numInputs} input(s):`);
@@ -254,7 +236,7 @@ async function main() {
   }
 
   // Final fee calculation using mass
-  const finalFeeString = calculateFeeFromMass(numInputs, numOutputs, selectedFeeRate);
+  const finalFeeString = HoosatCrypto.calculateFee(numInputs, numOutputs, selectedFeeRate);
   const finalFee = BigInt(finalFeeString);
   const changeAmount = selectedAmount - totalSendSompi - finalFee;
 
@@ -279,8 +261,6 @@ async function main() {
   console.log('8️⃣  Final Transaction Breakdown');
   console.log('═════════════════════════════════════');
 
-  const massResult = calculateTransactionMass(numInputs, numOutputs);
-
   console.log(`  Total Input:     ${HoosatUtils.sompiToAmount(selectedAmount)} HTN`);
   console.log(`  Total Send:      ${HoosatUtils.sompiToAmount(totalSendSompi)} HTN`);
   RECIPIENTS.forEach((r, i) => {
@@ -294,36 +274,8 @@ async function main() {
   console.log(`  Outputs: ${numOutputs} (${RECIPIENTS.length} recipients + 1 change)`);
   console.log();
   console.log('  Mass Details:');
-  console.log(`    Transaction mass:    ${massResult.mass}`);
-  console.log(`    Equivalent size:     ${massResult.equivalentSize} bytes`);
   console.log(`    Fee rate:            ${selectedFeeRate} sompi/byte`);
   console.log(`    Final fee:           ${finalFeeString} sompi`);
-  console.log();
-
-  // ==================== FEE COMPARISON ====================
-  console.log('💰 Fee Analysis');
-  console.log('─────────────────────────────────────');
-
-  // Calculate what OLD method would have suggested
-  const oldSize = 10 + numInputs * 150 + numOutputs * 35;
-  const oldFee = Math.max(oldSize * selectedFeeRate, 1000);
-
-  console.log('Old SDK Method (Incorrect):');
-  console.log(`  Size: ${oldSize} bytes`);
-  console.log(`  Fee:  ${oldFee} sompi (${HoosatUtils.sompiToAmount(oldFee.toString())} HTN)`);
-  console.log();
-  console.log('New Mass-Based Method (Correct):');
-  console.log(`  Mass: ${massResult.mass}`);
-  console.log(`  Equiv: ${massResult.equivalentSize} bytes`);
-  console.log(`  Fee:  ${finalFeeString} sompi (${HoosatUtils.sompiToAmount(finalFee)} HTN)`);
-  console.log();
-
-  const difference = Number(finalFee) - oldFee;
-  console.log(`Difference: ${difference > 0 ? '+' : ''}${difference} sompi (${((difference / oldFee) * 100).toFixed(1)}%)`);
-
-  if (difference > 0) {
-    console.log(`⚠️  Old method underestimated by ${difference} sompi - that's why it was rejected!`);
-  }
   console.log();
 
   // ==================== STEP 9: BUILD & SIGN TRANSACTION ====================

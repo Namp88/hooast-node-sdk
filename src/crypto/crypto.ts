@@ -5,6 +5,7 @@ import * as bech32Hoosat from '@libs/bech32-hoosat';
 import { HOOSAT_PARAMS, HoosatNetwork } from '@constants/hoosat-params.conts';
 import { Transaction, UtxoForSigning } from '@models/transaction/transaction.types';
 import { KeyPair, SighashReusedValues, TransactionSignature } from '@crypto/models';
+import { MASS } from '@constants/mass.const';
 
 export class HoosatCrypto {
   // ==================== HASHING ====================
@@ -222,29 +223,34 @@ export class HoosatCrypto {
   // ==================== TRANSACTION UTILITIES ====================
 
   /**
-   * Estimates transaction size in bytes
-   * @param inputCount - Number of inputs
-   * @param outputCount - Number of outputs
-   * @returns Estimated size in bytes
-   * @example
-   * const size = HoosatCrypto.estimateTransactionSize(2, 2);
-   */
-  static estimateTransactionSize(inputCount: number, outputCount: number): number {
-    return 10 + inputCount * 150 + outputCount * 35;
-  }
-
-  /**
-   * Calculates recommended transaction fee
+   * Calculates recommended transaction fee using MASS-BASED calculation
+   * This is the CORRECT method that accounts for ScriptPubKey mass
+   *
    * @param inputCount - Number of inputs
    * @param outputCount - Number of outputs
    * @param feePerByte - Fee rate (default: 1 sompi/byte)
    * @returns Fee amount in sompi as string
+   *
    * @example
    * const fee = HoosatCrypto.calculateFee(2, 2, 1);
    */
+
   static calculateFee(inputCount: number, outputCount: number, feePerByte: number = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
-    const size = this.estimateTransactionSize(inputCount, outputCount);
-    return Math.max(size * feePerByte, HOOSAT_PARAMS.MIN_FEE).toString();
+    const txSize = MASS.BaseTxOverhead + inputCount * MASS.EstimatedInputSize;
+
+    const scriptPubKeySize = outputCount * MASS.ScriptPubKeyBytesPerOutput;
+
+    const baseMass = txSize * MASS.MassPerTxByte;
+    const scriptPubKeyMass = scriptPubKeySize * MASS.MassPerScriptPubKeyByte;
+    const sigOpsMass = inputCount * MASS.MassPerSigOp;
+
+    const totalMass = baseMass + scriptPubKeyMass + sigOpsMass;
+    const equivalentSize = Math.ceil(totalMass / 10);
+
+    const calculatedFee = equivalentSize * feePerByte;
+    const fee = Math.max(calculatedFee, HOOSAT_PARAMS.MIN_FEE);
+
+    return fee.toString();
   }
 
   // ==================== TRANSACTION SIGNING ====================
