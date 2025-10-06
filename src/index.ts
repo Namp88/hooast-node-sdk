@@ -1,9 +1,10 @@
 export { HoosatNode } from '@client/client';
-export { HoosatWallet } from '@wallet/wallet';
 export { HoosatCrypto } from '@crypto/crypto';
 export { HoosatUtils } from '@utils/utils';
 export { TransactionBuilder } from '@transaction/transaction.builder';
-export { FeeEstimator, FeePriority } from '@transaction/fee.estimator';
+export { FeeEstimator } from '@transaction/fee.estimator';
+
+export { FeePriority } from '@transaction/fee.estimator';
 
 export type { NodeConfig } from './models/node-config.model';
 export type { Transaction, TransactionInput, TransactionOutput, UtxoEntry, UtxoForSigning } from '@models/transaction/transaction.types';
