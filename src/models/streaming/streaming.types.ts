@@ -1,4 +1,4 @@
-export interface UtxoEntry {
+export interface StreamingUtxoEntry {
   outpoint: {
     transactionId: string;
     index: number;
@@ -9,15 +9,15 @@ export interface UtxoEntry {
   isCoinbase?: boolean;
 }
 
-export interface UtxoChange {
+export interface StreamingUtxoChange {
   address: string;
   changes: {
-    added: UtxoEntry[];
-    removed: UtxoEntry[];
+    added: StreamingUtxoEntry[];
+    removed: StreamingUtxoEntry[];
   };
 }
 
-export interface UtxoChanges {
-  added: UtxoEntry[];
-  removed: UtxoEntry[];
+export interface StreamingUtxoChanges {
+  added: StreamingUtxoEntry[];
+  removed: StreamingUtxoEntry[];
 }

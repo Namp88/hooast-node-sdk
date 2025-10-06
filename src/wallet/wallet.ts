@@ -40,7 +40,7 @@ export interface SendTransactionOptions {
  * Wallet class for managing Hoosat addresses and transactions
  * Combines HoosatNode client with cryptographic utilities
  */
-export class HooastWallet extends EventEmitter {
+export class HoosatWallet extends EventEmitter {
   private readonly _node: HoosatNode;
   private readonly _keyPair: KeyPair;
 
@@ -69,8 +69,8 @@ export class HooastWallet extends EventEmitter {
    * @param node - HoosatNode instance
    * @returns New wallet instance
    */
-  static createNew(node: HoosatNode): HooastWallet {
-    return new HooastWallet({ node });
+  static createNew(node: HoosatNode): HoosatWallet {
+    return new HoosatWallet({ node });
   }
 
   /**
@@ -79,8 +79,8 @@ export class HooastWallet extends EventEmitter {
    * @param privateKey - Private key in hex format
    * @returns Wallet instance
    */
-  static import(node: HoosatNode, privateKey: string): HooastWallet {
-    return new HooastWallet({ node, privateKey });
+  static import(node: HoosatNode, privateKey: string): HoosatWallet {
+    return new HoosatWallet({ node, privateKey });
   }
 
   // ==================== GETTERS ====================

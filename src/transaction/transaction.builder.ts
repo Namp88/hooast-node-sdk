@@ -4,18 +4,65 @@ import { HoosatUtils } from '@utils/utils';
 import { Transaction, TransactionOutput, UtxoForSigning } from '@models/transaction/transaction.types';
 import { SighashReusedValues } from '@crypto/models';
 
-export class TransactionBuilder {
-  private inputs: Array<{ utxo: UtxoForSigning; privateKey?: Buffer }> = [];
-  private outputs: TransactionOutput[] = [];
-  private lockTime = '0';
-  private fee = '1000';
-  private reusedValues: SighashReusedValues = {};
+/**
+ * Options for transaction builder
+ */
+export interface TransactionBuilderOptions {
+  debug?: boolean; // Enable debug logging
+}
 
+/**
+ * Builder class for creating and signing Hoosat transactions
+ *
+ * @example
+ * const builder = new TransactionBuilder({ debug: true });
+ *
+ * builder
+ *   .addInput(utxo, privateKey)
+ *   .addOutput(recipientAddress, '100000000')
+ *   .addChangeOutput(changeAddress)
+ *   .setFee('1000');
+ *
+ * const signedTx = builder.sign();
+ */
+export class TransactionBuilder {
+  private _inputs: Array<{ utxo: UtxoForSigning; privateKey?: Buffer }> = [];
+  private _outputs: TransactionOutput[] = [];
+  private _lockTime = '0';
+  private _fee = '1000';
+  private _reusedValues: SighashReusedValues = {};
+  private _debug: boolean;
+
+  /**
+   * Creates a new transaction builder
+   * @param options - Builder options
+   */
+  constructor(options: TransactionBuilderOptions = {}) {
+    this._debug = options.debug || false;
+  }
+
+  /**
+   * Adds an input to the transaction
+   * @param utxo - UTXO to spend
+   * @param privateKey - Private key for this specific input (optional if using global key in sign())
+   * @returns This builder instance for chaining
+   * @example
+   * builder.addInput(utxo, privateKey);
+   */
   addInput(utxo: UtxoForSigning, privateKey?: Buffer): this {
-    this.inputs.push({ utxo, privateKey });
+    this._inputs.push({ utxo, privateKey });
     return this;
   }
 
+  /**
+   * Adds an output to the transaction
+   * @param address - Recipient address
+   * @param amount - Amount in sompi as string
+   * @returns This builder instance for chaining
+   * @throws Error if address is invalid
+   * @example
+   * builder.addOutput('hoosat:qz7ulu...', '100000000');
+   */
   addOutput(address: string, amount: string): this {
     if (!HoosatUtils.isValidAddress(address)) {
       throw new Error(`Invalid address: ${address}`);
@@ -23,8 +70,7 @@ export class TransactionBuilder {
 
     const scriptPublicKey = HoosatCrypto.addressToScriptPublicKey(address);
 
-    // Version always 0 for ScriptPublicKey structure
-    this.outputs.push({
+    this._outputs.push({
       amount,
       scriptPublicKey: {
         scriptPublicKey: scriptPublicKey.toString('hex'),
@@ -35,120 +81,267 @@ export class TransactionBuilder {
     return this;
   }
 
+  /**
+   * Adds change output with automatic amount calculation
+   * @param changeAddress - Address to receive change
+   * @returns This builder instance for chaining
+   * @throws Error if insufficient funds or invalid address
+   * @example
+   * builder.addChangeOutput('hoosat:qz7ulu...');
+   */
+  addChangeOutput(changeAddress: string): this {
+    if (!HoosatUtils.isValidAddress(changeAddress)) {
+      throw new Error(`Invalid change address: ${changeAddress}`);
+    }
+
+    const totalInput = this.getTotalInputAmount();
+    const totalOutput = this.getTotalOutputAmount();
+    const fee = BigInt(this._fee);
+    const changeAmount = totalInput - totalOutput - fee;
+
+    if (changeAmount < 0n) {
+      throw new Error(`Insufficient funds for change: inputs ${totalInput}, outputs ${totalOutput}, fee ${fee}`);
+    }
+
+    // Only add change output if amount is meaningful (> dust threshold)
+    if (changeAmount > BigInt(HOOSAT_PARAMS.MIN_FEE)) {
+      this.addOutput(changeAddress, changeAmount.toString());
+    }
+
+    return this;
+  }
+
+  /**
+   * Adds a raw output to the transaction
+   * @param output - Pre-formatted transaction output
+   * @returns This builder instance for chaining
+   * @example
+   * builder.addOutputRaw({ amount: '100000000', scriptPublicKey: {...} });
+   */
   addOutputRaw(output: TransactionOutput): this {
-    this.outputs.push(output);
+    this._outputs.push(output);
     return this;
   }
 
+  /**
+   * Sets transaction fee
+   * @param fee - Fee amount in sompi as string
+   * @returns This builder instance for chaining
+   * @example
+   * builder.setFee('1000');
+   */
   setFee(fee: string): this {
-    this.fee = fee;
+    this._fee = fee;
     return this;
   }
 
+  /**
+   * Sets transaction lock time
+   * @param lockTime - Lock time as string
+   * @returns This builder instance for chaining
+   * @example
+   * builder.setLockTime('0');
+   */
   setLockTime(lockTime: string): this {
-    this.lockTime = lockTime;
+    this._lockTime = lockTime;
     return this;
   }
 
+  /**
+   * Builds unsigned transaction
+   * @returns Unsigned transaction object
+   * @throws Error if validation fails
+   * @example
+   * const unsignedTx = builder.build();
+   */
   build(): Transaction {
-    if (this.inputs.length === 0) throw new Error('Transaction must have at least one input');
-    if (this.outputs.length === 0) throw new Error('Transaction must have at least one output');
+    if (this._inputs.length === 0) {
+      throw new Error('Transaction must have at least one input');
+    }
+
+    if (this._outputs.length === 0) {
+      throw new Error('Transaction must have at least one output');
+    }
+
+    // Validate amounts
+    this.validate();
 
     return {
       version: 0,
-      inputs: this.inputs.map(({ utxo }) => ({
+      inputs: this._inputs.map(({ utxo }) => ({
         previousOutpoint: utxo.outpoint,
         signatureScript: '',
         sequence: '0',
         sigOpCount: 1,
         utxoEntry: utxo.utxoEntry,
       })),
-      outputs: this.outputs,
-      lockTime: this.lockTime,
+      outputs: this._outputs,
+      lockTime: this._lockTime,
       subnetworkId: '0000000000000000000000000000000000000000',
       gas: '0',
       payload: '',
-      fee: this.fee,
+      fee: this._fee,
     };
   }
 
-  async sign(globalPrivateKey?: Buffer): Promise<Transaction> {
+  /**
+   * Signs the transaction with provided private key(s)
+   * @param globalPrivateKey - Global private key to use for all inputs without specific keys
+   * @returns Signed transaction ready for broadcast
+   * @throws Error if no private key provided for any input
+   * @example
+   * const signedTx = builder.sign(privateKey);
+   */
+  sign(globalPrivateKey?: Buffer): Transaction {
     const transaction = this.build();
 
-    console.log('\n🔐 === SIGNING PROCESS START ===\n');
+    if (this._debug) {
+      console.log('\n🔐 === SIGNING PROCESS START ===\n');
+    }
 
-    for (let i = 0; i < this.inputs.length; i++) {
-      const { utxo, privateKey } = this.inputs[i];
+    for (let i = 0; i < this._inputs.length; i++) {
+      const { utxo, privateKey } = this._inputs[i];
       const keyToUse = privateKey || globalPrivateKey;
 
       if (!keyToUse) {
         throw new Error(`No private key provided for input ${i}`);
       }
 
-      console.log(`Input ${i} signing:`);
-      console.log(`  UTXO amount: ${utxo.utxoEntry.amount}`);
-      console.log(`  Script version: ${utxo.utxoEntry.scriptPublicKey.version}`);
-      console.log(`  Script: ${utxo.utxoEntry.scriptPublicKey.script}\n`);
+      if (this._debug) {
+        console.log(`Input ${i} signing:`);
+        console.log(`  UTXO amount: ${utxo.utxoEntry.amount}`);
+        console.log(`  Script version: ${utxo.utxoEntry.scriptPublicKey.version}`);
+        console.log(`  Script: ${utxo.utxoEntry.scriptPublicKey.script}\n`);
+      }
 
-      // Получаем signature hash с debug
-      const schnorrHash = HoosatCrypto.getSignatureHashSchnorr(transaction, i, utxo, this.reusedValues);
-      console.log(`  Schnorr Hash: ${schnorrHash.toString('hex')}`);
+      // Calculate signature hashes
+      const schnorrHash = HoosatCrypto.getSignatureHashSchnorr(transaction, i, utxo, this._reusedValues);
 
-      const ecdsaHash = HoosatCrypto.getSignatureHashECDSA(transaction, i, utxo, this.reusedValues);
-      console.log(`  ECDSA Hash: ${ecdsaHash.toString('hex')}`);
+      const ecdsaHash = HoosatCrypto.getSignatureHashECDSA(transaction, i, utxo, this._reusedValues);
 
-      // Подписываем
-      const signature = HoosatCrypto.signTransactionInput(transaction, i, keyToUse, utxo, this.reusedValues);
-      console.log(`  Raw Signature: ${signature.signature.toString('hex')}`);
+      if (this._debug) {
+        console.log(`  Schnorr Hash: ${schnorrHash.toString('hex')}`);
+        console.log(`  ECDSA Hash: ${ecdsaHash.toString('hex')}`);
+      }
 
-      // SignatureScript: 0x41 + 64-byte sig + 0x01
+      // Sign input
+      const signature = HoosatCrypto.signTransactionInput(transaction, i, keyToUse, utxo, this._reusedValues);
+
+      if (this._debug) {
+        console.log(`  Raw Signature: ${signature.signature.toString('hex')}`);
+      }
+
+      // Build signature script: length + (64-byte sig + sigHashType)
       const sigWithType = Buffer.concat([signature.signature, Buffer.from([signature.sigHashType])]);
       const sigScript = Buffer.concat([Buffer.from([sigWithType.length]), sigWithType]);
 
-      console.log(`  SigScript: ${sigScript.toString('hex')}`);
-      console.log(`  SigScript length: ${sigScript.length} bytes\n`);
+      if (this._debug) {
+        console.log(`  SigScript: ${sigScript.toString('hex')}`);
+        console.log(`  SigScript length: ${sigScript.length} bytes\n`);
+      }
 
       transaction.inputs[i].signatureScript = sigScript.toString('hex');
     }
 
-    // Удаляем utxoEntry из inputs для финальной транзакции
+    // Remove utxoEntry from inputs for final transaction
     transaction.inputs.forEach(input => {
       delete input.utxoEntry;
     });
 
-    console.log('🔐 === SIGNING PROCESS COMPLETE ===\n');
+    if (this._debug) {
+      console.log('🔐 === SIGNING PROCESS COMPLETE ===\n');
+      console.log(`Transaction ID: ${HoosatCrypto.getTransactionId(transaction)}\n`);
+    }
 
     return transaction;
   }
 
+  /**
+   * Builds and signs transaction in one step
+   * @param globalPrivateKey - Private key to use for all inputs
+   * @returns Signed transaction
+   * @example
+   * const signedTx = builder.buildAndSign(privateKey);
+   */
+  buildAndSign(globalPrivateKey?: Buffer): Transaction {
+    return this.sign(globalPrivateKey);
+  }
+
+  /**
+   * Estimates transaction fee based on inputs/outputs count
+   * @param feePerByte - Fee rate in sompi per byte (default: 1)
+   * @returns Estimated fee as string
+   * @example
+   * const fee = builder.estimateFee();
+   */
   estimateFee(feePerByte = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
-    return HoosatCrypto.calculateFee(this.inputs.length, this.outputs.length, feePerByte);
+    return HoosatCrypto.calculateFee(this._inputs.length, this._outputs.length, feePerByte);
   }
 
+  /**
+   * Gets total amount of all inputs
+   * @returns Total input amount as bigint
+   * @example
+   * const totalIn = builder.getTotalInputAmount();
+   */
   getTotalInputAmount(): bigint {
-    return this.inputs.reduce((sum, { utxo }) => sum + BigInt(utxo.utxoEntry.amount), 0n);
+    return this._inputs.reduce((sum, { utxo }) => sum + BigInt(utxo.utxoEntry.amount), 0n);
   }
 
+  /**
+   * Gets total amount of all outputs
+   * @returns Total output amount as bigint
+   * @example
+   * const totalOut = builder.getTotalOutputAmount();
+   */
   getTotalOutputAmount(): bigint {
-    return this.outputs.reduce((sum, output) => sum + BigInt(output.amount), 0n);
+    return this._outputs.reduce((sum, output) => sum + BigInt(output.amount), 0n);
   }
 
+  /**
+   * Validates transaction amounts
+   * @throws Error if outputs + fee exceed inputs
+   * @example
+   * builder.validate(); // throws if invalid
+   */
   validate(): void {
     const totalInput = this.getTotalInputAmount();
     const totalOutput = this.getTotalOutputAmount();
-    const fee = BigInt(this.fee);
+    const fee = BigInt(this._fee);
 
     if (totalOutput + fee > totalInput) {
       throw new Error(`Insufficient funds: inputs ${totalInput}, outputs ${totalOutput}, fee ${fee}`);
     }
   }
 
+  /**
+   * Resets builder to initial state
+   * @returns This builder instance for chaining
+   * @example
+   * builder.clear().addInput(...).addOutput(...);
+   */
   clear(): this {
-    this.inputs = [];
-    this.outputs = [];
-    this.fee = '1000';
-    this.lockTime = '0';
-    this.reusedValues = {};
+    this._inputs = [];
+    this._outputs = [];
+    this._fee = '1000';
+    this._lockTime = '0';
+    this._reusedValues = {};
     return this;
+  }
+
+  /**
+   * Gets current number of inputs
+   * @returns Number of inputs
+   */
+  getInputCount(): number {
+    return this._inputs.length;
+  }
+
+  /**
+   * Gets current number of outputs
+   * @returns Number of outputs
+   */
+  getOutputCount(): number {
+    return this._outputs.length;
   }
 }

@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { UtxoChange, UtxoEntry, UtxoChanges } from '@models/streaming/streaming.types';
+import { StreamingUtxoChange, StreamingUtxoEntry, StreamingUtxoChanges } from '@models/streaming/streaming.types';
 import { RequestType } from '@enums/request-type.enum';
 
 // ==================== CONSTANTS ====================
@@ -480,7 +480,7 @@ export class StreamingManager extends EventEmitter {
     if (response.utxosChangedNotification) {
       const notification = response.utxosChangedNotification;
 
-      const changes: UtxoChanges = {
+      const changes: StreamingUtxoChanges = {
         added: notification.added || [],
         removed: notification.removed || [],
       };
@@ -492,7 +492,7 @@ export class StreamingManager extends EventEmitter {
         this.emit(STREAMING_EVENTS.UTXO_CHANGED, {
           address,
           changes: addressChanges,
-        } as UtxoChange);
+        } as StreamingUtxoChange);
       });
 
       // Emit general event with all changes
@@ -510,8 +510,8 @@ export class StreamingManager extends EventEmitter {
    * Groups UTXO changes by address for easier processing
    * @private
    */
-  private _groupUtxoChangesByAddress(changes: UtxoChanges): { [address: string]: UtxoChanges } {
-    const grouped: { [address: string]: UtxoChanges } = {};
+  private _groupUtxoChangesByAddress(changes: StreamingUtxoChanges): { [address: string]: StreamingUtxoChanges } {
+    const grouped: { [address: string]: StreamingUtxoChanges } = {};
 
     // Process added UTXOs
     changes.added.forEach((utxo: any) => {
@@ -538,7 +538,7 @@ export class StreamingManager extends EventEmitter {
    * Maps raw UTXO data to standardized UtxoEntry format
    * @private
    */
-  private _mapUtxoEntry(utxo: any): UtxoEntry {
+  private _mapUtxoEntry(utxo: any): StreamingUtxoEntry {
     return {
       outpoint: utxo.outpoint || {},
       amount: utxo.utxoEntry?.amount || '0',

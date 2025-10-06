@@ -1,5 +1,5 @@
 import { HoosatNode } from '../src';
-import { UtxoChange, UtxoChanges, UtxoEntry } from '../src/models/streaming/streaming.types';
+import { StreamingUtxoChange, StreamingUtxoChanges, StreamingUtxoEntry } from '../src/models/streaming/streaming.types';
 import { HoosatUtils } from '../src/utils/utils';
 
 async function setupWalletMonitoring(): Promise<void> {
@@ -20,7 +20,7 @@ async function setupWalletMonitoring(): Promise<void> {
     console.log('✅ Подписка на UTXO изменения активна');
 
     // 💰 Слушаем изменения конкретного адреса (типизированный обработчик)
-    node.on('utxoChanged', (change: UtxoChange) => {
+    node.on('utxoChanged', (change: StreamingUtxoChange) => {
       const { address, changes } = change;
 
       console.log(`\n💳 Изменения для ${address.substring(0, 20)}...:`);
@@ -39,7 +39,7 @@ async function setupWalletMonitoring(): Promise<void> {
       });
 
       // Потраченные UTXO (исходящие платежи)
-      changes.removed.forEach((utxo: UtxoEntry) => {
+      changes.removed.forEach((utxo: StreamingUtxoEntry) => {
         const amount: string = HoosatUtils.sompiToAmount(utxo.amount);
         console.log(`  ❌ Потрачено: ${amount} HTN`);
         console.log(`     TX: ${utxo.outpoint.transactionId.substring(0, 20)}...`);
@@ -50,7 +50,7 @@ async function setupWalletMonitoring(): Promise<void> {
     });
 
     // 🌐 Слушаем все изменения в сети (типизированный обработчик)
-    node.on('utxosChanged', (allChanges: UtxoChanges) => {
+    node.on('utxosChanged', (allChanges: StreamingUtxoChanges) => {
       const totalAdded: number = allChanges.added.length;
       const totalRemoved: number = allChanges.removed.length;
 

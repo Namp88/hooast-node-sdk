@@ -1,16 +1,19 @@
 import { HoosatNode } from '@client/client';
-import { HooastWallet } from '@wallet/wallet';
+import { HoosatWallet } from '@wallet/wallet';
 import { NodeConfig } from '@models/node-config.model';
 
 // Types
 export type { NodeConfig } from './models/node-config.model';
 export type { Transaction, TransactionInput, TransactionOutput, UtxoEntry, UtxoForSigning } from '@models/transaction/transaction.types';
+export type { StreamingUtxoEntry, StreamingUtxoChange, StreamingUtxoChanges } from '@models/streaming/streaming.types';
 export type { KeyPair, TransactionSignature, SighashReusedValues } from '@crypto/models';
+export type { TransactionBuilderOptions } from '@transaction/transaction.builder';
 
 export { HoosatNode } from '@client/client';
-export { HooastWallet } from '@wallet/wallet';
+export { HoosatWallet } from '@wallet/wallet';
 export { HoosatCrypto } from '@crypto/crypto';
 export { HoosatUtils } from '@utils/utils';
+export { TransactionBuilder } from '@transaction/transaction.builder';
 
 /**
  * Quick start factory for common use cases
@@ -29,10 +32,10 @@ export class HoosatSDK {
    * Creates a new wallet with auto-generated keys
    * @param node - HoosatNode instance or connection params
    */
-  static createWallet(node: HoosatNode | NodeConfig): HooastWallet {
+  static createWallet(node: HoosatNode | NodeConfig): HoosatWallet {
     const nodeInstance = node instanceof HoosatNode ? node : new HoosatNode(node);
 
-    return HooastWallet.createNew(nodeInstance);
+    return HoosatWallet.createNew(nodeInstance);
   }
 
   /**
@@ -40,9 +43,9 @@ export class HoosatSDK {
    * @param privateKey - Private key in hex format
    * @param node - HoosatNode instance or connection params
    */
-  static importWallet(privateKey: string, node: HoosatNode | { host?: string; port?: number }): HooastWallet {
+  static importWallet(privateKey: string, node: HoosatNode | { host?: string; port?: number }): HoosatWallet {
     const nodeInstance = node instanceof HoosatNode ? node : new HoosatNode(node);
 
-    return HooastWallet.import(nodeInstance, privateKey);
+    return HoosatWallet.import(nodeInstance, privateKey);
   }
 }
