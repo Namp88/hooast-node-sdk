@@ -42,8 +42,8 @@ export { HoosatFeeEstimator } from '@fee/fee-estimator';
 export { FeePriority } from '@fee/fee-estimator.types';
 export type { FeeEstimate, FeeRecommendations, FeeEstimatorConfig } from '@fee/fee-estimator.types';
 
-export { HoosatTxBuilder } from '@transaction/hoosat-tx-builder';
-export type { TxBuilderOptions } from '@transaction/hoosat-tx-builder.types';
+export { HoosatTxBuilder } from '@transaction/tx-builder';
+export type { TxBuilderOptions } from '@transaction/tx-builder.types';
 
 export { HoosatUtils } from '@utils/utils';
 

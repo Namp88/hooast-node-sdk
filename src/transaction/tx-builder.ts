@@ -3,7 +3,7 @@ import { HOOSAT_PARAMS } from '@constants/hoosat-params.const';
 import { HoosatUtils } from '@utils/utils';
 import { Transaction, TransactionOutput, UtxoForSigning } from '@models/transaction.types';
 import { SighashReusedValues } from '@crypto/crypto.types';
-import { TxBuilderOptions } from '@transaction/hoosat-tx-builder.types';
+import { TxBuilderOptions } from '@transaction/tx-builder.types';
 
 /**
  * Builder class for creating and signing Hoosat transactions
@@ -313,7 +313,7 @@ export class HoosatTxBuilder {
    * @example
    * const fee = builder.estimateFee();
    */
-  estimateFee(feePerByte = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
+  estimateFee(feePerByte: number = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
     return HoosatCrypto.calculateFee(this._inputs.length, this._outputs.length, feePerByte);
   }
 
