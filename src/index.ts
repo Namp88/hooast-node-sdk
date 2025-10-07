@@ -13,6 +13,7 @@ export type { StreamingUtxoEntry, StreamingUtxoChange, StreamingUtxoChanges } fr
 export type { KeyPair, TransactionSignature } from '@crypto/models';
 export type { TransactionBuilderOptions } from '@transaction/transaction.builder';
 export type { FeeEstimate, FeeRecommendations } from '@transaction/fee.estimator';
+export type { PaymentURIParams, QRCodeOptions, ParsedPaymentURI } from '@qr/qr';
 
 export type { BaseResult } from '@models/result/base.result';
 export type { GetInfo } from '@models/result/get-info.result';

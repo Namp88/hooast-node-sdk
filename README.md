@@ -177,7 +177,7 @@ builder.addOutput('recipient3', '25000000'); // Error!
 
 ## 📋 Examples
 
-We provide **37+ comprehensive examples** covering all aspects of the SDK:
+We provide **40+ comprehensive examples** covering all aspects of the SDK:
 
 ### Address & Balance (3 examples)
 ```bash
@@ -209,9 +209,9 @@ npm run example:streaming:subscribe-utxos    # Real-time UTXO monitoring
 
 ### QR codes (3 examples)
 ```bash
-npm run example:utils:amount-conversion            # Amount conversions
-npm run example:utils:validation                   # Input validation
-npm run example:utils:formatting                   # Pretty formatting
+npm run example:qr:address                         # Generate address QR codes
+npm run example:qr:payment                         # Payment request QR codes
+npm run example:qr:parse                           # Parse payment URIs
 ```
 
 ### Transaction Management (9 examples)
@@ -338,6 +338,34 @@ HoosatUtils.isValidPublicKey(publicKey: string): boolean
 HoosatUtils.formatAmount(amount: string): string
 HoosatUtils.truncateHash(hash: string): string
 HoosatUtils.truncateAddress(address: string): string
+```
+
+### HoosatQR
+
+Generate and parse QR codes:
+```typescript
+// Generate QR codes
+await HoosatQR.generateAddressQR(address, options?)
+await HoosatQR.generatePaymentQR({ address, amount?, label?, message? }, options?)
+await HoosatQR.generateQRBuffer(address, options?)  // PNG Buffer
+await HoosatQR.generateQRSVG(address, options?)     // SVG string
+await HoosatQR.generateQRTerminal(address)          // CLI ASCII art
+
+// Build and parse URIs
+HoosatQR.buildPaymentURI({ address, amount?, label?, message? })
+HoosatQR.parsePaymentURI(uri)
+HoosatQR.isValidPaymentURI(uri)
+
+// QR options
+{
+    width?: number;                          // default: 300
+    errorCorrectionLevel?: 'L'|'M'|'Q'|'H'; // default: 'M'
+    margin?: number;                         // default: 2
+    color?: {
+        dark?: string;   // hex color
+        light?: string;  // hex color
+    }
+}
 ```
 
 ### TransactionBuilder
