@@ -3,6 +3,7 @@ export { HoosatCrypto } from '@crypto/crypto';
 export { HoosatUtils } from '@utils/utils';
 export { TransactionBuilder } from '@transaction/transaction.builder';
 export { FeeEstimator } from '@transaction/fee.estimator';
+export { HoosatQR } from '@qr/qr';
 
 export { FeePriority } from '@transaction/fee.estimator';
 

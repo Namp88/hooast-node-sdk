@@ -21,6 +21,7 @@
       "@helpers/*": ["src/helpers/*"],
       "@libs/*": ["src/libs/*"],
       "@models/*": ["src/models/*"],
+      "@qr/*": ["src/qr/*"],
       "@streaming/*": ["src/streaming/*"],
       "@transaction/*": ["src/transaction/*"],
       "@utils/*": ["src/utils/*"],

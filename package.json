@@ -30,6 +30,9 @@
     "example:node:blockchain-info": "tsx examples/node/02-blockchain-info.ts",
     "example:node:blocks": "tsx examples/node/03-blocks.ts",
     "example:node:mempool": "tsx examples/node/04-mempool.ts",
+    "example:qr:generate-address": "tsx examples/qr/01-generate-address.ts",
+    "example:qr:generate-payment": "tsx examples/qr/02-generate-payment.ts",
+    "example:qr:parse-payment": "tsx examples/qr/03-parse-payment-uri.ts",
     "example:streaming:subscribe-utxos": "tsx watch examples/streaming/01-subscribe-utxos.ts",
     "example:transaction:build-simple": "tsx watch examples/transaction/01-build-simple.ts",
     "example:transaction:build-with-change": "tsx watch examples/transaction/02-build-with-change.ts",
@@ -71,13 +74,15 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
     "@grpc/proto-loader": "^0.8.0",
+    "bech32": "^2.0.0",
     "blake3": "^2.1.7",
-    "secp256k1": "^5.0.0",
-    "bech32": "^2.0.0"
+    "qrcode": "^1.5.4",
+    "secp256k1": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.6.2",
     "@types/secp256k1": "^4.0.6",
+    "@types/qrcode": "^1.5.5",
     "copyfiles": "^2.4.1",
     "prettier": "^3.6.2",
     "tsx": "^4.20.6",
