@@ -17,7 +17,7 @@
  * - Private key with sufficient balance
  * - Valid recipient address
  */
-import { FeeEstimator, FeePriority, HoosatCrypto, HoosatNode, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
+import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatNode, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -164,7 +164,7 @@ async function main() {
   console.log('5️⃣  Estimate Fee from Network');
   console.log('═════════════════════════════════════');
 
-  const feeEstimator = new FeeEstimator(node);
+  const feeEstimator = new HoosatFeeEstimator(node);
   const feeRecommendations = await feeEstimator.getRecommendations();
 
   console.log('Network Conditions:');
@@ -249,7 +249,7 @@ async function main() {
 
   let signedTx;
   try {
-    const builder = new TransactionBuilder({ debug: false });
+    const builder = new HoosatTxBuilder({ debug: false });
 
     // Add all selected inputs
     for (const utxo of selectedUtxos) {

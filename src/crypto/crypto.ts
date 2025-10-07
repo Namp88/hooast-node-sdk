@@ -2,10 +2,11 @@ import * as blake3 from 'blake3';
 import * as secp256k1 from 'secp256k1';
 import { createHash, randomBytes } from 'crypto';
 import * as bech32Hoosat from '@libs/bech32-hoosat';
-import { HOOSAT_PARAMS, HoosatNetwork } from '@constants/hoosat-params.conts';
-import { Transaction, UtxoForSigning } from '@models/transaction/transaction.types';
-import { KeyPair, SighashReusedValues, TransactionSignature } from '@crypto/models';
-import { MASS } from '@constants/mass.const';
+import { HOOSAT_PARAMS } from '@constants/hoosat-params.const';
+import { Transaction, UtxoForSigning } from '@models/transaction.types';
+import { KeyPair, SighashReusedValues, TransactionSignature } from '@crypto/crypto.types';
+import { HOOSAT_MASS } from '@constants/hoosat-mass.const';
+import { HoosatNetwork } from '@models/network.type';
 
 export class HoosatCrypto {
   // ==================== HASHING ====================
@@ -236,13 +237,13 @@ export class HoosatCrypto {
    */
 
   static calculateFee(inputCount: number, outputCount: number, feePerByte: number = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE): string {
-    const txSize = MASS.BaseTxOverhead + inputCount * MASS.EstimatedInputSize;
+    const txSize = HOOSAT_MASS.BaseTxOverhead + inputCount * HOOSAT_MASS.EstimatedInputSize;
 
-    const scriptPubKeySize = outputCount * MASS.ScriptPubKeyBytesPerOutput;
+    const scriptPubKeySize = outputCount * HOOSAT_MASS.ScriptPubKeyBytesPerOutput;
 
-    const baseMass = txSize * MASS.MassPerTxByte;
-    const scriptPubKeyMass = scriptPubKeySize * MASS.MassPerScriptPubKeyByte;
-    const sigOpsMass = inputCount * MASS.MassPerSigOp;
+    const baseMass = txSize * HOOSAT_MASS.MassPerTxByte;
+    const scriptPubKeyMass = scriptPubKeySize * HOOSAT_MASS.MassPerScriptPubKeyByte;
+    const sigOpsMass = inputCount * HOOSAT_MASS.MassPerSigOp;
 
     const totalMass = baseMass + scriptPubKeyMass + sigOpsMass;
     const equivalentSize = Math.ceil(totalMass / 10);
@@ -360,7 +361,7 @@ export class HoosatCrypto {
    * @param utxo - UTXO being spent (includes scriptPubKey)
    * @param reusedValues - Cache for hash optimization (optional)
    * @returns Signature object with 64-byte raw signature + pubkey
-   * @internal Used by TransactionBuilder
+   * @internal Used by TxBuilder
    */
   static signTransactionInput(
     transaction: Transaction,

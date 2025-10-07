@@ -1,14 +1,14 @@
 /**
  * Example 04: Dynamic Fee Estimation from Network
  *
- * Learn how to use FeeEstimator to get optimal fee rates
+ * Learn how to use HoosatFeeEstimator to get optimal fee rates
  * based on current network conditions.
  *
  * Prerequisites:
  * - Access to Hoosat node
  * - Node must be synced
  */
-import { FeeEstimator, FeePriority, HoosatNode, HoosatUtils } from '../../src';
+import { HoosatFeeEstimator, FeePriority, HoosatNode, HoosatUtils } from '../../src';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -42,7 +42,7 @@ async function main() {
   console.log('2️⃣  Initialize Fee Estimator');
   console.log('═════════════════════════════════════');
 
-  const feeEstimator = new FeeEstimator(node);
+  const feeEstimator = new HoosatFeeEstimator(node);
   console.log('✅ Fee estimator created (uses MASS-based calculation)\n');
 
   // ==================== ANALYZE MEMPOOL ====================

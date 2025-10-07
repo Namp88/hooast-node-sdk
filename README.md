@@ -87,7 +87,7 @@ if (result.ok) {
 ### Build & Send Transaction
 
 ```typescript
-import { TransactionBuilder, FeeEstimator, FeePriority } from 'hoosat-sdk';
+import { TxBuilder, FeeEstimator, FeePriority } from 'hoosat-sdk';
 
 // Estimate fee
 const feeEstimator = new FeeEstimator(node);
@@ -98,7 +98,7 @@ const feeEstimate = await feeEstimator.estimateFee(
 );
 
 // Build transaction
-const builder = new TransactionBuilder();
+const builder = new TxBuilder();
 builder.addInput(utxo, privateKey);
 builder.addOutput('hoosat:qz7ulu...', '100000000'); // 1 HTN
 builder.setFee(feeEstimate.totalFee);
@@ -368,12 +368,12 @@ HoosatQR.isValidPaymentURI(uri)
 }
 ```
 
-### TransactionBuilder
+### TxBuilder
 
 Build and sign transactions:
 
 ```typescript
-const builder = new TransactionBuilder({ debug?: boolean });
+const builder = new TxBuilder({ debug?: boolean });
 
 // Add inputs and outputs
 builder.addInput(utxo: UtxoForSigning, privateKey?: Buffer)
@@ -587,7 +587,7 @@ for (const batch of batches) {
 // Best for: Reducing future transaction fees
 // See: examples/transaction/08-consolidate-utxos.ts
 
-const builder = new TransactionBuilder();
+const builder = new TxBuilder();
 for (const utxo of smallUtxos) {
   builder.addInput(utxo, privateKey);
 }

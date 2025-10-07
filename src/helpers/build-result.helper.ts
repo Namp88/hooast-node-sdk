@@ -1,5 +1,5 @@
-import { ErrorResponse } from '@models/response/error.response';
-import { BaseResult } from '@models/result/base.result';
+import { ErrorResponse } from '@client/models/response/error.response';
+import { BaseResult } from '@models/base.result';
 
 /**
  * Builds a standardized result object

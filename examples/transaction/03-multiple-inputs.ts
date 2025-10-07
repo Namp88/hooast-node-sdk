@@ -13,7 +13,7 @@
  *
  * Note: This example uses mock UTXO data and does NOT broadcast to network.
  */
-import { HoosatCrypto, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
+import { HoosatCrypto, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
 
 function main() {
   console.log('🔗 Transaction with Multiple Inputs\n');
@@ -122,7 +122,7 @@ function main() {
   console.log('3️⃣  Scenario 1: Consolidation (Use All UTXOs)');
   console.log('═════════════════════════════════════');
 
-  const builder1 = new TransactionBuilder();
+  const builder1 = new HoosatTxBuilder();
 
   console.log('Strategy: Consolidate all UTXOs into one output');
   console.log();
@@ -186,7 +186,7 @@ function main() {
   console.log();
 
   // Select UTXOs until we have enough
-  const builder2 = new TransactionBuilder();
+  const builder2 = new HoosatTxBuilder();
   const neededAmount = BigInt(targetAmount) + BigInt(fee2);
   let selectedAmount = 0n;
   const selectedUtxos: UtxoForSigning[] = [];
@@ -249,7 +249,7 @@ function main() {
   });
   console.log();
 
-  const builder3 = new TransactionBuilder();
+  const builder3 = new HoosatTxBuilder();
   const neededAmount3 = BigInt(targetAmount3) + BigInt(fee3);
   let selectedAmount3 = 0n;
   const selectedUtxos3: UtxoForSigning[] = [];

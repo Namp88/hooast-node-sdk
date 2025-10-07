@@ -1,8 +1,8 @@
 import { BaseService } from '@client/services/base.service';
-import { Transaction } from '@models/transaction/transaction.types';
-import { BaseResult } from '@models/result/base.result';
-import { SubmitTransaction } from '@models/result/submit-transaction.result';
-import { SubmitTransactionResponse } from '@models/response/submit-transaction.response';
+import { Transaction } from '@models/transaction.types';
+import { BaseResult } from '@models/base.result';
+import { SubmitTransaction } from '@client/models/result/submit-transaction';
+import { SubmitTransactionResponse } from '@client/models/response/submit-transaction.response';
 import { RequestType } from '@enums/request-type.enum';
 import { buildResult } from '@helpers/build-result.helper';
 

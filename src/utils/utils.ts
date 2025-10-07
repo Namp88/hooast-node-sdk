@@ -1,6 +1,6 @@
 import * as bech32Hoosat from '@libs/bech32-hoosat';
 import { VALIDATION_PARAMS } from '@constants/validation-params.const';
-import { HOOSAT_PARAMS } from '@constants/hoosat-params.conts';
+import { HOOSAT_PARAMS } from '@constants/hoosat-params.const';
 
 export class HoosatUtils {
   // ==================== AMOUNT CONVERSION ====================

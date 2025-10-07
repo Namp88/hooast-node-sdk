@@ -1,39 +1,54 @@
 export { HoosatNode } from '@client/client';
+export type { NodeConfig } from '@client/client.types';
+export type { GetInfo } from '@client/models/result/get-info';
+export type { GetBlockDagInfo } from '@client/models/result/get-block-dag-info';
+export type { GetBlockCount } from '@client/models/result/get-block-count';
+export type { GetBlock } from '@client/models/result/get-block';
+export type { GetBlocks } from '@client/models/result/get-blocks';
+export type { GetSelectedTipHash } from '@client/models/result/get-selected-tip-hash';
+export type { GetVirtualSelectedParentBlueScore } from '@client/models/result/get-virtual-selected-parent-blue-score';
+export type { GetBalanceByAddress } from '@client/models/result/get-balance-by-address';
+export type { GetBalancesByAddresses } from '@client/models/result/get-balances-by-addresses';
+export type { GetUtxosByAddresses } from '@client/models/result/get-utxos-by-addresses';
+export type { GetMempoolEntry } from '@client/models/result/get-mempool-entry';
+export type { GetMempoolEntries } from '@client/models/result/get-mempool-entries';
+export type { GetMempoolEntriesByAddresses } from '@client/models/result/get-mempool-entries-by-addresses';
+export type { GetPeerAddresses } from '@client/models/result/get-peer-addresses';
+export type { GetConnectedPeerInfo } from '@client/models/result/get-connected-peer-info';
+export type { GetCurrentNetwork } from '@client/models/result/get-current-network';
+export type { EstimateNetworkHashesPerSecond } from '@client/models/result/estimate-network-hashes-per-second';
+export type { GetCoinSupply } from '@client/models/result/get-coin-supply';
+export type { SubmitTransaction } from '@client/models/result/submit-transaction';
+export type { GetClientInfo } from '@client/models/result/get-client-info';
+export type { HoosatNetwork } from '@models/network.type';
+
 export { HoosatCrypto } from '@crypto/crypto';
-export { HoosatUtils } from '@utils/utils';
-export { TransactionBuilder } from '@transaction/transaction.builder';
-export { FeeEstimator } from '@transaction/fee.estimator';
+export type { KeyPair, TransactionSignature } from '@crypto/crypto.types';
+
+export { UtxoStreamManager } from '@streaming/utxo-stream-manager';
+export { UTXO_STREAM_EVENTS, UtxoStreamEventName } from './streaming/utxo-stream-manager.types';
+export type {
+  UtxoStreamConfig,
+  UtxoStreamStats,
+  UtxoChangeNotification,
+  UtxoChanges,
+  UtxoChangeEntry,
+} from './streaming/utxo-stream-manager.types';
+
 export { HoosatQR } from '@qr/qr';
+export type { PaymentURIParams, QRCodeOptions, ParsedPaymentURI } from '@qr/qr.types';
 
-export { FeePriority } from '@transaction/fee.estimator';
+export { HoosatFeeEstimator } from '@fee/fee-estimator';
+export { FeePriority } from '@fee/fee-estimator.types';
+export type { FeeEstimate, FeeRecommendations, FeeEstimatorConfig } from '@fee/fee-estimator.types';
 
-export type { NodeConfig } from './models/node-config.model';
-export type { Transaction, TransactionInput, TransactionOutput, UtxoEntry, UtxoForSigning } from '@models/transaction/transaction.types';
-export type { StreamingUtxoEntry, StreamingUtxoChange, StreamingUtxoChanges } from '@models/streaming/streaming.types';
-export type { KeyPair, TransactionSignature } from '@crypto/models';
-export type { TransactionBuilderOptions } from '@transaction/transaction.builder';
-export type { FeeEstimate, FeeRecommendations } from '@transaction/fee.estimator';
-export type { PaymentURIParams, QRCodeOptions, ParsedPaymentURI } from '@qr/qr';
+export { HoosatTxBuilder } from '@transaction/hoosat-tx-builder';
+export type { TxBuilderOptions } from '@transaction/hoosat-tx-builder.types';
 
-export type { BaseResult } from '@models/result/base.result';
-export type { GetInfo } from '@models/result/get-info.result';
-export type { GetBlockDagInfo } from '@models/result/get-block-dag-info.result';
-export type { GetBlockCount } from '@models/result/get-block-count.result';
-export type { GetBlock } from '@models/result/get-block.result';
-export type { GetBlocks } from '@models/result/get-blocks.result';
-export type { GetSelectedTipHash } from '@models/result/get-selected-tip-hash.result';
-export type { GetVirtualSelectedParentBlueScore } from '@models/result/get-virtual-selected-parent-blue-score.result';
-export type { GetBalanceByAddress } from '@models/result/get-balance-by-address.result';
-export type { GetBalancesByAddresses } from '@models/result/get-balances-by-addresses.result';
-export type { GetUtxosByAddresses } from '@models/result/get-utxos-by-addresses.result';
-export type { GetMempoolEntry } from '@models/result/get-mempool-entry.result';
-export type { GetMempoolEntries } from '@models/result/get-mempool-entries.result';
-export type { GetMempoolEntriesByAddresses } from '@models/result/get-mempool-entries-by-addresses.result';
-export type { GetPeerAddresses } from '@models/result/get-peer-addresses.result';
-export type { GetConnectedPeerInfo } from '@models/result/get-connected-peer-info.result';
-export type { GetCurrentNetwork } from '@models/result/get-current-network.result';
-export type { EstimateNetworkHashesPerSecond } from '@models/result/estimate-network-hashes-per-second.result';
-export type { GetCoinSupply } from '@models/result/get-coin-supply.result';
-export type { SubmitTransaction } from '@models/result/submit-transaction.result';
-export type { GetClientInfo } from '@models/result/get-client-info.result';
-export type { HoosatNetwork } from '@constants/hoosat-params.conts';
+export { HoosatUtils } from '@utils/utils';
+
+export type { Transaction, TransactionInput, TransactionOutput, UtxoEntry, UtxoForSigning } from '@models/transaction.types';
+export type { BaseResult } from '@models/base.result';
+
+export { HOOSAT_PARAMS } from '@constants/hoosat-params.const';
+export { HOOSAT_MASS } from '@constants/hoosat-mass.const';

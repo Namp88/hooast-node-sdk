@@ -1,13 +1,13 @@
 import { BaseService } from '@client/services/base.service';
 import { RequestType } from '@enums/request-type.enum';
-import { BaseResult } from '@models/result/base.result';
+import { BaseResult } from '@models/base.result';
 import { buildResult } from '@helpers/build-result.helper';
-import { GetUtxosByAddresses } from '@models/result/get-utxos-by-addresses.result';
-import { GetUtxosByAddressesResponse } from '@models/response/get-utxos-by-addresses.response';
-import { GetBalanceByAddress } from '@models/result/get-balance-by-address.result';
-import { GetBalanceByAddressResponse } from '@models/response/get-balance-by-address.response';
-import { GetBalancesByAddresses } from '@models/result/get-balances-by-addresses.result';
-import { GetBalancesByAddressesResponse } from '@models/response/get-balances-by-addresses.response';
+import { GetUtxosByAddresses } from '@client/models/result/get-utxos-by-addresses';
+import { GetUtxosByAddressesResponse } from '@client/models/response/get-utxos-by-addresses.response';
+import { GetBalanceByAddress } from '@client/models/result/get-balance-by-address';
+import { GetBalanceByAddressResponse } from '@client/models/response/get-balance-by-address.response';
+import { GetBalancesByAddresses } from '@client/models/result/get-balances-by-addresses';
+import { GetBalancesByAddressesResponse } from '@client/models/response/get-balances-by-addresses.response';
 import { HoosatUtils } from '@utils/utils';
 
 export class AddressService extends BaseService {

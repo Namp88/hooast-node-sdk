@@ -13,8 +13,7 @@
  *
  * Note: This example uses mock UTXO data and does NOT broadcast to network.
  */
-import { HoosatCrypto, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
-import { HOOSAT_PARAMS } from '../../src/constants/hoosat-params.conts';
+import { HoosatCrypto, HoosatUtils, HoosatTxBuilder, UtxoForSigning, HOOSAT_PARAMS } from '../../src';
 
 function main() {
   console.log('💰 Build Transaction with Automatic Change\n');
@@ -62,7 +61,7 @@ function main() {
   console.log(`  Amount: ${HoosatUtils.sompiToAmount(mockUtxo1.utxoEntry.amount)} HTN`);
   console.log();
 
-  const builder1 = new TransactionBuilder();
+  const builder1 = new HoosatTxBuilder();
 
   const sendAmount1 = '75000000'; // 0.75 HTN
   const fee1 = '1000'; // 0.00001 HTN
@@ -130,7 +129,7 @@ function main() {
   console.log(`  Amount: ${HoosatUtils.sompiToAmount(mockUtxo2.utxoEntry.amount)} HTN`);
   console.log();
 
-  const builder2 = new TransactionBuilder();
+  const builder2 = new HoosatTxBuilder();
 
   const sendAmount2 = '100000000'; // 1 HTN
   const fee2 = HOOSAT_PARAMS.MIN_FEE; // 0.00001 HTN
@@ -189,7 +188,7 @@ function main() {
     },
   };
 
-  const builder3 = new TransactionBuilder();
+  const builder3 = new HoosatTxBuilder();
 
   const send1 = '150000000'; // 1.5 HTN to recipient1
   const send2 = '100000000'; // 1 HTN to recipient2
@@ -241,7 +240,7 @@ function main() {
     },
   };
 
-  const builder4 = new TransactionBuilder();
+  const builder4 = new HoosatTxBuilder();
 
   // Send almost everything, leaving only dust as change
   const send4 = '9998000'; // 0.09998 HTN
@@ -296,7 +295,7 @@ function main() {
     },
   };
 
-  const builder5 = new TransactionBuilder();
+  const builder5 = new HoosatTxBuilder();
 
   const send5 = '15000000'; // 0.15 HTN (more than we have!)
   const fee5 = HOOSAT_PARAMS.MIN_FEE;

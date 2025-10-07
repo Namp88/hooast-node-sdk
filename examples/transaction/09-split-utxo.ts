@@ -22,7 +22,7 @@
  * Due to spam protection, you can only create 2 new UTXOs per transaction.
  * To create more, run multiple split transactions.
  */
-import { FeeEstimator, FeePriority, HoosatCrypto, HoosatNode, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
+import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatNode, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -176,7 +176,7 @@ async function main() {
   const totalOutputAmount = amountPerOutputSompi * BigInt(NUM_OUTPUTS);
 
   // Estimate fee (1 input, NUM_OUTPUTS + change)
-  const feeEstimator = new FeeEstimator(node);
+  const feeEstimator = new HoosatFeeEstimator(node);
   const recommendations = await feeEstimator.getRecommendations();
   const feeRate = recommendations[FEE_PRIORITY].feeRate;
 
@@ -228,7 +228,7 @@ async function main() {
 
   let signedTx;
   try {
-    const builder = new TransactionBuilder({ debug: false });
+    const builder = new HoosatTxBuilder({ debug: false });
 
     // Add input (UTXO to split)
     const utxoForSigning: UtxoForSigning = {

@@ -18,16 +18,16 @@
       "@constants/*": ["src/constants/*"],
       "@crypto/*": ["src/crypto/*"],
       "@enums/*": ["src/enums/*"],
+      "@fee/*": ["src/fee/*"],
       "@helpers/*": ["src/helpers/*"],
       "@libs/*": ["src/libs/*"],
       "@models/*": ["src/models/*"],
       "@qr/*": ["src/qr/*"],
       "@streaming/*": ["src/streaming/*"],
       "@transaction/*": ["src/transaction/*"],
-      "@utils/*": ["src/utils/*"],
-      "@wallet/*": ["src/wallet/*"]
+      "@utils/*": ["src/utils/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "examples", "src/wallet/**/*"],
+  "exclude": ["node_modules", "dist", "examples"],
 }

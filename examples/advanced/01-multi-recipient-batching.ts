@@ -26,7 +26,7 @@
  * - Track success/failure for each batch
  * - Calculate total fees upfront
  */
-import { FeeEstimator, FeePriority, HoosatCrypto, HoosatNode, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
+import { FeeEstimator, FeePriority, HoosatCrypto, HoosatNode, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
 
 interface Recipient {
   address: string;
@@ -294,7 +294,7 @@ async function main() {
       console.log();
 
       // Build transaction
-      const builder = new TransactionBuilder({ debug: false });
+      const builder = new HoosatTxBuilder({ debug: false });
 
       const utxoForSigning: UtxoForSigning = {
         outpoint: {

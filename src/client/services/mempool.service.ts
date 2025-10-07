@@ -1,13 +1,13 @@
 import { BaseService } from '@client/services/base.service';
 import { RequestType } from '@enums/request-type.enum';
-import { BaseResult } from '@models/result/base.result';
+import { BaseResult } from '@models/base.result';
 import { buildResult } from '@helpers/build-result.helper';
-import { GetMempoolEntry } from '@models/result/get-mempool-entry.result';
-import { GetMempoolEntryResponse } from '@models/response/get-mempool-entry.response';
-import { GetMempoolEntries } from '@models/result/get-mempool-entries.result';
-import { GetMempoolEntriesResponse } from '@models/response/get-mempool-entries.response';
-import { GetMempoolEntriesByAddresses } from '@models/result/get-mempool-entries-by-addresses.result';
-import { GetMempoolEntriesByAddressesResponse } from '@models/response/get-mempool-entries-by-addresses.response';
+import { GetMempoolEntry } from '@client/models/result/get-mempool-entry';
+import { GetMempoolEntryResponse } from '@client/models/response/get-mempool-entry.response';
+import { GetMempoolEntries } from '@client/models/result/get-mempool-entries';
+import { GetMempoolEntriesResponse } from '@client/models/response/get-mempool-entries.response';
+import { GetMempoolEntriesByAddresses } from '@client/models/result/get-mempool-entries-by-addresses';
+import { GetMempoolEntriesByAddressesResponse } from '@client/models/response/get-mempool-entries-by-addresses.response';
 import { HoosatUtils } from '@utils/utils';
 
 export class MempoolService extends BaseService {

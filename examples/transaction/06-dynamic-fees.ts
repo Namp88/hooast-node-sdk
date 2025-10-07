@@ -10,7 +10,7 @@
  * This example shows how to estimate fees dynamically based on
  * current network activity, rather than using static rates.
  */
-import { FeeEstimator, FeePriority, HoosatNode, HoosatUtils } from '../../src';
+import { HoosatFeeEstimator, FeePriority, HoosatNode, HoosatUtils } from '../../src';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -44,7 +44,7 @@ async function main() {
   console.log('2️⃣  Initialize Fee Estimator');
   console.log('═════════════════════════════════════');
 
-  const feeEstimator = new FeeEstimator(node);
+  const feeEstimator = new HoosatFeeEstimator(node);
   console.log('✅ Fee estimator created (MASS-based calculation)\n');
 
   // ==================== ANALYZE MEMPOOL ====================

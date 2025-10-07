@@ -1,15 +1,15 @@
 import { BaseService } from '@client/services/base.service';
 import { RequestType } from '@enums/request-type.enum';
-import { BaseResult } from '@models/result/base.result';
+import { BaseResult } from '@models/base.result';
 import { buildResult } from '@helpers/build-result.helper';
 
-import { GetCurrentNetworkResponse } from '@models/response/get-current-network.response';
-import { GetPeerAddressesResponse } from '@models/response/get-peer-addresses.response';
-import { GetConnectedPeerInfoResponse } from '@models/response/get-connected-peer-info.response';
+import { GetCurrentNetworkResponse } from '@client/models/response/get-current-network.response';
+import { GetPeerAddressesResponse } from '@client/models/response/get-peer-addresses.response';
+import { GetConnectedPeerInfoResponse } from '@client/models/response/get-connected-peer-info.response';
 
-import { GetCurrentNetwork } from '@models/result/get-current-network.result';
-import { GetPeerAddresses, GetPeerAddressItem } from '@models/result/get-peer-addresses.result';
-import { GetConnectedPeerInfo } from '@models/result/get-connected-peer-info.result';
+import { GetCurrentNetwork } from '@client/models/result/get-current-network';
+import { GetPeerAddresses, GetPeerAddressItem } from '@client/models/result/get-peer-addresses';
+import { GetConnectedPeerInfo } from '@client/models/result/get-connected-peer-info';
 
 export class NetworkService extends BaseService {
   async getCurrentNetwork(): Promise<BaseResult<GetCurrentNetwork>> {

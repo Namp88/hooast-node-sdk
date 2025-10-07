@@ -2,38 +2,43 @@ import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { join } from 'path';
 import { EventEmitter } from 'events';
-import { NodeConfig } from '@models/node-config.model';
-import { BaseResult } from '@models/result/base.result';
-import { GetSelectedTipHash } from '@models/result/get-selected-tip-hash.result';
-import { GetMempoolEntry } from '@models/result/get-mempool-entry.result';
-import { GetBlock } from '@models/result/get-block.result';
-import { GetBlocks } from '@models/result/get-blocks.result';
-import { GetBlockCount } from '@models/result/get-block-count.result';
-import { GetBlockDagInfo } from '@models/result/get-block-dag-info.result';
-import { GetMempoolEntries } from '@models/result/get-mempool-entries.result';
-import { GetUtxosByAddresses } from '@models/result/get-utxos-by-addresses.result';
-import { GetVirtualSelectedParentBlueScore } from '@models/result/get-virtual-selected-parent-blue-score.result';
-import { GetInfo } from '@models/result/get-info.result';
-import { EstimateNetworkHashesPerSecond } from '@models/result/estimate-network-hashes-per-second.result';
-import { GetBalanceByAddress } from '@models/result/get-balance-by-address.result';
-import { GetBalancesByAddresses } from '@models/result/get-balances-by-addresses.result';
-import { GetMempoolEntriesByAddresses } from '@models/result/get-mempool-entries-by-addresses.result';
-import { GetCoinSupply } from '@models/result/get-coin-supply.result';
-import { SubmitTransaction } from '@models/result/submit-transaction.result';
-import { Transaction } from '@models/transaction/transaction.types';
-import { StreamingManager } from '@streaming/streaming-manager';
-import { CLIENT_DEFAULT_CONFIG } from '@constants/client-default-config.const';
-import { NetworkService } from './services/network.service';
-import { BlockchainService } from './services/blockchain.service';
-import { MempoolService } from './services/mempool.service';
-import { AddressService } from './services/address.service';
-import { NodeInfoService } from './services/node-info.service';
-import { TransactionService } from './services/transaction.service';
-import { GetClientInfo } from '@models/result/get-client-info.result';
+import { BaseResult } from '@models/base.result';
+import { GetSelectedTipHash } from '@client/models/result/get-selected-tip-hash';
+import { GetMempoolEntry } from '@client/models/result/get-mempool-entry';
+import { GetBlock } from '@client/models/result/get-block';
+import { GetBlocks } from '@client/models/result/get-blocks';
+import { GetBlockCount } from '@client/models/result/get-block-count';
+import { GetBlockDagInfo } from '@client/models/result/get-block-dag-info';
+import { GetMempoolEntries } from '@client/models/result/get-mempool-entries';
+import { GetUtxosByAddresses } from '@client/models/result/get-utxos-by-addresses';
+import { GetVirtualSelectedParentBlueScore } from '@client/models/result/get-virtual-selected-parent-blue-score';
+import { GetInfo } from '@client/models/result/get-info';
+import { EstimateNetworkHashesPerSecond } from '@client/models/result/estimate-network-hashes-per-second';
+import { GetBalanceByAddress } from '@client/models/result/get-balance-by-address';
+import { GetBalancesByAddresses } from '@client/models/result/get-balances-by-addresses';
+import { GetMempoolEntriesByAddresses } from '@client/models/result/get-mempool-entries-by-addresses';
+import { GetCoinSupply } from '@client/models/result/get-coin-supply';
+import { SubmitTransaction } from '@client/models/result/submit-transaction';
+import { Transaction } from '@models/transaction.types';
+import { UtxoStreamManager } from '@streaming/utxo-stream-manager';
+import { GetClientInfo } from '@client/models/result/get-client-info';
 import { HoosatUtils } from '@utils/utils';
+import { NodeConfig } from '@client/client.types';
+import { NetworkService } from '@client/services/network.service';
+import { BlockchainService } from '@client/services/blockchain.service';
+import { MempoolService } from '@client/services/mempool.service';
+import { AddressService } from '@client/services/address.service';
+import { NodeInfoService } from '@client/services/node-info.service';
+import { TransactionService } from '@client/services/transaction.service';
 
 const GRPC_CONFIG = {
   MAX_MESSAGE_SIZE: 1024 * 1024 * 1024, // 1GB
+} as const;
+
+const CLIENT_DEFAULT_CONFIG = {
+  HOST: '127.0.0.1',
+  PORT: 42420,
+  TIMEOUT: 10000,
 } as const;
 
 export class HoosatNode extends EventEmitter {
@@ -42,7 +47,7 @@ export class HoosatNode extends EventEmitter {
   private readonly _timeout: number;
 
   private _client: any;
-  private _streamingManager: StreamingManager | null = null;
+  private _streamingManager: UtxoStreamManager | null = null;
 
   private _networkService: NetworkService | null = null;
   private _blockchainService: BlockchainService | null = null;
@@ -117,9 +122,9 @@ export class HoosatNode extends EventEmitter {
    * @private
    */
   private _initializeStreaming(): void {
-    this._streamingManager = new StreamingManager(this._client);
+    this._streamingManager = new UtxoStreamManager(this._client);
 
-    // Proxy events from StreamingManager
+    // Proxy events from UtxoStreamManager
     this._streamingManager.on('utxoChanged', change => this.emit('utxoChanged', change));
     this._streamingManager.on('utxosChanged', changes => this.emit('utxosChanged', changes));
     this._streamingManager.on('error', error => this.emit('streamingError', error));

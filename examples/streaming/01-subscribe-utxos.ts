@@ -14,7 +14,7 @@
  * Note: This example runs continuously until interrupted (Ctrl+C)
  */
 
-import { HoosatNode, HoosatUtils, StreamingUtxoChange } from '../../src';
+import { HoosatNode, HoosatUtils, UtxoChangeNotification } from '../../src';
 
 async function main() {
   console.log('📡 Real-time UTXO Monitoring\n');
@@ -38,7 +38,7 @@ async function main() {
 
   try {
     // Set up event listeners BEFORE subscribing
-    node.on('utxoChanged', (change: StreamingUtxoChange) => {
+    node.on('utxoChanged', (change: UtxoChangeNotification) => {
       console.log('\n🔔 UTXO Change Detected!');
       console.log('─────────────────────────────────────');
       console.log(`Address: ${HoosatUtils.truncateAddress(change.address)}`);

@@ -1,15 +1,15 @@
 import { BaseService } from '@client/services/base.service';
-import { BaseResult } from '@models/result/base.result';
-import { GetInfo } from '@models/result/get-info.result';
-import { GetInfoResponse } from '@models/response/get-info.response';
+import { BaseResult } from '@models/base.result';
+import { GetInfo } from '@client/models/result/get-info';
+import { GetInfoResponse } from '@client/models/response/get-info.response';
 import { RequestType } from '@enums/request-type.enum';
 import { buildResult } from '@helpers/build-result.helper';
-import { GetVirtualSelectedParentBlueScore } from '@models/result/get-virtual-selected-parent-blue-score.result';
-import { GetVirtualSelectedParentBlueScoreResponse } from '@models/response/get-virtual-selected-parent-blue-score.response';
-import { EstimateNetworkHashesPerSecond } from '@models/result/estimate-network-hashes-per-second.result';
-import { EstimateNetworkHashesPerSecondResponse } from '@models/response/estimate-network-hashes-per-second.response';
-import { GetCoinSupply } from '@models/result/get-coin-supply.result';
-import { GetCoinSupplyResponse } from '@models/response/get-coin-supply.response';
+import { GetVirtualSelectedParentBlueScore } from '@client/models/result/get-virtual-selected-parent-blue-score';
+import { GetVirtualSelectedParentBlueScoreResponse } from '@client/models/response/get-virtual-selected-parent-blue-score.response';
+import { EstimateNetworkHashesPerSecond } from '@client/models/result/estimate-network-hashes-per-second';
+import { EstimateNetworkHashesPerSecondResponse } from '@client/models/response/estimate-network-hashes-per-second.response';
+import { GetCoinSupply } from '@client/models/result/get-coin-supply';
+import { GetCoinSupplyResponse } from '@client/models/response/get-coin-supply.response';
 import { VALIDATION_PARAMS } from '@constants/validation-params.const';
 import { HoosatUtils } from '@utils/utils';
 

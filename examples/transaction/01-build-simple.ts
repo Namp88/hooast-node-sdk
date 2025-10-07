@@ -2,7 +2,7 @@
  * Example: Build Simple Transaction
  *
  * Demonstrates:
- * - Creating a transaction with TransactionBuilder
+ * - Creating a transaction with TxBuilder
  * - Adding single input and output
  * - Signing transaction
  * - Getting transaction ID
@@ -14,8 +14,7 @@
  * Note: This example uses mock UTXO data and does NOT broadcast to network.
  *       It demonstrates transaction building and signing only.
  */
-import { HoosatCrypto, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
-import { HOOSAT_PARAMS } from '../../src/constants/hoosat-params.conts';
+import { HoosatCrypto, HoosatUtils, HoosatTxBuilder, UtxoForSigning, HOOSAT_PARAMS } from '../../src';
 
 function main() {
   console.log('🔨 Build Simple Transaction\n');
@@ -75,7 +74,7 @@ function main() {
   console.log('═════════════════════════════════════');
 
   // Create transaction builder
-  const builder = new TransactionBuilder({ debug: false });
+  const builder = new HoosatTxBuilder({ debug: false });
 
   // Transaction amounts
   const amountToSend = '50000000'; // 0.5 HTN

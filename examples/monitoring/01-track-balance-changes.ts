@@ -24,7 +24,7 @@
  * - Log all balance changes for audit trail
  * - Show pending vs confirmed transactions
  */
-import { HoosatNode, HoosatUtils, StreamingUtxoChanges } from '../../src';
+import { HoosatNode, HoosatUtils, UtxoChangeNotification } from '../../src';
 
 // Balance tracker class
 class BalanceTracker {
@@ -201,11 +201,11 @@ async function main() {
   console.log('   Press Ctrl+C to stop monitoring...\n');
 
   // Listen for UTXO changes
-  node.on('utxoChange', async (notification: StreamingUtxoChanges) => {
+  node.on('utxoChange', async (notification: UtxoChangeNotification) => {
     console.log('🔔 UTXO Change Detected!');
     console.log('─────────────────────────────────────');
 
-    const { added, removed } = notification;
+    const { added, removed } = notification.changes;
 
     console.log(`   Added UTXOs:   ${added.length}`);
     console.log(`   Removed UTXOs: ${removed.length}`);

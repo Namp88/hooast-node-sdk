@@ -23,7 +23,7 @@
  * - Provide specific error messages
  * - Implement proper error recovery
  */
-import { HoosatCrypto, HoosatUtils, TransactionBuilder, UtxoForSigning } from '../../src';
+import { HoosatCrypto, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -62,7 +62,7 @@ async function main() {
   };
 
   try {
-    const builder1 = new TransactionBuilder();
+    const builder1 = new HoosatTxBuilder();
     builder1.addInput(mockUtxo1, wallet.privateKey);
     builder1.addOutput('hoosat:qz95mwas8ja7ucsernv9z335rdxxqswff7wvzenl29qukn5qs3lsqfsa4pd74', '200000000'); // 2 HTN
     builder1.setFee('1000');
@@ -111,7 +111,7 @@ async function main() {
   };
 
   try {
-    const builder2 = new TransactionBuilder();
+    const builder2 = new HoosatTxBuilder();
     builder2.addInput(mockUtxo2, wallet.privateKey);
     builder2.addOutput('hoosat:qz95mwas8ja7ucsernv9z335rdxxqswff7wvzenl29qukn5qs3lsqfsa4pd74', '100000000');
     builder2.addOutput('hoosat:qzr0pvne29vrvp2pud5j5qxx0xyuv0mjvw9qdswsu5q7z5ulgmxswemhkklu2', '100000000');
@@ -145,7 +145,7 @@ async function main() {
   console.log('Attempting to send to invalid address...\n');
 
   try {
-    const builder3 = new TransactionBuilder();
+    const builder3 = new HoosatTxBuilder();
     builder3.addInput(mockUtxo2, wallet.privateKey);
     builder3.addOutput('invalid_address_format', '100000000');
 
@@ -177,7 +177,7 @@ async function main() {
   const MIN_OUTPUT = 1000n; // Minimum meaningful output
 
   try {
-    const builder4 = new TransactionBuilder();
+    const builder4 = new HoosatTxBuilder();
     builder4.addInput(mockUtxo2, wallet.privateKey);
     builder4.addOutput('hoosat:qz95mwas8ja7ucsernv9z335rdxxqswff7wvzenl29qukn5qs3lsqfsa4pd74', '100'); // 0.000001 HTN (dust)
     builder4.setFee('1000');
@@ -238,7 +238,7 @@ async function main() {
   const MIN_FEE = 1000n;
 
   try {
-    const builder6 = new TransactionBuilder();
+    const builder6 = new HoosatTxBuilder();
     builder6.addInput(mockUtxo2, wallet.privateKey);
     builder6.addOutput('hoosat:qz95mwas8ja7ucsernv9z335rdxxqswff7wvzenl29qukn5qs3lsqfsa4pd74', '100000000');
     builder6.setFee('100'); // Very low fee
