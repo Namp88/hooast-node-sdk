@@ -1,7 +1,7 @@
 {
   "name": "hoosat-sdk",
   "version": "0.1.0",
-  "description": "Comprehensive TypeScript SDK for Hoosat blockchain: node communication, cryptographic utilities, real-time streaming, and transaction building",
+  "description": "TypeScript SDK for Hoosat blockchain: full node integration, crypto utilities, real-time UTXO streaming, transaction building, dynamic fee estimation, and QR code generation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
