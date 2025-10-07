@@ -14,6 +14,7 @@ Comprehensive TypeScript SDK for [Hoosat](https://hoosat.fi) blockchain. Full-fe
 - 🏗️ **Transaction Builder** - Intuitive API with automatic fee calculation
 - 📊 **Network Analytics** - Block data, mempool analysis, hashrate estimation
 - 💰 **Balance & UTXO Management** - Query balances, manage UTXOs efficiently
+- 🎨 **QR Code Generation** - Payment URIs and address QR codes
 
 ### Advanced Features
 - 📡 **Real-time Streaming** - Subscribe to UTXO changes with automatic reconnection
@@ -128,6 +129,28 @@ node.on('utxoChange', async (notification) => {
 });
 ```
 
+### Generate Payment QR Codes
+```typescript
+import { HoosatQR } from 'hoosat-sdk';
+
+// Simple address QR
+const qr = await HoosatQR.generateAddressQR('hoosat:qz7ulu...');
+// Use in HTML: <img src="${qr}" alt="Scan to send HTN" />
+
+// Payment request with amount
+const paymentQR = await HoosatQR.generatePaymentQR({
+    address: 'hoosat:qz7ulu...',
+    amount: 100,           // 100 HTN
+    label: 'Coffee Shop',
+    message: 'Order #12345'
+});
+
+// Parse scanned QR from mobile wallet
+const parsed = HoosatQR.parsePaymentURI('hoosat:qz7ulu...?amount=100');
+console.log('Amount:', HoosatUtils.sompiToAmount(parsed.amount!), 'HTN');
+console.log('Label:', parsed.label);
+````
+
 ## 🛡️ Spam Protection
 
 Hoosat inherits **anti-dust-attack protection** from Kaspa. Transactions are limited to:
@@ -182,6 +205,13 @@ npm run example:node:mempool                 # Analyze mempool
 ### Real-time Streaming (1 example)
 ```bash
 npm run example:streaming:subscribe-utxos    # Real-time UTXO monitoring
+```
+
+### QR codes (3 examples)
+```bash
+npm run example:utils:amount-conversion            # Amount conversions
+npm run example:utils:validation                   # Input validation
+npm run example:utils:formatting                   # Pretty formatting
 ```
 
 ### Transaction Management (9 examples)
@@ -361,6 +391,49 @@ console.log('Total fee:', estimate.totalFee, 'sompi');
 estimator.clearCache()
 estimator.setCacheDuration(milliseconds)
 ```
+
+## 🎨 QR Code Integration
+
+Generate payment QR codes that work with any Hoosat mobile wallet:
+
+### Features
+- ✅ Simple address QR codes
+- ✅ Payment requests with amount and metadata
+- ✅ Multiple formats: PNG, SVG, Data URL, Terminal
+- ✅ URI parsing from scanned QR codes
+- ✅ Full mobile wallet compatibility
+
+### Use Cases
+- **E-commerce**: Generate payment QR on checkout
+- **Donations**: Create QR for fundraising
+- **Invoices**: Embed QR in PDF invoices
+- **Point of Sale**: Display QR at cash register
+- **Mobile Apps**: Show QR for peer-to-peer payments
+
+### Quick Examples
+```typescript
+// E-commerce checkout
+const checkoutQR = await HoosatQR.generatePaymentQR({
+    address: merchantAddress,
+    amount: orderTotal,
+    label: 'My Shop',
+    message: `Order #${orderId}`
+});
+
+// Restaurant bill
+const billQR = await HoosatQR.generatePaymentQR({
+    address: restaurantAddress,
+    amount: 25.50,
+    label: 'Restaurant',
+    message: 'Table 15 - Thank you!'
+});
+
+// Donation button
+const donationQR = await HoosatQR.generateAddressQR(charityAddress, {
+    width: 400,
+    errorCorrectionLevel: 'H'
+});
+````
 
 ## 🔄 Error Handling
 
