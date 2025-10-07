@@ -3,12 +3,37 @@
 [![npm version](https://badge.fury.io/js/hoosat-sdk.svg)](https://badge.fury.io/js/hoosat-sdk)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/Tests-Vitest-green.svg)](https://vitest.dev/)
 
-Comprehensive TypeScript SDK for [Hoosat](https://hoosat.fi) blockchain. Full-featured toolkit for building production-ready applications with robust error handling, real-time monitoring, and advanced transaction management.
+**Professional TypeScript SDK for the [Hoosat](https://hoosat.fi) blockchain.** Full-featured toolkit for building production-ready applications with robust error handling, real-time monitoring, and advanced transaction management.
 
-## ✨ Features
+## 📋 Table of Contents
+
+- [Key Features](#-key-features)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [Detailed API Documentation](#-detailed-api-documentation)
+    - [HoosatNode](#hoosatnode)
+    - [HoosatCrypto](#hoosatcrypto)
+    - [HoosatTxBuilder](#hoosattxbuilder)
+    - [HoosatFeeEstimator](#hoosatfeeestimator)
+    - [HoosatQR](#hoosatqr)
+    - [HoosatUtils](#hoosatutils)
+    - [UtxoStreamManager](#utxostreammanager)
+- [Usage Examples](#-usage-examples)
+- [Error Handling](#-error-handling)
+- [UTXO Management](#-utxo-management)
+- [Spam Protection](#-spam-protection)
+- [Best Practices](#-best-practices)
+- [Testing](#-testing)
+- [Development](#-development)
+
+---
+
+## ✨ Key Features
 
 ### Core Functionality
+
 - 🔗 **Full Node Integration** - Connect to any Hoosat node via gRPC
 - 🔐 **Cryptographic Utilities** - Key generation, address creation, transaction signing
 - 🏗️ **Transaction Builder** - Intuitive API with automatic fee calculation
@@ -17,18 +42,24 @@ Comprehensive TypeScript SDK for [Hoosat](https://hoosat.fi) blockchain. Full-fe
 - 🎨 **QR Code Generation** - Payment URIs and address QR codes
 
 ### Advanced Features
+
 - 📡 **Real-time Streaming** - Subscribe to UTXO changes with automatic reconnection
 - 🎯 **Dynamic Fee Estimation** - Network-aware fee recommendations
 - 🔄 **UTXO Selection Strategies** - Optimize fees and privacy
 - 📦 **Batch Payments** - Send to multiple recipients efficiently
 - ⚡ **UTXO Consolidation** - Optimize wallet structure
+- 🔀 **UTXO Splitting** - Prepare for future payments
 
 ### Production-Ready
+
 - 🛡️ **Spam Protection Compliance** - Built-in limits (max 2 recipients per tx)
 - ⚠️ **Comprehensive Error Handling** - Robust error categorization and recovery
 - 🔄 **Retry Strategies** - Exponential backoff, circuit breaker patterns
 - 📈 **Network Monitoring** - Real-time statistics and health checks
 - 🔒 **Type Safety** - Full TypeScript support with comprehensive types
+- ✅ **Test Coverage** - Unit tests with Vitest
+
+---
 
 ## 📦 Installation
 
@@ -36,9 +67,16 @@ Comprehensive TypeScript SDK for [Hoosat](https://hoosat.fi) blockchain. Full-fe
 npm install hoosat-sdk
 ```
 
+### Requirements
+
+- Node.js >= 20.0.0
+- TypeScript >= 5.0 (optional but recommended)
+
+---
+
 ## 🚀 Quick Start
 
-### Connect to Node
+### 1. Connect to Node
 
 ```typescript
 import { HoosatNode } from 'hoosat-sdk';
@@ -46,19 +84,19 @@ import { HoosatNode } from 'hoosat-sdk';
 const node = new HoosatNode({
   host: '54.38.176.95',
   port: 42420,
-  timeout: 10000
+  timeout: 10000  // Optional, default: 10000ms
 });
 
 // Check node status
 const info = await node.getInfo();
 if (info.ok) {
-  console.log('Connected to', info.result.serverVersion);
-  console.log('Network:', info.result.networkName);
-  console.log('Synced:', info.result.isSynced);
+  console.log('Connected to:', info.result.serverVersion);
+  console.log('Is Synced:', info.result.isSynced);
+  console.log('UTXO Indexed:', info.result.isUtxoIndexed);
 }
 ```
 
-### Generate Wallet
+### 2. Create Wallet
 
 ```typescript
 import { HoosatCrypto } from 'hoosat-sdk';
@@ -66,13 +104,14 @@ import { HoosatCrypto } from 'hoosat-sdk';
 // Generate new keypair
 const wallet = HoosatCrypto.generateKeyPair();
 console.log('Address:', wallet.address);
+console.log('Public Key:', wallet.publicKey.toString('hex'));
 console.log('Private Key:', wallet.privateKey.toString('hex'));
 
 // Import existing wallet
 const imported = HoosatCrypto.importKeyPair('your_private_key_hex');
 ```
 
-### Check Balance
+### 3. Check Balance
 
 ```typescript
 import { HoosatUtils } from 'hoosat-sdk';
@@ -84,52 +123,72 @@ if (result.ok) {
 }
 ```
 
-### Build & Send Transaction
+### 4. Build and Send Transaction
 
 ```typescript
-import { TxBuilder, FeeEstimator, FeePriority } from 'hoosat-sdk';
+import { HoosatTxBuilder, HoosatFeeEstimator, FeePriority } from 'hoosat-sdk';
+
+// Get UTXOs
+const utxoResponse = await node.getUtxosByAddresses([wallet.address]);
+if (!utxoResponse.ok) {
+  throw new Error('Failed to fetch UTXOs');
+}
+
+const utxos = utxoResponse.result.utxos;
+const selectedUtxo = utxos[0]; // Select UTXO
 
 // Estimate fee
-const feeEstimator = new FeeEstimator(node);
+const feeEstimator = new HoosatFeeEstimator(node);
 const feeEstimate = await feeEstimator.estimateFee(
   FeePriority.Normal,
-  1, // inputs
-  2  // outputs (recipient + change)
+  1,  // inputs count
+  2   // outputs count (recipient + change)
 );
 
 // Build transaction
-const builder = new TxBuilder();
-builder.addInput(utxo, privateKey);
-builder.addOutput('hoosat:qz7ulu...', '100000000'); // 1 HTN
+const builder = new HoosatTxBuilder();
+builder.addInput(selectedUtxo, wallet.privateKey);
+builder.addOutput('hoosat:recipient_address...', '100000000'); // 1 HTN in sompi
 builder.setFee(feeEstimate.totalFee);
 builder.addChangeOutput(wallet.address);
 
 const signedTx = builder.sign();
 
 // Submit to network
-const result = await node.submitTransaction(signedTx);
-if (result.ok) {
-  console.log('Transaction ID:', result.result.transactionId);
+const submitResult = await node.submitTransaction(signedTx);
+if (submitResult.ok) {
+  console.log('Transaction ID:', submitResult.result.transactionId);
 }
 ```
 
-### Real-time Balance Monitoring
+### 5. Real-time Balance Monitoring
 
 ```typescript
 // Subscribe to UTXO changes
-await node.subscribeToUtxoChanges(['hoosat:qz7ulu...']);
+await node.subscribeToUtxoChanges([wallet.address]);
 
 node.on('utxoChange', async (notification) => {
   console.log('Added UTXOs:', notification.added.length);
   console.log('Removed UTXOs:', notification.removed.length);
   
   // Update balance
-  const balance = await node.getBalance('hoosat:qz7ulu...');
-  console.log('New balance:', HoosatUtils.sompiToAmount(balance.result.balance), 'HTN');
+  const balance = await node.getBalance(wallet.address);
+  if (balance.ok) {
+    console.log('New balance:', HoosatUtils.sompiToAmount(balance.result.balance), 'HTN');
+  }
+});
+
+node.on('error', (error) => {
+  console.error('Streaming error:', error);
+});
+
+node.on('disconnect', () => {
+  console.log('Disconnected from node');
 });
 ```
 
-### Generate Payment QR Codes
+### 6. Generate Payment QR Codes
+
 ```typescript
 import { HoosatQR } from 'hoosat-sdk';
 
@@ -137,331 +196,918 @@ import { HoosatQR } from 'hoosat-sdk';
 const qr = await HoosatQR.generateAddressQR('hoosat:qz7ulu...');
 // Use in HTML: <img src="${qr}" alt="Scan to send HTN" />
 
-// Payment request with amount
+// Payment request with amount and metadata
 const paymentQR = await HoosatQR.generatePaymentQR({
-    address: 'hoosat:qz7ulu...',
-    amount: 100,           // 100 HTN
-    label: 'Coffee Shop',
-    message: 'Order #12345'
+  address: 'hoosat:qz7ulu...',
+  amount: 100,           // 100 HTN
+  label: 'Coffee Shop',
+  message: 'Order #12345'
 });
 
 // Parse scanned QR from mobile wallet
 const parsed = HoosatQR.parsePaymentURI('hoosat:qz7ulu...?amount=100');
 console.log('Amount:', HoosatUtils.sompiToAmount(parsed.amount!), 'HTN');
 console.log('Label:', parsed.label);
-````
-
-## 🛡️ Spam Protection
-
-Hoosat inherits **anti-dust-attack protection** from Kaspa. Transactions are limited to:
-- **Maximum 2 recipient outputs** per transaction
-- **Total 3 outputs** (2 recipients + 1 change)
-
-This is a **hardcoded network rule** to prevent spam attacks.
-
-```typescript
-// ✅ Valid - 2 recipients
-builder.addOutput('recipient1', '100000000');
-builder.addOutput('recipient2', '50000000');
-builder.addChangeOutput(wallet.address); // 3 outputs total
-
-// ❌ Invalid - 3 recipients will throw error
-builder.addOutput('recipient1', '100000000');
-builder.addOutput('recipient2', '50000000');
-builder.addOutput('recipient3', '25000000'); // Error!
+console.log('Message:', parsed.message);
 ```
 
-**For batch payments to 3+ recipients:**
-- Send multiple transactions (2 recipients each)
-- See `examples/advanced/02-multi-recipient-batching.ts`
+---
 
-## 📋 Examples
+## 📚 Detailed API Documentation
 
-We provide **40+ comprehensive examples** covering all aspects of the SDK:
+## HoosatNode
 
-### Address & Balance (3 examples)
+**Main class for interacting with Hoosat nodes via gRPC.**
+
+### Constructor
+
+```typescript
+const node = new HoosatNode(config: NodeConfig);
+
+interface NodeConfig {
+  host?: string;    // Default: 'localhost'
+  port?: number;    // Default: 42420
+  timeout?: number; // Default: 10000 (ms)
+}
+```
+
+### Methods - Node Information
+
+#### `getInfo()`
+Get node information.
+
+```typescript
+await node.getInfo(): Promise<BaseResult<GetInfo>>
+
+interface GetInfo {
+  p2pId: string;
+  mempoolSize: string;
+  serverVersion: string;
+  isUtxoIndexed: boolean;
+  isSynced: boolean;
+}
+```
+
+#### `getCurrentNetwork()`
+Get current network (mainnet/testnet).
+
+```typescript
+await node.getCurrentNetwork(): Promise<BaseResult<GetCurrentNetwork>>
+
+interface GetCurrentNetwork {
+  currentNetwork: string;
+}
+```
+
+#### `getConnectedPeerInfo()`
+Get information about connected peers.
+
+```typescript
+await node.getConnectedPeerInfo(): Promise<BaseResult<GetConnectedPeerInfo>>
+```
+
+### Methods - Blockchain
+
+#### `getSelectedTipHash()`
+Get current tip block hash.
+
+```typescript
+await node.getSelectedTipHash(): Promise<BaseResult<GetSelectedTipHash>>
+```
+
+#### `getBlock(blockHash, includeTransactions?)`
+Get block data by hash.
+
+```typescript
+await node.getBlock(
+  blockHash: string,
+  includeTransactions: boolean = true
+): Promise<BaseResult<GetBlock>>
+```
+
+#### `getBlocks(lowHash, includeTransactions?)`
+Get multiple blocks starting from specified hash.
+
+```typescript
+await node.getBlocks(
+  lowHash: string,
+  includeTransactions: boolean = false
+): Promise<BaseResult<GetBlocks>>
+```
+
+#### `getBlockCount()`
+Get current blockchain height.
+
+```typescript
+await node.getBlockCount(): Promise<BaseResult<GetBlockCount>>
+```
+
+#### `getBlockDagInfo()`
+Get blockchain DAG structure information.
+
+```typescript
+await node.getBlockDagInfo(): Promise<BaseResult<GetBlockDagInfo>>
+```
+
+### Methods - Addresses and Balances
+
+#### `getBalance(address)`
+Get address balance.
+
+```typescript
+await node.getBalance(address: string): Promise<BaseResult<GetBalanceByAddress>>
+
+interface GetBalanceByAddress {
+  balance: string; // Amount in sompi
+}
+```
+
+#### `getBalancesByAddresses(addresses)`
+Get balances for multiple addresses.
+
+```typescript
+await node.getBalancesByAddresses(addresses: string[]): Promise<BaseResult<GetBalancesByAddresses>>
+```
+
+#### `getUtxosByAddresses(addresses)`
+Get all UTXOs for specified addresses.
+
+```typescript
+await node.getUtxosByAddresses(addresses: string[]): Promise<BaseResult<GetUtxosByAddresses>>
+```
+
+### Methods - Transactions
+
+#### `submitTransaction(transaction, allowOrphan?)`
+Submit transaction to network.
+
+```typescript
+await node.submitTransaction(
+  transaction: Transaction,
+  allowOrphan: boolean = false
+): Promise<BaseResult<SubmitTransaction>>
+```
+
+### Methods - Mempool
+
+#### `getMempoolEntry(txId, includeOrphanPool?, filterTransactionPool?)`
+Get transaction information from mempool.
+
+```typescript
+await node.getMempoolEntry(
+  txId: string,
+  includeOrphanPool: boolean = true,
+  filterTransactionPool: boolean = false
+): Promise<BaseResult<GetMempoolEntry>>
+```
+
+#### `getMempoolEntries(includeOrphanPool?, filterTransactionPool?)`
+Get all transactions in mempool.
+
+```typescript
+await node.getMempoolEntries(
+  includeOrphanPool: boolean = true,
+  filterTransactionPool: boolean = false
+): Promise<BaseResult<GetMempoolEntries>>
+```
+
+### Methods - Real-time Streaming
+
+#### `subscribeToUtxoChanges(addresses)`
+Subscribe to UTXO changes for specified addresses.
+
+```typescript
+await node.subscribeToUtxoChanges(addresses: string[]): Promise<BaseResult<void>>
+```
+
+#### `unsubscribeFromUtxoChanges(addresses?)`
+Unsubscribe from UTXO changes.
+
+```typescript
+await node.unsubscribeFromUtxoChanges(addresses?: string[]): Promise<BaseResult<void>>
+```
+
+### Events
+
+- `'utxoChange'` - UTXO change notifications
+- `'error'` - Streaming errors
+- `'disconnect'` - Node disconnection
+
+### Method - Disconnect
+
+#### `disconnect()`
+Close connection to utxo stream.
+
+```typescript
+node.disconnect(): void
+```
+
+---
+
+## HoosatCrypto
+
+**Class for all cryptographic operations: key generation, address creation, transaction signing.**
+
+### Methods - Key Generation and Import
+
+#### `generateKeyPair()`
+Generate new keypair (ECDSA secp256k1).
+
+```typescript
+HoosatCrypto.generateKeyPair(): KeyPair
+
+interface KeyPair {
+  address: string;
+  publicKey: Buffer;
+  privateKey: Buffer;
+}
+```
+
+#### `importKeyPair(privateKeyHex)`
+Import existing keypair from private key.
+
+```typescript
+HoosatCrypto.importKeyPair(privateKeyHex: string): KeyPair
+```
+
+### Methods - Addresses
+
+#### `publicKeyToAddressECDSA(publicKey)`
+Convert public key to Hoosat address.
+
+```typescript
+HoosatCrypto.publicKeyToAddressECDSA(publicKey: Buffer): string
+```
+
+#### `addressToScriptPublicKey(address)`
+Convert address to scriptPublicKey.
+
+```typescript
+HoosatCrypto.addressToScriptPublicKey(address: string): {
+  version: number;
+  script: string;
+}
+```
+
+### Methods - Transactions
+
+#### `getTransactionId(transaction)`
+Calculate transaction ID.
+
+```typescript
+HoosatCrypto.getTransactionId(transaction: Transaction): string
+```
+
+#### `signTransaction(transaction, privateKey, sighashType?)`
+Sign transaction with private key.
+
+```typescript
+HoosatCrypto.signTransaction(
+  transaction: Transaction,
+  privateKey: Buffer,
+  sighashType: number = HOOSAT_PARAMS.SIGHASH_ALL
+): Transaction
+```
+
+#### `calculateFee(inputsCount, outputsCount, feeRate)`
+Calculate transaction fee.
+
+```typescript
+HoosatCrypto.calculateFee(
+  inputsCount: number,
+  outputsCount: number,
+  feeRate: number = HOOSAT_PARAMS.DEFAULT_FEE_PER_BYTE
+): string
+```
+
+### Methods - Hashing
+
+#### `blake3Hash(data)`
+Calculate BLAKE3 hash.
+
+```typescript
+HoosatCrypto.blake3Hash(data: Buffer | string): Buffer
+```
+
+---
+
+## HoosatTxBuilder
+
+**Convenient class for building and signing transactions with automatic change calculation.**
+
+### Constructor
+
+```typescript
+const builder = new HoosatTxBuilder(options?: TxBuilderOptions);
+
+interface TxBuilderOptions {
+  debug?: boolean; // Enable debug logging (default: false)
+}
+```
+
+### Methods - Adding Inputs and Outputs
+
+#### `addInput(utxo, privateKey?)`
+Add input to transaction.
+
+```typescript
+builder.addInput(utxo: UtxoForSigning, privateKey?: Buffer): this
+```
+
+#### `addOutput(address, amount)`
+Add output (recipient).
+
+```typescript
+builder.addOutput(address: string, amount: string): this
+```
+
+**Important:** Maximum 2 recipients due to spam protection.
+
+#### `addOutputRaw(output)`
+Add raw output (bypassing validation).
+
+```typescript
+builder.addOutputRaw(output: TransactionOutput): this
+```
+
+#### `addChangeOutput(changeAddress)`
+Automatically calculate and add change output.
+
+```typescript
+builder.addChangeOutput(changeAddress: string): this
+```
+
+**Important:** Call `setFee()` BEFORE `addChangeOutput()`.
+
+### Methods - Configuration
+
+#### `setFee(fee)`
+Set transaction fee.
+
+```typescript
+builder.setFee(fee: string): this
+```
+
+#### `setLockTime(lockTime)`
+Set transaction lockTime.
+
+```typescript
+builder.setLockTime(lockTime: string): this
+```
+
+### Methods - Building and Signing
+
+#### `build()`
+Build unsigned transaction.
+
+```typescript
+builder.build(): Transaction
+```
+
+#### `sign(globalPrivateKey?)`
+Sign transaction.
+
+```typescript
+builder.sign(globalPrivateKey?: Buffer): Transaction
+```
+
+#### `buildAndSign(globalPrivateKey?)`
+Build and sign transaction in one call.
+
+```typescript
+builder.buildAndSign(globalPrivateKey?: Buffer): Transaction
+```
+
+### Methods - Validation and Information
+
+#### `validate()`
+Validate transaction correctness.
+
+```typescript
+builder.validate(): void // Throws error if invalid
+```
+
+#### `estimateFee(feePerByte?)`
+Estimate fee based on transaction size.
+
+```typescript
+builder.estimateFee(feePerByte: number = 1): string
+```
+
+#### `getTotalInputAmount()`
+Get sum of all inputs.
+
+```typescript
+builder.getTotalInputAmount(): bigint
+```
+
+#### `getTotalOutputAmount()`
+Get sum of all outputs.
+
+```typescript
+builder.getTotalOutputAmount(): bigint
+```
+
+#### `getInputCount()` / `getOutputCount()`
+Get number of inputs/outputs.
+
+```typescript
+builder.getInputCount(): number
+builder.getOutputCount(): number
+```
+
+### Methods - State Management
+
+#### `clear()`
+Reset builder to initial state.
+
+```typescript
+builder.clear(): this
+```
+
+---
+
+## HoosatFeeEstimator
+
+**Dynamic fee estimation based on current network state.**
+
+### Constructor
+
+```typescript
+const estimator = new HoosatFeeEstimator(node: HoosatNode, config?: FeeEstimatorConfig);
+
+interface FeeEstimatorConfig {
+  cacheDuration?: number; // Cache duration in ms (default: 30000)
+}
+```
+
+### Methods
+
+#### `getRecommendations()`
+Get recommended fee rates for all priority levels.
+
+```typescript
+await estimator.getRecommendations(): Promise<FeeRecommendations>
+
+interface FeeRecommendations {
+  low: FeeEstimate;
+  normal: FeeEstimate;
+  high: FeeEstimate;
+  urgent: FeeEstimate;
+}
+
+enum FeePriority {
+  Low = 'low',
+  Normal = 'normal',
+  High = 'high',
+  Urgent = 'urgent'
+}
+```
+
+#### `estimateFee(priority, inputsCount, outputsCount)`
+Estimate total fee for specific transaction.
+
+```typescript
+await estimator.estimateFee(
+  priority: FeePriority,
+  inputsCount: number,
+  outputsCount: number
+): Promise<FeeEstimate>
+```
+
+#### `clearCache()`
+Clear fee estimation cache.
+
+```typescript
+estimator.clearCache(): void
+```
+
+#### `setCacheDuration(duration)`
+Set cache lifetime.
+
+```typescript
+estimator.setCacheDuration(duration: number): void
+```
+
+### Priority Recommendations
+
+- **Low** - Non-urgent transactions (0.5x base rate)
+- **Normal** - Standard confirmation speed (1.0x base rate)
+- **High** - Fast confirmation (2.0x base rate)
+- **Urgent** - Priority confirmation (5.0x base rate)
+
+---
+
+## HoosatQR
+
+**Generate and parse QR codes for Hoosat addresses and payment requests.**
+
+### Methods - QR Code Generation
+
+#### `generateAddressQR(address, options?)`
+Generate QR code for simple address.
+
+```typescript
+await HoosatQR.generateAddressQR(
+  address: string,
+  options?: QRCodeOptions
+): Promise<string>
+
+interface QRCodeOptions {
+  width?: number;                          // Default: 300
+  errorCorrectionLevel?: 'L'|'M'|'Q'|'H'; // Default: 'M'
+  margin?: number;                         // Default: 2
+  color?: {
+    dark?: string;   // Hex color (default: '#000000')
+    light?: string;  // Hex color (default: '#FFFFFF')
+  };
+}
+```
+
+**Returns:** Data URL (base64 PNG image) for use in `<img>` tags.
+
+#### `generatePaymentQR(params, options?)`
+Generate QR code for payment request.
+
+```typescript
+await HoosatQR.generatePaymentQR(
+  params: PaymentURIParams,
+  options?: QRCodeOptions
+): Promise<string>
+
+interface PaymentURIParams {
+  address: string;
+  amount?: string | number;  // Amount in HTN (not sompi)
+  label?: string;
+  message?: string;
+}
+```
+
+#### `generateQRBuffer(address, options?)`
+Generate QR code as PNG Buffer.
+
+```typescript
+await HoosatQR.generateQRBuffer(
+  address: string,
+  options?: QRCodeOptions
+): Promise<Buffer>
+```
+
+#### `generateQRSVG(address, options?)`
+Generate QR code as SVG string.
+
+```typescript
+await HoosatQR.generateQRSVG(
+  address: string,
+  options?: QRCodeOptions
+): Promise<string>
+```
+
+#### `generateQRTerminal(address)`
+Generate ASCII art QR code for terminal.
+
+```typescript
+await HoosatQR.generateQRTerminal(address: string): Promise<void>
+```
+
+### Methods - URI Operations
+
+#### `buildPaymentURI(params)`
+Build payment URI from parameters.
+
+```typescript
+HoosatQR.buildPaymentURI(params: PaymentURIParams): string
+```
+
+#### `parsePaymentURI(uri)`
+Parse payment URI into structured data.
+
+```typescript
+HoosatQR.parsePaymentURI(uri: string): ParsedPaymentURI
+
+interface ParsedPaymentURI {
+  address: string;
+  amount?: string;    // Amount in sompi
+  label?: string;
+  message?: string;
+  rawUri: string;
+}
+```
+
+#### `isValidPaymentURI(uri)`
+Validate payment URI.
+
+```typescript
+HoosatQR.isValidPaymentURI(uri: string): boolean
+```
+
+### Use Cases
+
+**E-commerce Integration:**
+```typescript
+const orderQR = await HoosatQR.generatePaymentQR({
+  address: merchantAddress,
+  amount: orderTotal,
+  label: 'My Online Store',
+  message: `Order #${orderId}`
+});
+```
+
+**Donation Button:**
+```typescript
+const donationQR = await HoosatQR.generateAddressQR(charityAddress, {
+  width: 400,
+  errorCorrectionLevel: 'H'
+});
+```
+
+---
+
+## HoosatUtils
+
+**Set of utilities for working with amounts, validation, and formatting.**
+
+### Methods - Amount Conversion
+
+#### `amountToSompi(htn)`
+Convert HTN to sompi (smallest unit).
+
+```typescript
+HoosatUtils.amountToSompi(htn: string): string
+```
+
+#### `sompiToAmount(sompi)`
+Convert sompi to HTN.
+
+```typescript
+HoosatUtils.sompiToAmount(sompi: string | bigint): string
+```
+
+### Methods - Formatting
+
+#### `formatAmount(htn, decimals?)`
+Format amount with thousands separators.
+
+```typescript
+HoosatUtils.formatAmount(htn: string, decimals: number = 8): string
+```
+
+#### `truncateHash(hash, prefixLength?, suffixLength?)`
+Truncate hash for display.
+
+```typescript
+HoosatUtils.truncateHash(
+  hash: string,
+  prefixLength: number = 8,
+  suffixLength: number = 6
+): string
+```
+
+#### `truncateAddress(address, prefixLength?, suffixLength?)`
+Truncate address for display.
+
+```typescript
+HoosatUtils.truncateAddress(
+  address: string,
+  prefixLength: number = 15,
+  suffixLength: number = 6
+): string
+```
+
+### Methods - Address Validation
+
+#### `isValidAddress(address)`
+Validate Hoosat address.
+
+```typescript
+HoosatUtils.isValidAddress(address: string): boolean
+```
+
+**Supports:** Mainnet (`hoosat:`) and Testnet (`hoosattest:`) addresses.
+
+#### `isValidAddresses(addresses, checkUnique?)`
+Validate array of addresses.
+
+```typescript
+HoosatUtils.isValidAddresses(
+  addresses: string[],
+  checkUnique: boolean = false
+): boolean
+```
+
+#### `getAddressVersion(address)`
+Get address version.
+
+```typescript
+HoosatUtils.getAddressVersion(address: string): number | null
+```
+
+**Returns:** `0x00` (Schnorr), `0x01` (ECDSA), `0x08` (P2SH), or `null`.
+
+#### `getAddressType(address)`
+Get address type.
+
+```typescript
+HoosatUtils.getAddressType(address: string): 'schnorr' | 'ecdsa' | 'p2sh' | null
+```
+
+### Methods - Hash Validation
+
+#### `isValidHash(hash, expectedLength?)`
+Validate hex hash.
+
+```typescript
+HoosatUtils.isValidHash(hash: string, expectedLength: number = 64): boolean
+```
+
+#### `isValidTransactionId(txId)`
+Validate transaction ID.
+
+```typescript
+HoosatUtils.isValidTransactionId(txId: string): boolean
+```
+
+#### `isValidBlockHash(blockHash)`
+Validate block hash.
+
+```typescript
+HoosatUtils.isValidBlockHash(blockHash: string): boolean
+```
+
+#### `isValidHashes(hashes, length?)`
+Validate array of hashes.
+
+```typescript
+HoosatUtils.isValidHashes(hashes: string[], length: number = 64): boolean
+```
+
+### Methods - Key Validation
+
+#### `isValidPrivateKey(privateKey)`
+Validate private key.
+
+```typescript
+HoosatUtils.isValidPrivateKey(privateKey: string): boolean
+```
+
+#### `isValidPublicKey(publicKey, compressed?)`
+Validate public key.
+
+```typescript
+HoosatUtils.isValidPublicKey(
+  publicKey: string,
+  compressed: boolean = true
+): boolean
+```
+
+### Methods - Amount Validation
+
+#### `isValidAmount(amount, maxDecimals?)`
+Validate amount.
+
+```typescript
+HoosatUtils.isValidAmount(amount: string, maxDecimals: number = 8): boolean
+```
+
+### Methods - Comparison
+
+#### `compareAddresses(addr1, addr2)`
+Case-insensitive address comparison.
+
+```typescript
+HoosatUtils.compareAddresses(addr1: string, addr2: string): boolean
+```
+
+#### `compareHashes(hash1, hash2)`
+Case-insensitive hash comparison.
+
+```typescript
+HoosatUtils.compareHashes(hash1: string, hash2: string): boolean
+```
+
+---
+
+## UtxoStreamManager
+
+**Low-level class for managing real-time UTXO streaming (usually used through HoosatNode).**
+
+### Events
+
+```typescript
+enum StreamEventName {
+  UtxoChange = 'utxoChange',
+  Error = 'error',
+  Disconnect = 'disconnect',
+  Reconnecting = 'reconnecting',
+  Reconnected = 'reconnected'
+}
+```
+
+### Configuration
+
+```typescript
+interface UtxoStreamConfig {
+  maxReconnectAttempts?: number;  // Default: 5
+  baseReconnectDelay?: number;    // Default: 2000ms
+  maxSubscribedAddresses?: number; // Default: 1000
+}
+```
+
+**Note:** In most cases, use `HoosatNode` methods instead of working directly with `UtxoStreamManager`.
+
+---
+
+## 📋 Usage Examples
+
+The SDK includes **40+ detailed examples** covering all aspects of functionality.
+
+### Example Categories
+
+#### 📍 Address & Balance (3 examples)
+
 ```bash
 npm run example:address:balance              # Check single address balance
 npm run example:address:balances-multiple    # Check multiple addresses
 npm run example:address:utxos                # Fetch and analyze UTXOs
 ```
 
-### Cryptography (4 examples)
+#### 🔐 Cryptography (4 examples)
+
 ```bash
 npm run example:crypto:generate-keypair      # Generate new wallet
 npm run example:crypto:import-keypair        # Import existing wallet
-npm run example:crypto:address-types         # Address format examples
+npm run example:crypto:address-types         # Explore address types
 npm run example:crypto:hashing               # Cryptographic hashing
 ```
 
-### Node Operations (4 examples)
+#### 🌐 Node Operations (4 examples)
+
 ```bash
-npm run example:node:connect                 # Connect and get node info
+npm run example:node:connect                 # Connect and get info
 npm run example:node:blockchain-info         # Blockchain statistics
 npm run example:node:blocks                  # Query block data
 npm run example:node:mempool                 # Analyze mempool
 ```
 
-### Real-time Streaming (1 example)
+#### 📡 Real-time Streaming (1 example)
+
 ```bash
 npm run example:streaming:subscribe-utxos    # Real-time UTXO monitoring
 ```
 
-### QR codes (3 examples)
+#### 🎨 QR Codes (3 examples)
+
 ```bash
-npm run example:qr:address                         # Generate address QR codes
-npm run example:qr:payment                         # Payment request QR codes
-npm run example:qr:parse                           # Parse payment URIs
+npm run example:qr:address                   # Generate address QR codes
+npm run example:qr:payment                   # Payment request QR codes
+npm run example:qr:parse                     # Parse payment URIs
 ```
 
-### Transaction Management (9 examples)
+#### 💸 Transaction Management (9 examples)
+
 ```bash
-npm run example:transaction:build-simple           # Basic transaction
+npm run example:transaction:build-simple           # Build simple transaction
 npm run example:transaction:build-with-change      # Automatic change handling
-npm run example:transaction:multiple-inputs        # Multiple inputs
+npm run example:transaction:multiple-inputs        # Handle multiple inputs
 npm run example:transaction:estimate-fee           # Dynamic fee estimation
 npm run example:transaction:send-real              # Send real transaction
 npm run example:transaction:dynamic-fees           # Network-aware fees
-npm run example:transaction:send-real-batch        # Batch payment (2 recipients)
+npm run example:transaction:send-real-batch        # Batch payment
 npm run example:transaction:consolidate-utxos      # UTXO consolidation
 npm run example:transaction:split-utxo             # Split UTXO
 ```
 
-### Error Handling (3 examples)
+#### ⚠️ Error Handling (3 examples)
+
 ```bash
 npm run example:error-handling:network-errors      # Network error handling
-npm run example:error-handling:transaction-errors  # Transaction error handling
+npm run example:error-handling:transaction-errors  # Transaction errors
 npm run example:error-handling:retry-strategies    # Retry patterns
 ```
 
-### Monitoring (2 examples)
+#### 📊 Monitoring (2 examples)
+
 ```bash
 npm run example:monitoring:track-balance-changes   # Real-time balance tracking
 npm run example:monitoring:network-stats           # Network statistics
 ```
 
-### Advanced (2 examples)
+#### 🚀 Advanced (2 examples)
+
 ```bash
 npm run example:advanced:multi-recipient-batching  # Batch payments (3+ recipients)
-npm run example:advanced:utxo-selection-strategy   # Coin selection algorithms
+npm run example:advanced:utxo-selection-strategy   # UTXO selection algorithms
 ```
 
-### Utilities (3 examples)
+#### 🛠 Utilities (3 examples)
+
 ```bash
 npm run example:utils:amount-conversion            # Amount conversions
 npm run example:utils:validation                   # Input validation
 npm run example:utils:formatting                   # Pretty formatting
 ```
 
-## 🔧 Core API Reference
-
-### HoosatNode
-
-Main class for node communication:
-
-```typescript
-const node = new HoosatNode({
-  host: string,
-  port: number,
-  timeout?: number  // default: 10000ms
-});
-
-// Node information
-await node.getInfo()
-await node.getBlockCount()
-await node.getCurrentNetwork()
-await node.getConnectedPeerInfo()
-
-// Blockchain queries
-await node.getBlock(blockHash, includeTransactions?)
-await node.getBlocks(lowHash, includeTransactions?)
-await node.getSelectedTipHash()
-
-// Address operations
-await node.getBalance(address)
-await node.getUtxosByAddresses(addresses)
-
-// Transaction operations
-await node.submitTransaction(transaction)
-await node.getMempoolEntry(txId)
-await node.getMempoolEntries(includeOrphanPool?, filterTransactionPool?)
-
-// Real-time streaming
-await node.subscribeToUtxoChanges(addresses)
-await node.unsubscribeFromUtxoChanges(addresses?)
-node.on('utxoChange', (notification) => { /* ... */ })
-node.on('error', (error) => { /* ... */ })
-node.on('disconnect', () => { /* ... */ })
-
-// Cleanup
-node.disconnect()
-```
-
-### HoosatCrypto
-
-Cryptographic operations:
-
-```typescript
-// Key generation
-HoosatCrypto.generateKeyPair() // Returns { address, publicKey, privateKey }
-HoosatCrypto.importKeyPair(privateKeyHex)
-
-// Address operations
-HoosatCrypto.publicKeyToAddressECDSA(publicKey)
-HoosatCrypto.addressToScriptPublicKey(address)
-
-// Transaction operations
-HoosatCrypto.getTransactionId(transaction)
-HoosatCrypto.signTransaction(transaction, privateKey, sighashType?)
-HoosatCrypto.calculateFee(inputs, outputs, feeRate)
-
-// Hashing
-HoosatCrypto.blake3Hash(data)
-```
-
-### HoosatUtils
-
-Utility functions:
-
-```typescript
-// Amount conversion
-HoosatUtils.amountToSompi(amount: string): string
-HoosatUtils.sompiToAmount(sompi: string | bigint): string
-
-// Validation
-HoosatUtils.isValidAddress(address: string): boolean
-HoosatUtils.isValidAddresses(addresses: string[]): boolean
-HoosatUtils.isValidPrivateKey(privateKey: string): boolean
-HoosatUtils.isValidPublicKey(publicKey: string): boolean
-
-// Formatting
-HoosatUtils.formatAmount(amount: string): string
-HoosatUtils.truncateHash(hash: string): string
-HoosatUtils.truncateAddress(address: string): string
-```
-
-### HoosatQR
-
-Generate and parse QR codes:
-```typescript
-// Generate QR codes
-await HoosatQR.generateAddressQR(address, options?)
-await HoosatQR.generatePaymentQR({ address, amount?, label?, message? }, options?)
-await HoosatQR.generateQRBuffer(address, options?)  // PNG Buffer
-await HoosatQR.generateQRSVG(address, options?)     // SVG string
-await HoosatQR.generateQRTerminal(address)          // CLI ASCII art
-
-// Build and parse URIs
-HoosatQR.buildPaymentURI({ address, amount?, label?, message? })
-HoosatQR.parsePaymentURI(uri)
-HoosatQR.isValidPaymentURI(uri)
-
-// QR options
-{
-    width?: number;                          // default: 300
-    errorCorrectionLevel?: 'L'|'M'|'Q'|'H'; // default: 'M'
-    margin?: number;                         // default: 2
-    color?: {
-        dark?: string;   // hex color
-        light?: string;  // hex color
-    }
-}
-```
-
-### TxBuilder
-
-Build and sign transactions:
-
-```typescript
-const builder = new TxBuilder({ debug?: boolean });
-
-// Add inputs and outputs
-builder.addInput(utxo: UtxoForSigning, privateKey?: Buffer)
-builder.addOutput(address: string, amount: string)
-builder.addChangeOutput(changeAddress: string)  // Automatic calculation
-builder.addOutputRaw(output: TransactionOutput) // Bypass validation
-
-// Set parameters
-builder.setFee(fee: string)
-builder.setLockTime(lockTime: string)
-
-// Build and sign
-const unsignedTx = builder.build()
-const signedTx = builder.sign(privateKey?)
-
-// Validation
-builder.validate()
-```
-
-### FeeEstimator
-
-Dynamic fee estimation:
-
-```typescript
-const estimator = new FeeEstimator(node);
-
-// Get recommendations for all priority levels
-const recommendations = await estimator.getRecommendations();
-console.log('Low:', recommendations.low.feeRate, 'sompi/byte');
-console.log('Normal:', recommendations.normal.feeRate, 'sompi/byte');
-console.log('High:', recommendations.high.feeRate, 'sompi/byte');
-console.log('Urgent:', recommendations.urgent.feeRate, 'sompi/byte');
-
-// Estimate fee for specific transaction
-const estimate = await estimator.estimateFee(
-  FeePriority.Normal,
-  numInputs,
-  numOutputs
-);
-console.log('Total fee:', estimate.totalFee, 'sompi');
-
-// Cache management
-estimator.clearCache()
-estimator.setCacheDuration(milliseconds)
-```
-
-## 🎨 QR Code Integration
-
-Generate payment QR codes that work with any Hoosat mobile wallet:
-
-### Features
-- ✅ Simple address QR codes
-- ✅ Payment requests with amount and metadata
-- ✅ Multiple formats: PNG, SVG, Data URL, Terminal
-- ✅ URI parsing from scanned QR codes
-- ✅ Full mobile wallet compatibility
-
-### Use Cases
-- **E-commerce**: Generate payment QR on checkout
-- **Donations**: Create QR for fundraising
-- **Invoices**: Embed QR in PDF invoices
-- **Point of Sale**: Display QR at cash register
-- **Mobile Apps**: Show QR for peer-to-peer payments
-
-### Quick Examples
-```typescript
-// E-commerce checkout
-const checkoutQR = await HoosatQR.generatePaymentQR({
-    address: merchantAddress,
-    amount: orderTotal,
-    label: 'My Shop',
-    message: `Order #${orderId}`
-});
-
-// Restaurant bill
-const billQR = await HoosatQR.generatePaymentQR({
-    address: restaurantAddress,
-    amount: 25.50,
-    label: 'Restaurant',
-    message: 'Table 15 - Thank you!'
-});
-
-// Donation button
-const donationQR = await HoosatQR.generateAddressQR(charityAddress, {
-    width: 400,
-    errorCorrectionLevel: 'H'
-});
-````
+---
 
 ## 🔄 Error Handling
 
@@ -470,101 +1116,411 @@ All SDK methods return a standardized result:
 ```typescript
 interface BaseResult<T> {
   ok: boolean;
-  result?: T;
-  error?: string;
+  result: T | null;
+  error: string | null;
 }
+```
 
-// Always check result.ok before accessing data
-const result = await node.getBalance('hoosat:qz7ulu...');
+### Usage Pattern
+
+```typescript
+const result = await node.getBalance(address);
 
 if (result.ok) {
-  // Success - safe to access result.result
+  // Success - use result.result
   console.log('Balance:', result.result.balance);
 } else {
-  // Error - handle gracefully
+  // Error - use result.error
   console.error('Error:', result.error);
-  
-  // Categorize errors
-  if (result.error.includes('timeout')) {
-    console.log('Node timeout - increase timeout or check connection');
-  } else if (result.error.includes('utxoindex')) {
-    console.log('Node requires --utxoindex flag');
-  }
 }
 ```
 
-### Common Error Scenarios
+### Error Types
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `utxoindex not available` | Node without `--utxoindex` | Restart node with flag |
-| `DEADLINE_EXCEEDED` | Request timeout | Increase timeout value |
-| `ECONNREFUSED` | Node not running | Check node status and config |
-| `Invalid address format` | Malformed address | Validate with `HoosatUtils.isValidAddress()` |
-| `Insufficient balance` | Not enough funds | Check balance before transaction |
-| `spam` / `too many outputs` | 3+ recipients | Limit to 2 recipients per tx |
+#### Network Errors
+- Connection timeout
+- Lost connection
+- gRPC errors
 
-See `examples/error-handling/` for comprehensive error handling patterns.
+#### Transaction Errors
+- Insufficient balance
+- Invalid addresses
+- Recipient limit exceeded
 
-## 🎯 Production Best Practices
+#### Validation Errors
+- Invalid address formats
+- Invalid private keys
+- Invalid amounts
 
-### 1. Always Validate Inputs
+### Retry Strategies
 
-```typescript
-// Validate addresses before building transaction
-if (!HoosatUtils.isValidAddress(recipientAddress)) {
-  throw new Error('Invalid recipient address');
-}
-
-// Check balance before attempting transaction
-const balance = await node.getBalance(wallet.address);
-if (BigInt(balance.result.balance) < requiredAmount) {
-  throw new Error('Insufficient balance');
-}
-```
-
-### 2. Use Dynamic Fee Estimation
+#### Exponential Backoff
 
 ```typescript
-// Don't use static fees - query network conditions
-const feeEstimator = new FeeEstimator(node);
-const estimate = await feeEstimator.estimateFee(
-  FeePriority.Normal,
-  numInputs,
-  numOutputs
-);
-builder.setFee(estimate.totalFee);
-```
-
-### 3. Implement Retry Logic
-
-```typescript
-// Use exponential backoff for transient failures
 async function connectWithRetry(maxRetries = 3) {
   for (let i = 0; i < maxRetries; i++) {
     const result = await node.getInfo();
     if (result.ok) return result;
     
     const delay = Math.min(1000 * Math.pow(2, i), 30000);
+    console.log(`Retry ${i + 1}/${maxRetries} after ${delay}ms`);
     await new Promise(r => setTimeout(r, delay));
   }
   throw new Error('Max retries exceeded');
 }
 ```
 
-See `examples/error-handling/03-retry-strategies.ts` for advanced patterns.
+#### Circuit Breaker
+
+```typescript
+class CircuitBreaker {
+  private failureCount = 0;
+  private readonly threshold = 5;
+  private readonly timeout = 60000;
+  private state: 'closed' | 'open' | 'half-open' = 'closed';
+
+  async execute<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.state === 'open') {
+      if (Date.now() - this.lastFailureTime > this.timeout) {
+        this.state = 'half-open';
+      } else {
+        throw new Error('Circuit breaker is OPEN');
+      }
+    }
+
+    try {
+      const result = await fn();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+}
+```
+
+### Handling Disconnections
+
+```typescript
+node.on('disconnect', async () => {
+  console.log('Disconnected from node - attempting reconnect...');
+  await reconnectWithBackoff();
+});
+
+node.on('error', (error) => {
+  console.error('Node error:', error);
+  // Log for monitoring
+  logger.error('Node error', { error, timestamp: Date.now() });
+});
+```
+
+---
+
+## 💼 UTXO Management
+
+### UTXO Selection Strategies
+
+#### 1. Largest-First (Minimize Fees)
+
+```typescript
+// Sort UTXOs by amount descending
+const sortedUtxos = utxos.sort((a, b) => 
+  Number(BigInt(b.utxoEntry.amount) - BigInt(a.utxoEntry.amount))
+);
+
+// Select largest UTXOs first
+let totalSelected = 0n;
+for (const utxo of sortedUtxos) {
+  if (totalSelected >= neededAmount) break;
+  builder.addInput(utxo, privateKey);
+  totalSelected += BigInt(utxo.utxoEntry.amount);
+}
+```
+
+**Advantages:**
+- Minimum number of inputs → lower fees
+- Fast transaction building
+
+**Disadvantages:**
+- Worse privacy (obvious selection pattern)
+- Doesn't clean up small UTXOs
+
+#### 2. Smallest-First (Dust Cleanup)
+
+```typescript
+// Sort UTXOs by amount ascending
+const sortedUtxos = utxos.sort((a, b) => 
+  Number(BigInt(a.utxoEntry.amount) - BigInt(b.utxoEntry.amount))
+);
+
+// Select smallest UTXOs first
+let totalSelected = 0n;
+for (const utxo of sortedUtxos) {
+  if (totalSelected >= neededAmount) break;
+  builder.addInput(utxo, privateKey);
+  totalSelected += BigInt(utxo.utxoEntry.amount);
+}
+```
+
+**Advantages:**
+- Cleans up small UTXOs (dust cleanup)
+- Improves wallet structure
+- Reduces future fees
+
+**Disadvantages:**
+- More inputs → higher current fee
+- Slower for large amounts
+
+#### 3. Random Selection (Privacy)
+
+```typescript
+// Shuffle UTXOs randomly
+const shuffled = utxos.sort(() => Math.random() - 0.5);
+
+let totalSelected = 0n;
+for (const utxo of shuffled) {
+  if (totalSelected >= neededAmount) break;
+  builder.addInput(utxo, privateKey);
+  totalSelected += BigInt(utxo.utxoEntry.amount);
+}
+```
+
+**Advantages:**
+- Unpredictable pattern → better privacy
+- Makes chain analysis harder
+
+**Disadvantages:**
+- Unpredictable fees
+- Not optimal for size
+
+### UTXO Consolidation
+
+Combine many small UTXOs into one large UTXO.
+
+```typescript
+// Get all UTXOs
+const utxos = await node.getUtxosByAddresses([wallet.address]);
+
+// Estimate fee
+const feeEstimator = new HoosatFeeEstimator(node);
+const feeEstimate = await feeEstimator.estimateFee(
+  FeePriority.Low,  // Use low priority for consolidation
+  utxos.result.utxos.length,  // All inputs
+  1  // Single output
+);
+
+// Build consolidation transaction
+const builder = new HoosatTxBuilder();
+
+// Add all UTXOs as inputs
+for (const utxo of utxos.result.utxos) {
+  builder.addInput(utxo, wallet.privateKey);
+}
+
+// Single output to same address
+const totalIn = builder.getTotalInputAmount();
+const fee = BigInt(feeEstimate.totalFee);
+const outputAmount = (totalIn - fee).toString();
+
+builder.addOutput(wallet.address, outputAmount);
+builder.setFee(feeEstimate.totalFee);
+
+// Submit
+const signedTx = builder.sign();
+await node.submitTransaction(signedTx);
+```
+
+**When to consolidate:**
+- Accumulated many small UTXOs (>10)
+- Low network activity (cheap fees)
+- Before an important transaction
+
+**Pros:**
+- Reduces future fees
+- Simplifies wallet structure
+- Speeds up transaction creation
+
+**Cons:**
+- Costs fees now
+- Loss of privacy (all UTXOs linked)
+
+### UTXO Splitting
+
+Split one large UTXO into multiple smaller ones.
+
+```typescript
+// Get largest UTXO
+const utxos = await node.getUtxosByAddresses([wallet.address]);
+const largestUtxo = utxos.result.utxos.sort((a, b) => 
+  Number(BigInt(b.utxoEntry.amount) - BigInt(a.utxoEntry.amount))
+)[0];
+
+// Estimate fee
+const feeEstimate = await feeEstimator.estimateFee(
+  FeePriority.Normal,
+  1,  // Single input
+  3   // 2 splits + change
+);
+
+// Build split transaction
+const totalAmount = BigInt(largestUtxo.utxoEntry.amount);
+const fee = BigInt(feeEstimate.totalFee);
+const splitAmount = (totalAmount - fee) / 2n;
+
+const builder = new HoosatTxBuilder();
+builder.addInput(largestUtxo, wallet.privateKey);
+builder.addOutput(wallet.address, splitAmount.toString());  // Split 1
+builder.addOutput(wallet.address, splitAmount.toString());  // Split 2
+builder.setFee(feeEstimate.totalFee);
+
+const signedTx = builder.sign();
+await node.submitTransaction(signedTx);
+```
+
+**When to split:**
+- Preparing for multiple payments
+- Improving privacy
+- Parallel transactions
+
+---
+
+## 🛡 Spam Protection
+
+Hoosat inherits **dust-attack protection** from Kaspa. This means a hard protocol-level limitation:
+
+### Transaction Limits
+
+- **Maximum 2 recipient outputs** per transaction
+- **Maximum 3 outputs** total (2 recipients + 1 change)
+
+```typescript
+// ✅ VALID - 2 recipients + change
+builder.addInput(utxo, privateKey);
+builder.addOutput('hoosat:recipient1...', '100000000');
+builder.addOutput('hoosat:recipient2...', '50000000');
+builder.addChangeOutput(wallet.address);  // Total: 3 outputs
+
+// ❌ INVALID - 3 recipients
+builder.addInput(utxo, privateKey);
+builder.addOutput('hoosat:recipient1...', '100000000');
+builder.addOutput('hoosat:recipient2...', '50000000');
+builder.addOutput('hoosat:recipient3...', '25000000');  // ERROR!
+```
+
+### Handling Multiple Recipients
+
+For sending to 3+ recipients, use **batch payments** (multiple transactions):
+
+```typescript
+const recipients = [
+  { address: 'hoosat:addr1...', amount: '100000000' },
+  { address: 'hoosat:addr2...', amount: '50000000' },
+  { address: 'hoosat:addr3...', amount: '75000000' },
+  { address: 'hoosat:addr4...', amount: '25000000' },
+];
+
+// Split into batches of 2
+const batches = [];
+for (let i = 0; i < recipients.length; i += 2) {
+  batches.push(recipients.slice(i, i + 2));
+}
+
+// Process each batch
+for (const batch of batches) {
+  const builder = new HoosatTxBuilder();
+  
+  // Get fresh UTXO for each transaction
+  const utxos = await node.getUtxosByAddresses([wallet.address]);
+  builder.addInput(utxos.result.utxos[0], wallet.privateKey);
+  
+  // Add recipients (max 2)
+  for (const recipient of batch) {
+    builder.addOutput(recipient.address, recipient.amount);
+  }
+  
+  builder.setFee(estimatedFee);
+  builder.addChangeOutput(wallet.address);
+  
+  const signedTx = builder.sign();
+  await node.submitTransaction(signedTx);
+  
+  // Add delay between batches
+  await new Promise(r => setTimeout(r, 2000));
+}
+```
+
+**See example:** `examples/advanced/01-multi-recipient-batching.ts`
+
+### Why This Limitation?
+
+1. **Spam Protection** - Prevents creating thousands of small UTXOs
+2. **Network Performance** - Reduces validation load
+3. **UTXO Set Size** - Controls database growth
+
+---
+
+## 💡 Best Practices
+
+### 1. Always Check Results
+
+```typescript
+const result = await node.getBalance(address);
+if (!result.ok) {
+  console.error('Error:', result.error);
+  return;
+}
+
+// Safe to use result.result
+console.log('Balance:', result.result.balance);
+```
+
+### 2. Validate Before Operations
+
+```typescript
+// Validate address before querying
+if (!HoosatUtils.isValidAddress(address)) {
+  throw new Error('Invalid Hoosat address');
+}
+
+// Validate private key before importing
+if (!HoosatUtils.isValidPrivateKey(privateKeyHex)) {
+  throw new Error('Invalid private key format');
+}
+
+// Validate amount before sending
+if (!HoosatUtils.isValidAmount(amount)) {
+  throw new Error('Invalid amount format');
+}
+```
+
+### 3. Use Dynamic Fee Estimation
+
+```typescript
+// ❌ BAD - Fixed fee
+builder.setFee('2500');
+
+// ✅ GOOD - Dynamic fee based on network
+const feeEstimator = new HoosatFeeEstimator(node);
+const estimate = await feeEstimator.estimateFee(
+  FeePriority.Normal,
+  inputCount,
+  outputCount
+);
+builder.setFee(estimate.totalFee);
+```
 
 ### 4. Handle Disconnections
 
 ```typescript
 node.on('disconnect', async () => {
-  console.log('Disconnected - attempting reconnect...');
-  await reconnectLogic();
+  console.log('Disconnected - reconnecting...');
+  await reconnectWithRetry();
 });
 
 node.on('error', (error) => {
   console.error('Node error:', error);
-  // Log for monitoring and debugging
+  // Log to monitoring system
 });
 ```
 
@@ -573,117 +1529,287 @@ node.on('error', (error) => {
 ```typescript
 // Add delays between batch operations
 for (const batch of batches) {
-  await processTransaction(batch);
+  await processBatch(batch);
   await new Promise(r => setTimeout(r, 2000)); // 2s delay
 }
 ```
 
-## 📊 UTXO Management Strategies
-
-### Consolidation (Reduce UTXO Count)
+### 6. Use Change Outputs
 
 ```typescript
-// Combine many small UTXOs into one large UTXO
-// Best for: Reducing future transaction fees
-// See: examples/transaction/08-consolidate-utxos.ts
+// ❌ BAD - Manual change calculation (error-prone)
+const change = totalIn - amount - fee;
+builder.addOutput(wallet.address, change.toString());
 
-const builder = new TxBuilder();
-for (const utxo of smallUtxos) {
-  builder.addInput(utxo, privateKey);
-}
-builder.addOutput(wallet.address, totalAmount - fee);
-```
-
-### Splitting (Create Multiple UTXOs)
-
-```typescript
-// Split one large UTXO into multiple smaller ones
-// Best for: Preparing for future batch payments
-// See: examples/transaction/09-split-utxo.ts
-
-builder.addInput(largeUtxo, privateKey);
-builder.addOutput(wallet.address, amount1); // Split 1
-builder.addOutput(wallet.address, amount2); // Split 2 (max 2)
-builder.setFee(fee);
+// ✅ GOOD - Automatic change calculation
 builder.addChangeOutput(wallet.address);
 ```
 
-### Selection Strategies
+### 7. Validate Transactions Before Sending
 
-- **Largest-First**: Minimize fees (fewer inputs)
-- **Smallest-First**: Clean up dust (UTXO consolidation)
-- **Random**: Enhance privacy (unpredictable pattern)
-- **Branch-and-Bound**: Optimal (minimal change)
+```typescript
+try {
+  builder.validate();
+  const signedTx = builder.sign();
+  await node.submitTransaction(signedTx);
+} catch (error) {
+  console.error('Transaction validation failed:', error);
+}
+```
 
-See `examples/advanced/03-utxo-selection-strategy.ts` for implementations.
+### 8. Secure Private Key Storage
+
+```typescript
+// ❌ NEVER store private keys in plain text
+const privateKey = '33a4a81e...';
+
+// ✅ Use environment variables
+const privateKey = process.env.WALLET_PRIVATE_KEY;
+
+// ✅ Use encrypted storage
+const encryptedKey = encrypt(privateKey, password);
+
+// ✅ Use hardware wallets for production
+```
+
+### 9. Test on Testnet
+
+```typescript
+// Use testnet for development
+const node = new HoosatNode({
+  host: 'testnet-node.hoosat.fi',
+  port: 42420
+});
+
+// Generate testnet addresses
+const wallet = HoosatCrypto.generateKeyPair();
+```
+
+### 10. Monitoring and Logging
+
+```typescript
+// Log all transactions
+const txId = await submitTransaction(tx);
+logger.info('Transaction submitted', {
+  txId,
+  amount,
+  recipient,
+  timestamp: Date.now()
+});
+
+// Monitor UTXO changes
+node.on('utxoChange', (notification) => {
+  logger.info('UTXO change detected', {
+    added: notification.added.length,
+    removed: notification.removed.length
+  });
+});
+```
+
+---
 
 ## 🧪 Testing
 
-```bash
-# Build the project
-npm run build
+The SDK uses [Vitest](https://vitest.dev/) for unit testing.
 
-# Run examples
-npm run example:node:connect
-npm run example:transaction:build-simple
-npm run example:error-handling:network-errors
+### Run Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Run with UI
+npm run test:ui
+
+# Watch mode
+npm test -- --watch
 ```
+
+### Test Structure
+
+```
+tests/
+├── crypto/
+│   └── crypto.test.ts         # HoosatCrypto tests
+├── transaction/
+│   └── tx-builder.test.ts     # HoosatTxBuilder tests
+├── utils/
+│   └── utils.test.ts          # HoosatUtils tests
+└── qr/
+    └── qr.test.ts             # HoosatQR tests
+```
+
+### Coverage
+
+The SDK aims for high test coverage of critical components:
+
+- ✅ **HoosatCrypto** - 90%+ coverage
+- ✅ **HoosatTxBuilder** - 90%+ coverage
+- ✅ **HoosatUtils** - 95%+ coverage
+- 🔄 **HoosatNode** - Integration tests
+- 🔄 **HoosatFeeEstimator** - Unit tests
+
+---
 
 ## 🔧 Development
 
+### Clone Repository
+
 ```bash
-# Clone repository
 git clone https://github.com/Namp88/hoosat-sdk.git
 cd hoosat-sdk
+```
 
-# Install dependencies
+### Install Dependencies
+
+```bash
 npm install
+```
 
-# Build
+### Development Commands
+
+```bash
+# Build project
 npm run build
 
-# Watch mode
-npm run dev
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
 
 # Format code
 npm run format
+
+# Check formatting
+npm run format:check
+
+# Run example
+npm run example:node:connect
 ```
+
+### Adding New Feature
+
+1. Create feature branch
+```bash
+git checkout -b feature/my-new-feature
+```
+
+2. Implement feature in appropriate module
+
+3. Add tests
+```typescript
+// tests/my-feature/my-feature.test.ts
+describe('MyFeature', () => {
+  it('should work correctly', () => {
+    // Test implementation
+  });
+});
+```
+
+4. Add usage example
+```typescript
+// examples/my-feature/01-basic-usage.ts
+async function main() {
+  // Example implementation
+}
+
+main();
+```
+
+5. Update exports in `src/index.ts`
+
+6. Run tests and formatting
+```bash
+npm test
+npm run format
+npm run build
+```
+
+7. Create Pull Request
+
+---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please:
+We welcome contributions! Please:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. **Fork the repository**
+2. **Create feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit changes** (`git commit -m 'Add amazing feature'`)
+4. **Push to branch** (`git push origin feature/amazing-feature`)
+5. **Open Pull Request**
+
+### Guidelines
+
+- Follow existing code style
+- Add tests for new functionality
+- Update documentation
+- Ensure all tests pass
+- Write clear commit messages
+
+### Code Style
+
+```bash
+# Format code before committing
+npm run format
+
+# Check formatting
+npm run format:check
+```
+
+---
 
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
+---
+
 ## 🔗 Links
 
-- [Hoosat Official Website](https://hoosat.fi)
-- [GitHub Repository](https://github.com/Namp88/hoosat-sdk)
-- [NPM Package](https://www.npmjs.com/package/hoosat-sdk)
-- [Issues & Support](https://github.com/Namp88/hoosat-sdk/issues)
+- **Hoosat Official Website:** [https://hoosat.fi](https://hoosat.fi)
+- **GitHub Repository:** [https://github.com/Namp88/hoosat-sdk](https://github.com/Namp88/hoosat-sdk)
+- **NPM Package:** [https://www.npmjs.com/package/hoosat-sdk](https://www.npmjs.com/package/hoosat-sdk)
+- **Issues & Support:** [https://github.com/Namp88/hoosat-sdk/issues](https://github.com/Namp88/hoosat-sdk/issues)
+
+---
 
 ## 📞 Support
 
 For questions and support:
-- Open an issue on [GitHub](https://github.com/Namp88/hoosat-sdk/issues)
-- Join Hoosat community channels
-- Email: namp2988@gmail.com
+
+- **GitHub Issues:** [https://github.com/Namp88/hoosat-sdk/issues](https://github.com/Namp88/hoosat-sdk/issues)
+- **Email:** namp2988@gmail.com
+- **Hoosat Community:** Join official Hoosat [channels](https://network.hoosat.fi/)
+
+---
 
 ## 🙏 Acknowledgments
 
 Special thanks to:
+
 - **Tonto** - Lead Hoosat developer for invaluable technical guidance and spam protection insights
-- Hoosat core development team for building an amazing blockchain
-- All contributors and community members who help improve this SDK
+- **Hoosat Core Team** for building an amazing blockchain
+- **All Contributors** and community members who help improve this SDK
+
+---
+
+## 📊 Technical Specifications
+
+### Support
+
+- **Node.js:** >= 20.0.0
+- **TypeScript:** >= 5.0.0
+- **Networks:** Mainnet, Testnet
+- **Address Types:** ECDSA (secp256k1), Schnorr, P2SH
 
 ---
 
 **Made with ❤️ for the Hoosat community**
+
+*Version: 0.1.0*
+*Last Updated: October 2025*
