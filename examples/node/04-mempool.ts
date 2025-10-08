@@ -11,7 +11,7 @@
  * - Running Hoosat node
  * - Transaction ID for single entry lookup (optional)
  */
-import { HoosatClient, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from 'hoosat-sdk';
 
 async function main() {
   console.log('🌊 Working with Mempool\n');

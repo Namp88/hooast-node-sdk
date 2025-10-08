@@ -1026,85 +1026,84 @@ The SDK includes **40+ detailed examples** covering all aspects of functionality
 #### 📍 Address & Balance (3 examples)
 
 ```bash
-npm run example:address:balance              # Check single address balance
-npm run example:address:balances-multiple    # Check multiple addresses
-npm run example:address:utxos                # Fetch and analyze UTXOs
+tsx 01-balance.ts              # Check single address balance
+tsx 02-balances-multiple.ts    # Check multiple addresses
+tsx 03-utxos.ts                # Fetch and analyze UTXOs
 ```
 
 #### 🔐 Cryptography (4 examples)
 
 ```bash
-npm run example:crypto:generate-keypair      # Generate new wallet
-npm run example:crypto:import-keypair        # Import existing wallet
-npm run example:crypto:address-types         # Explore address types
-npm run example:crypto:hashing               # Cryptographic hashing
+tsx 01-generate-keypair.ts      # Generate new wallet
+tsx 02-import-keypair.ts        # Import existing wallet
+tsx 03-address-types.ts         # Explore address types
+tsx 04-hashing.ts               # Cryptographic hashing
 ```
 
 #### 🌐 Node Operations (4 examples)
 
 ```bash
-npm run example:node:connect                 # Connect and get info
-npm run example:node:blockchain-info         # Blockchain statistics
-npm run example:node:blocks                  # Query block data
-npm run example:node:mempool                 # Analyze mempool
+tsx 01-connect.ts                 # Connect and get info
+tsx 02-blockchain-info.ts         # Blockchain statistics
+tsx 03-blocks.ts                  # Query block data
+tsx 04-mempool.ts                 # Analyze mempool
 ```
 
 #### 📡 Real-time Streaming (1 example)
 
 ```bash
-npm run example:streaming:subscribe-utxos    # Real-time UTXO monitoring
+tsx 01-subscribe-utxos.ts    # Real-time UTXO monitoring
 ```
 
 #### 🎨 QR Codes (3 examples)
 
 ```bash
-npm run example:qr:address                   # Generate address QR codes
-npm run example:qr:payment                   # Payment request QR codes
-npm run example:qr:parse                     # Parse payment URIs
+tsx 01-generate-address.ts                   # Generate address QR codes
+tsx 02-generate-payment.ts                   # Payment request QR codes
+tsx 03-parse-payment-uri.ts                     # Parse payment URIs
 ```
 
 #### 💸 Transaction Management (9 examples)
 
 ```bash
-npm run example:transaction:build-simple           # Build simple transaction
-npm run example:transaction:build-with-change      # Automatic change handling
-npm run example:transaction:multiple-inputs        # Handle multiple inputs
-npm run example:transaction:estimate-fee           # Dynamic fee estimation
-npm run example:transaction:send-real              # Send real transaction
-npm run example:transaction:dynamic-fees           # Network-aware fees
-npm run example:transaction:send-real-batch        # Batch payment
-npm run example:transaction:consolidate-utxos      # UTXO consolidation
-npm run example:transaction:split-utxo             # Split UTXO
+tsx 01-build-simple.ts           # Build simple transaction
+tsx 02-build-with-change.ts      # Automatic change handling
+tsx 03-multiple-inputs.ts        # Handle multiple inputs
+tsx 04-estimate-fee.ts           # Dynamic fee estimation
+tsx 05-send-real.ts              # Send real transaction
+tsx 06-dynamic-fees.ts           # Network-aware fees
+tsx 07-send-real-batch.ts        # Batch payment
+tsx 08-consolidate-utxos.ts      # UTXO consolidation
+tsx 09-split-utxo.ts             # Split UTXO
 ```
 
 #### ⚠️ Error Handling (3 examples)
 
 ```bash
-npm run example:error-handling:network-errors      # Network error handling
-npm run example:error-handling:transaction-errors  # Transaction errors
-npm run example:error-handling:retry-strategies    # Retry patterns
+tsx 01-network-errors.ts      # Network error handling
+tsx 02-transaction-errors.ts  # Transaction errors
+tsx 03-retry-strategies.ts    # Retry patterns
 ```
 
 #### 📊 Monitoring (2 examples)
 
 ```bash
-npm run example:monitoring:track-balance-changes   # Real-time balance tracking
-npm run example:monitoring:network-stats           # Network statistics
+tsx 01-track-balance-changes.ts   # Real-time balance tracking
+tsx 02-network-stats.ts           # Network statistics
 ```
 
 #### 🚀 Advanced (2 examples)
 
 ```bash
-npm run example:advanced:multi-recipient-batching  # Batch payments (3+ recipients)
-npm run example:advanced:utxo-selection-strategy   # UTXO selection algorithms
+tsx 01-multi-recipient-batching.ts  # Batch payments (3+ recipients)
 ```
 
 #### 🛠 Utilities (3 examples)
 
 ```bash
-npm run example:utils:amount-conversion            # Amount conversions
-npm run example:utils:validation                   # Input validation
-npm run example:utils:formatting                   # Pretty formatting
+tsx 01-amount-conversion.ts            # Amount conversions
+tsx 02-validation.ts                   # Input validation
+tsx 03-formatting.ts                   # Pretty formatting
 ```
 
 ---

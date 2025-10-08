@@ -11,7 +11,7 @@
  * - Running Hoosat node
  * - Valid Hoosat address to check
  */
-import { HoosatClient, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from 'hoosat-sdk';
 
 async function main() {
   console.log('💰 Check Address Balance\n');

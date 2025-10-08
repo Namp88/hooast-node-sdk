@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { HoosatQR } from '../../src';
+import { HoosatQR } from 'hoosat-sdk';
 
 /**
  * Example: Generate payment request QR codes with amount and metadata

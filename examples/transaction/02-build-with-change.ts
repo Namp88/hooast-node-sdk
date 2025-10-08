@@ -13,7 +13,8 @@
  *
  * Note: This example uses mock UTXO data and does NOT broadcast to network.
  */
-import { HoosatCrypto, HoosatUtils, HoosatTxBuilder, UtxoForSigning, HOOSAT_PARAMS } from '../../src';
+
+import { HOOSAT_PARAMS, HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 function main() {
   console.log('💰 Build Transaction with Automatic Change\n');

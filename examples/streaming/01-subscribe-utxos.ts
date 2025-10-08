@@ -13,8 +13,7 @@
  *
  * Note: This example runs continuously until interrupted (Ctrl+C)
  */
-
-import { HoosatClient, HoosatUtils, UtxoChangeNotification } from '../../src';
+import { HoosatClient, HoosatUtils, UtxoChangeNotification } from 'hoosat-sdk';
 
 async function main() {
   console.log('📡 Real-time UTXO Monitoring\n');

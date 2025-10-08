@@ -14,7 +14,7 @@
  * ⚠️  WARNING: Never share your private key!
  * Store it securely and never commit to version control.
  */
-import { HoosatCrypto, HoosatUtils } from '../../src';
+import { HoosatCrypto, HoosatUtils } from 'hoosat-sdk';
 
 function main() {
   console.log('🔑 Generate New Hoosat Key Pairs\n');

@@ -10,7 +10,7 @@
  * Prerequisites:
  * - None (works offline)
  */
-import { HoosatUtils } from '../../src';
+import { HoosatUtils } from 'hoosat-sdk';
 
 function main() {
   console.log('💱 Amount Conversion Examples\n');

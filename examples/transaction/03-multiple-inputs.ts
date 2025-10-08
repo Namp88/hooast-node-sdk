@@ -13,7 +13,8 @@
  *
  * Note: This example uses mock UTXO data and does NOT broadcast to network.
  */
-import { HoosatCrypto, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
+
+import { HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 function main() {
   console.log('🔗 Transaction with Multiple Inputs\n');

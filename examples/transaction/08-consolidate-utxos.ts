@@ -23,7 +23,8 @@
  * - Don't consolidate if you rarely make transactions
  * - Consider privacy implications (all UTXOs linked to one address)
  */
-import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatClient, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
+
+import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');

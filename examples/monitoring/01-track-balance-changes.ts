@@ -24,7 +24,7 @@
  * - Log all balance changes for audit trail
  * - Show pending vs confirmed transactions
  */
-import { HoosatClient, HoosatUtils, UtxoChangeNotification } from '../../src';
+import { HoosatClient, HoosatUtils, UtxoChangeNotification } from 'hoosat-sdk';
 
 // Balance tracker class
 class BalanceTracker {

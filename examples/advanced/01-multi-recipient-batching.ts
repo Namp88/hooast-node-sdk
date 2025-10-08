@@ -26,7 +26,7 @@
  * - Track success/failure for each batch
  * - Calculate total fees upfront
  */
-import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatClient, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
+import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 interface Recipient {
   address: string;

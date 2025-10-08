@@ -10,7 +10,7 @@
  * Prerequisites:
  * - None (works offline)
  */
-import { HoosatCrypto, HoosatUtils } from '../../src';
+import { HoosatCrypto, HoosatUtils } from 'hoosat-sdk';
 
 function main() {
   console.log('Hashing Utilities\n');

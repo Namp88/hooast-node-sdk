@@ -26,14 +26,14 @@ export { HoosatCrypto } from '@crypto/crypto';
 export type { KeyPair, TransactionSignature } from '@crypto/crypto.types';
 
 export { UtxoStreamManager } from '@streaming/utxo-stream-manager';
-export { UTXO_STREAM_EVENTS, UtxoStreamEventName } from './streaming/utxo-stream-manager.types';
+export { UTXO_STREAM_EVENTS, UtxoStreamEventName } from '@streaming/utxo-stream-manager.types';
 export type {
   UtxoStreamConfig,
   UtxoStreamStats,
   UtxoChangeNotification,
   UtxoChanges,
   UtxoChangeEntry,
-} from './streaming/utxo-stream-manager.types';
+} from '@streaming/utxo-stream-manager.types';
 
 export { HoosatQR } from '@qr/qr';
 export type { PaymentURIParams, QRCodeOptions, ParsedPaymentURI } from '@qr/qr.types';

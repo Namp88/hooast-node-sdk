@@ -22,7 +22,8 @@
  * Due to spam protection, you can only create 2 new UTXOs per transaction.
  * To create more, run multiple split transactions.
  */
-import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatClient, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
+
+import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');

@@ -10,7 +10,7 @@
  * Prerequisites:
  * - Running Hoosat node
  */
-import { HoosatClient, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from 'hoosat-sdk';
 
 async function main() {
   console.log('🔍 Get UTXOs by Address\n');

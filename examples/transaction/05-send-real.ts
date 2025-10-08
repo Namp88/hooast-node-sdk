@@ -17,7 +17,8 @@
  * - Private key with sufficient balance
  * - Valid recipient address
  */
-import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatClient, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
+
+import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');

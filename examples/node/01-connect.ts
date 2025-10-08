@@ -10,7 +10,7 @@
  * Prerequisites:
  * - Running Hoosat node (or public node access)
  */
-import { HoosatClient } from '../../src';
+import { HoosatClient } from 'hoosat-sdk';
 
 async function main() {
   console.log('🔌 Connecting to Hoosat Node...\n');

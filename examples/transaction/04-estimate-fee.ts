@@ -8,7 +8,7 @@
  * - Access to Hoosat node
  * - Node must be synced
  */
-import { HoosatFeeEstimator, FeePriority, HoosatClient, HoosatUtils } from '../../src';
+import { FeePriority, HoosatClient, HoosatFeeEstimator, HoosatUtils } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');

@@ -1,7 +1,8 @@
 /**
  * Example: Parse payment URIs from scanned QR codes
  */
-import { HoosatQR, HoosatUtils } from '../../src';
+
+import { HoosatQR, HoosatUtils } from 'hoosat-sdk';
 
 async function parsePaymentURIs() {
   console.log('🔍 Parsing Hoosat Payment URIs\n');

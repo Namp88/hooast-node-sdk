@@ -12,7 +12,7 @@
  * - None (works offline)
  * - Valid private key in hex format
  */
-import { HoosatCrypto, HoosatUtils } from '../../src';
+import { HoosatCrypto, HoosatUtils } from 'hoosat-sdk';
 
 function main() {
   console.log('🔐 Import Key Pair from Private Key\n');

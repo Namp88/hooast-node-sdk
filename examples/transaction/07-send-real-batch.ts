@@ -14,7 +14,8 @@
  * Max 3 outputs per tx: 2 recipients + 1 change.
  * This is a hardcoded network rule to prevent spam.
  */
-import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatClient, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
+
+import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');

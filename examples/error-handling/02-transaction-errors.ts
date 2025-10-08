@@ -23,7 +23,8 @@
  * - Provide specific error messages
  * - Implement proper error recovery
  */
-import { HoosatCrypto, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
+
+import { HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');

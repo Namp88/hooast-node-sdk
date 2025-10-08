@@ -22,7 +22,7 @@
  * - Cache results to reduce node load
  * - Monitor trends over time, not just snapshots
  */
-import { HoosatClient, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from 'hoosat-sdk';
 
 interface NetworkSnapshot {
   timestamp: Date;

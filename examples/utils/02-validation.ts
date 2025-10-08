@@ -11,7 +11,7 @@
  * Prerequisites:
  * - None (works offline)
  */
-import { HoosatUtils } from '../../src';
+import { HoosatUtils } from 'hoosat-sdk';
 
 function main() {
   console.log('✅ Validation Utilities\n');

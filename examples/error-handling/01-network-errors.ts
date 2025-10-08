@@ -22,7 +22,7 @@
  * - Implement retry logic for transient failures
  * - Log errors for debugging
  */
-import { HoosatClient } from '../../src';
+import { HoosatClient } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');

@@ -10,7 +10,7 @@
  * This example shows how to estimate fees dynamically based on
  * current network activity, rather than using static rates.
  */
-import { HoosatFeeEstimator, FeePriority, HoosatClient, HoosatUtils } from '../../src';
+import { FeePriority, HoosatClient, HoosatFeeEstimator, HoosatUtils } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');

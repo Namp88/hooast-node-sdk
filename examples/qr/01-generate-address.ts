@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { HoosatQR } from '../../src';
+import { HoosatQR } from 'hoosat-sdk';
 
 /**
  * Example: Generate QR codes for Hoosat addresses
