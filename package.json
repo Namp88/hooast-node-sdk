@@ -1,11 +1,11 @@
 {
   "name": "hoosat-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "TypeScript SDK for Hoosat blockchain: full node integration, crypto utilities, real-time UTXO streaming, transaction building, dynamic fee estimation, and QR code generation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && copyfiles -u 1 src/protos/*.proto dist",
+    "build": "tsc && tsc-alias && copyfiles -u 1 src/protos/*.proto dist",
     "prepare": "npm run build",
     "dev": "tsc --watch",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -87,6 +87,7 @@
     "@vitest/ui": "^3.2.4",
     "copyfiles": "^2.4.1",
     "prettier": "^3.6.2",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
