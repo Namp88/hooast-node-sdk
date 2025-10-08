@@ -20,7 +20,7 @@
     "release:first": "standard-version --first-release",
     "release:dry": "standard-version --dry-run",
     "publish:npm": "npm publish --access public",
-    "push:tags": "git push --follow-tags origin main"
+    "push:tags": "git push --follow-tags origin master"
   },
   "keywords": [
     "hoosat",
