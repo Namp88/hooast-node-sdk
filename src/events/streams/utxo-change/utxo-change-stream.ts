@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import { RequestType } from '@enums/request-type.enum';
 import { HoosatUtils } from '@utils/utils';
 import {
