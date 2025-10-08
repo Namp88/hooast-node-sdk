@@ -10,12 +10,12 @@
  * Prerequisites:
  * - Running Hoosat node
  */
-import { HoosatNode, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from '../../src';
 
 async function main() {
   console.log('🔍 Get UTXOs by Address\n');
 
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: process.env.HOOSAT_NODE_HOST || '54.38.176.95',
     port: parseInt(process.env.HOOSAT_NODE_PORT || '42420'),
   });
@@ -25,7 +25,7 @@ async function main() {
   console.log(`Fetching UTXOs for ${addresses.length} address(es)...\n`);
 
   try {
-    const result = await node.getUtxosByAddresses(addresses);
+    const result = await client.getUtxosByAddresses(addresses);
 
     if (!result.ok) {
       console.error('Failed to fetch UTXOs:', result.error);

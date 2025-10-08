@@ -1,4 +1,4 @@
-export { HoosatNode } from '@client/client';
+export { HoosatClient } from '@client/client';
 export type { NodeConfig } from '@client/client.types';
 export type { GetInfo } from '@client/models/result/get-info';
 export type { GetBlockDagInfo } from '@client/models/result/get-block-dag-info';

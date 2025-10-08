@@ -41,7 +41,7 @@ const CLIENT_DEFAULT_CONFIG = {
   TIMEOUT: 10000,
 } as const;
 
-export class HoosatNode extends EventEmitter {
+export class HoosatClient extends EventEmitter {
   private readonly _host: string;
   private readonly _port: number;
   private readonly _timeout: number;
@@ -57,7 +57,7 @@ export class HoosatNode extends EventEmitter {
   private _transactionService: TransactionService | null = null;
 
   /**
-   * Creates a new HoosatNode instance
+   * Creates a new HoosatClient instance
    * @param config - Node configuration options
    * @param config.host - Hostname or IP address of the Hoosat node (default: '127.0.0.1')
    * @param config.port - Port number of the Hoosat node (default: 42420)

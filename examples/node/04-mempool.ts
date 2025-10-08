@@ -11,12 +11,12 @@
  * - Running Hoosat node
  * - Transaction ID for single entry lookup (optional)
  */
-import { HoosatNode, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from '../../src';
 
 async function main() {
   console.log('🌊 Working with Mempool\n');
 
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: process.env.HOOSAT_NODE_HOST || '54.38.176.95',
     port: parseInt(process.env.HOOSAT_NODE_PORT || '42420'),
   });
@@ -26,7 +26,7 @@ async function main() {
     console.log('1️⃣ Getting All Mempool Entries...');
     console.log('─────────────────────────────────────');
 
-    const mempoolResult = await node.getMempoolEntries(true);
+    const mempoolResult = await client.getMempoolEntries(true);
 
     if (!mempoolResult.ok) {
       console.error('Failed to get mempool:', mempoolResult.error);
@@ -95,7 +95,7 @@ async function main() {
       console.log('─────────────────────────────────────');
       console.log(`TX ID: ${HoosatUtils.truncateHash(firstTxId)}\n`);
 
-      const entryResult = await node.getMempoolEntry(firstTxId, true);
+      const entryResult = await client.getMempoolEntry(firstTxId, true);
 
       if (entryResult.ok && entryResult.result) {
         const entry = entryResult.result;

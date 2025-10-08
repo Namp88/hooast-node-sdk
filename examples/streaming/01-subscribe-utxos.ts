@@ -14,13 +14,13 @@
  * Note: This example runs continuously until interrupted (Ctrl+C)
  */
 
-import { HoosatNode, HoosatUtils, UtxoChangeNotification } from '../../src';
+import { HoosatClient, HoosatUtils, UtxoChangeNotification } from '../../src';
 
 async function main() {
   console.log('📡 Real-time UTXO Monitoring\n');
 
   // Connect to node
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: process.env.HOOSAT_NODE_HOST || '54.38.176.95',
     port: parseInt(process.env.HOOSAT_NODE_PORT || '42420'),
   });
@@ -38,7 +38,7 @@ async function main() {
 
   try {
     // Set up event listeners BEFORE subscribing
-    node.on('utxoChanged', (change: UtxoChangeNotification) => {
+    client.on('utxoChanged', (change: UtxoChangeNotification) => {
       console.log('\n🔔 UTXO Change Detected!');
       console.log('─────────────────────────────────────');
       console.log(`Address: ${HoosatUtils.truncateAddress(change.address)}`);
@@ -69,26 +69,26 @@ async function main() {
     });
 
     // Handle streaming events
-    node.on('streamReconnected', () => {
+    client.on('streamReconnected', () => {
       console.log('🔄 Stream reconnected successfully\n');
     });
 
-    node.on('streamingError', (error: unknown) => {
+    client.on('streamingError', (error: unknown) => {
       console.error('❌ Streaming error:', error);
     });
 
-    node.on('streamEnded', () => {
+    client.on('streamEnded', () => {
       console.log('⚠️  Stream ended unexpectedly\n');
     });
 
-    node.on('streamMaxReconnectAttemptsReached', () => {
+    client.on('streamMaxReconnectAttemptsReached', () => {
       console.error('❌ Max reconnection attempts reached\n');
       process.exit(1);
     });
 
     // Subscribe to address
     console.log('📡 Subscribing to UTXO changes...\n');
-    await node.subscribeToUtxoChanges([address]);
+    await client.subscribeToUtxoChanges([address]);
 
     console.log('✅ Subscription active!\n');
     console.log('Waiting for UTXO changes...');
@@ -97,8 +97,8 @@ async function main() {
 
     // Check connection status
     setInterval(() => {
-      const isConnected = node.isStreamingConnected();
-      const subscribed = node.getSubscribedAddresses();
+      const isConnected = client.isStreamingConnected();
+      const subscribed = client.getSubscribedAddresses();
 
       if (isConnected) {
         console.log(`📊 Status: Connected | Monitoring ${subscribed.length} address(es)`);
@@ -113,8 +113,8 @@ async function main() {
     console.log('\n\n🛑 Shutting down...');
 
     try {
-      await node.unsubscribeFromUtxoChanges();
-      node.disconnect();
+      await client.unsubscribeFromUtxoChanges();
+      client.disconnect();
       console.log('✅ Disconnected successfully');
     } catch (error) {
       console.error('❌ Error during shutdown:', error);

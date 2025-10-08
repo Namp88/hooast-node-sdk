@@ -13,7 +13,7 @@
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
 - [Detailed API Documentation](#-detailed-api-documentation)
-    - [HoosatNode](#hoosatnode)
+    - [HoosatClient](#hoosatnode)
     - [HoosatCrypto](#hoosatcrypto)
     - [HoosatTxBuilder](#hoosattxbuilder)
     - [HoosatFeeEstimator](#hoosatfeeestimator)
@@ -79,16 +79,16 @@ npm install hoosat-sdk
 ### 1. Connect to Node
 
 ```typescript
-import { HoosatNode } from 'hoosat-sdk';
+import { HoosatClient } from 'hoosat-sdk';
 
-const node = new HoosatNode({
+const client = new HoosatClient({
   host: '54.38.176.95',
   port: 42420,
   timeout: 10000  // Optional, default: 10000ms
 });
 
 // Check node status
-const info = await node.getInfo();
+const info = await client.getInfo();
 if (info.ok) {
   console.log('Connected to:', info.result.serverVersion);
   console.log('Is Synced:', info.result.isSynced);
@@ -116,7 +116,7 @@ const imported = HoosatCrypto.importKeyPair('your_private_key_hex');
 ```typescript
 import { HoosatUtils } from 'hoosat-sdk';
 
-const result = await node.getBalance('hoosat:qz7ulu...');
+const result = await client.getBalance('hoosat:qz7ulu...');
 if (result.ok) {
   const balanceHTN = HoosatUtils.sompiToAmount(result.result.balance);
   console.log('Balance:', balanceHTN, 'HTN');
@@ -129,7 +129,7 @@ if (result.ok) {
 import { HoosatTxBuilder, HoosatFeeEstimator, FeePriority } from 'hoosat-sdk';
 
 // Get UTXOs
-const utxoResponse = await node.getUtxosByAddresses([wallet.address]);
+const utxoResponse = await client.getUtxosByAddresses([wallet.address]);
 if (!utxoResponse.ok) {
   throw new Error('Failed to fetch UTXOs');
 }
@@ -138,7 +138,7 @@ const utxos = utxoResponse.result.utxos;
 const selectedUtxo = utxos[0]; // Select UTXO
 
 // Estimate fee
-const feeEstimator = new HoosatFeeEstimator(node);
+const feeEstimator = new HoosatFeeEstimator(client);
 const feeEstimate = await feeEstimator.estimateFee(
   FeePriority.Normal,
   1,  // inputs count
@@ -155,7 +155,7 @@ builder.addChangeOutput(wallet.address);
 const signedTx = builder.sign();
 
 // Submit to network
-const submitResult = await node.submitTransaction(signedTx);
+const submitResult = await client.submitTransaction(signedTx);
 if (submitResult.ok) {
   console.log('Transaction ID:', submitResult.result.transactionId);
 }
@@ -165,25 +165,25 @@ if (submitResult.ok) {
 
 ```typescript
 // Subscribe to UTXO changes
-await node.subscribeToUtxoChanges([wallet.address]);
+await client.subscribeToUtxoChanges([wallet.address]);
 
-node.on('utxoChange', async (notification) => {
+client.on('utxoChange', async (notification) => {
   console.log('Added UTXOs:', notification.added.length);
   console.log('Removed UTXOs:', notification.removed.length);
   
   // Update balance
-  const balance = await node.getBalance(wallet.address);
+  const balance = await client.getBalance(wallet.address);
   if (balance.ok) {
     console.log('New balance:', HoosatUtils.sompiToAmount(balance.result.balance), 'HTN');
   }
 });
 
-node.on('error', (error) => {
+client.on('error', (error) => {
   console.error('Streaming error:', error);
 });
 
-node.on('disconnect', () => {
-  console.log('Disconnected from node');
+client.on('disconnect', () => {
+  console.log('Disconnected from utxo stream');
 });
 ```
 
@@ -215,14 +215,14 @@ console.log('Message:', parsed.message);
 
 ## 📚 Detailed API Documentation
 
-## HoosatNode
+## HoosatClient
 
 **Main class for interacting with Hoosat nodes via gRPC.**
 
 ### Constructor
 
 ```typescript
-const node = new HoosatNode(config: NodeConfig);
+const client = new HoosatClient(config: NodeConfig);
 
 interface NodeConfig {
   host?: string;    // Default: 'localhost'
@@ -237,7 +237,7 @@ interface NodeConfig {
 Get node information.
 
 ```typescript
-await node.getInfo(): Promise<BaseResult<GetInfo>>
+await client.getInfo(): Promise<BaseResult<GetInfo>>
 
 interface GetInfo {
   p2pId: string;
@@ -252,7 +252,7 @@ interface GetInfo {
 Get current network (mainnet/testnet).
 
 ```typescript
-await node.getCurrentNetwork(): Promise<BaseResult<GetCurrentNetwork>>
+await client.getCurrentNetwork(): Promise<BaseResult<GetCurrentNetwork>>
 
 interface GetCurrentNetwork {
   currentNetwork: string;
@@ -263,7 +263,7 @@ interface GetCurrentNetwork {
 Get information about connected peers.
 
 ```typescript
-await node.getConnectedPeerInfo(): Promise<BaseResult<GetConnectedPeerInfo>>
+await client.getConnectedPeerInfo(): Promise<BaseResult<GetConnectedPeerInfo>>
 ```
 
 ### Methods - Blockchain
@@ -272,14 +272,14 @@ await node.getConnectedPeerInfo(): Promise<BaseResult<GetConnectedPeerInfo>>
 Get current tip block hash.
 
 ```typescript
-await node.getSelectedTipHash(): Promise<BaseResult<GetSelectedTipHash>>
+await client.getSelectedTipHash(): Promise<BaseResult<GetSelectedTipHash>>
 ```
 
 #### `getBlock(blockHash, includeTransactions?)`
 Get block data by hash.
 
 ```typescript
-await node.getBlock(
+await client.getBlock(
   blockHash: string,
   includeTransactions: boolean = true
 ): Promise<BaseResult<GetBlock>>
@@ -289,7 +289,7 @@ await node.getBlock(
 Get multiple blocks starting from specified hash.
 
 ```typescript
-await node.getBlocks(
+await client.getBlocks(
   lowHash: string,
   includeTransactions: boolean = false
 ): Promise<BaseResult<GetBlocks>>
@@ -299,14 +299,14 @@ await node.getBlocks(
 Get current blockchain height.
 
 ```typescript
-await node.getBlockCount(): Promise<BaseResult<GetBlockCount>>
+await client.getBlockCount(): Promise<BaseResult<GetBlockCount>>
 ```
 
 #### `getBlockDagInfo()`
 Get blockchain DAG structure information.
 
 ```typescript
-await node.getBlockDagInfo(): Promise<BaseResult<GetBlockDagInfo>>
+await client.getBlockDagInfo(): Promise<BaseResult<GetBlockDagInfo>>
 ```
 
 ### Methods - Addresses and Balances
@@ -315,7 +315,7 @@ await node.getBlockDagInfo(): Promise<BaseResult<GetBlockDagInfo>>
 Get address balance.
 
 ```typescript
-await node.getBalance(address: string): Promise<BaseResult<GetBalanceByAddress>>
+await client.getBalance(address: string): Promise<BaseResult<GetBalanceByAddress>>
 
 interface GetBalanceByAddress {
   balance: string; // Amount in sompi
@@ -326,14 +326,14 @@ interface GetBalanceByAddress {
 Get balances for multiple addresses.
 
 ```typescript
-await node.getBalancesByAddresses(addresses: string[]): Promise<BaseResult<GetBalancesByAddresses>>
+await client.getBalancesByAddresses(addresses: string[]): Promise<BaseResult<GetBalancesByAddresses>>
 ```
 
 #### `getUtxosByAddresses(addresses)`
 Get all UTXOs for specified addresses.
 
 ```typescript
-await node.getUtxosByAddresses(addresses: string[]): Promise<BaseResult<GetUtxosByAddresses>>
+await client.getUtxosByAddresses(addresses: string[]): Promise<BaseResult<GetUtxosByAddresses>>
 ```
 
 ### Methods - Transactions
@@ -342,7 +342,7 @@ await node.getUtxosByAddresses(addresses: string[]): Promise<BaseResult<GetUtxos
 Submit transaction to network.
 
 ```typescript
-await node.submitTransaction(
+await client.submitTransaction(
   transaction: Transaction,
   allowOrphan: boolean = false
 ): Promise<BaseResult<SubmitTransaction>>
@@ -354,7 +354,7 @@ await node.submitTransaction(
 Get transaction information from mempool.
 
 ```typescript
-await node.getMempoolEntry(
+await client.getMempoolEntry(
   txId: string,
   includeOrphanPool: boolean = true,
   filterTransactionPool: boolean = false
@@ -365,7 +365,7 @@ await node.getMempoolEntry(
 Get all transactions in mempool.
 
 ```typescript
-await node.getMempoolEntries(
+await client.getMempoolEntries(
   includeOrphanPool: boolean = true,
   filterTransactionPool: boolean = false
 ): Promise<BaseResult<GetMempoolEntries>>
@@ -377,14 +377,14 @@ await node.getMempoolEntries(
 Subscribe to UTXO changes for specified addresses.
 
 ```typescript
-await node.subscribeToUtxoChanges(addresses: string[]): Promise<BaseResult<void>>
+await client.subscribeToUtxoChanges(addresses: string[]): Promise<BaseResult<void>>
 ```
 
 #### `unsubscribeFromUtxoChanges(addresses?)`
 Unsubscribe from UTXO changes.
 
 ```typescript
-await node.unsubscribeFromUtxoChanges(addresses?: string[]): Promise<BaseResult<void>>
+await client.unsubscribeFromUtxoChanges(addresses?: string[]): Promise<BaseResult<void>>
 ```
 
 ### Events
@@ -399,7 +399,7 @@ await node.unsubscribeFromUtxoChanges(addresses?: string[]): Promise<BaseResult<
 Close connection to utxo stream.
 
 ```typescript
-node.disconnect(): void
+client.disconnect(): void
 ```
 
 ---
@@ -634,7 +634,7 @@ builder.clear(): this
 ### Constructor
 
 ```typescript
-const estimator = new HoosatFeeEstimator(node: HoosatNode, config?: FeeEstimatorConfig);
+const estimator = new HoosatFeeEstimator(client: HoosatClient, config?: FeeEstimatorConfig);
 
 interface FeeEstimatorConfig {
   cacheDuration?: number; // Cache duration in ms (default: 30000)
@@ -989,7 +989,7 @@ HoosatUtils.compareHashes(hash1: string, hash2: string): boolean
 
 ## UtxoStreamManager
 
-**Low-level class for managing real-time UTXO streaming (usually used through HoosatNode).**
+**Low-level class for managing real-time UTXO streaming (usually used through HoosatClient).**
 
 ### Events
 
@@ -1013,7 +1013,7 @@ interface UtxoStreamConfig {
 }
 ```
 
-**Note:** In most cases, use `HoosatNode` methods instead of working directly with `UtxoStreamManager`.
+**Note:** In most cases, use `HoosatClient` methods instead of working directly with `UtxoStreamManager`.
 
 ---
 
@@ -1124,7 +1124,7 @@ interface BaseResult<T> {
 ### Usage Pattern
 
 ```typescript
-const result = await node.getBalance(address);
+const result = await client.getBalance(address);
 
 if (result.ok) {
   // Success - use result.result
@@ -1159,7 +1159,7 @@ if (result.ok) {
 ```typescript
 async function connectWithRetry(maxRetries = 3) {
   for (let i = 0; i < maxRetries; i++) {
-    const result = await node.getInfo();
+    const result = await client.getInfo();
     if (result.ok) return result;
     
     const delay = Math.min(1000 * Math.pow(2, i), 30000);
@@ -1203,12 +1203,12 @@ class CircuitBreaker {
 ### Handling Disconnections
 
 ```typescript
-node.on('disconnect', async () => {
-  console.log('Disconnected from node - attempting reconnect...');
+client.on('disconnect', async () => {
+  console.log('Disconnected from utxo stream - attempting reconnect...');
   await reconnectWithBackoff();
 });
 
-node.on('error', (error) => {
+client.on('error', (error) => {
   console.error('Node error:', error);
   // Log for monitoring
   logger.error('Node error', { error, timestamp: Date.now() });
@@ -1300,10 +1300,10 @@ Combine many small UTXOs into one large UTXO.
 
 ```typescript
 // Get all UTXOs
-const utxos = await node.getUtxosByAddresses([wallet.address]);
+const utxos = await client.getUtxosByAddresses([wallet.address]);
 
 // Estimate fee
-const feeEstimator = new HoosatFeeEstimator(node);
+const feeEstimator = new HoosatFeeEstimator(client);
 const feeEstimate = await feeEstimator.estimateFee(
   FeePriority.Low,  // Use low priority for consolidation
   utxos.result.utxos.length,  // All inputs
@@ -1328,7 +1328,7 @@ builder.setFee(feeEstimate.totalFee);
 
 // Submit
 const signedTx = builder.sign();
-await node.submitTransaction(signedTx);
+await client.submitTransaction(signedTx);
 ```
 
 **When to consolidate:**
@@ -1351,7 +1351,7 @@ Split one large UTXO into multiple smaller ones.
 
 ```typescript
 // Get largest UTXO
-const utxos = await node.getUtxosByAddresses([wallet.address]);
+const utxos = await client.getUtxosByAddresses([wallet.address]);
 const largestUtxo = utxos.result.utxos.sort((a, b) => 
   Number(BigInt(b.utxoEntry.amount) - BigInt(a.utxoEntry.amount))
 )[0];
@@ -1375,7 +1375,7 @@ builder.addOutput(wallet.address, splitAmount.toString());  // Split 2
 builder.setFee(feeEstimate.totalFee);
 
 const signedTx = builder.sign();
-await node.submitTransaction(signedTx);
+await client.submitTransaction(signedTx);
 ```
 
 **When to split:**
@@ -1431,7 +1431,7 @@ for (const batch of batches) {
   const builder = new HoosatTxBuilder();
   
   // Get fresh UTXO for each transaction
-  const utxos = await node.getUtxosByAddresses([wallet.address]);
+  const utxos = await client.getUtxosByAddresses([wallet.address]);
   builder.addInput(utxos.result.utxos[0], wallet.privateKey);
   
   // Add recipients (max 2)
@@ -1443,7 +1443,7 @@ for (const batch of batches) {
   builder.addChangeOutput(wallet.address);
   
   const signedTx = builder.sign();
-  await node.submitTransaction(signedTx);
+  await client.submitTransaction(signedTx);
   
   // Add delay between batches
   await new Promise(r => setTimeout(r, 2000));
@@ -1465,7 +1465,7 @@ for (const batch of batches) {
 ### 1. Always Check Results
 
 ```typescript
-const result = await node.getBalance(address);
+const result = await client.getBalance(address);
 if (!result.ok) {
   console.error('Error:', result.error);
   return;
@@ -1501,7 +1501,7 @@ if (!HoosatUtils.isValidAmount(amount)) {
 builder.setFee('2500');
 
 // ✅ GOOD - Dynamic fee based on network
-const feeEstimator = new HoosatFeeEstimator(node);
+const feeEstimator = new HoosatFeeEstimator(client);
 const estimate = await feeEstimator.estimateFee(
   FeePriority.Normal,
   inputCount,
@@ -1513,12 +1513,12 @@ builder.setFee(estimate.totalFee);
 ### 4. Handle Disconnections
 
 ```typescript
-node.on('disconnect', async () => {
-  console.log('Disconnected - reconnecting...');
+client.on('disconnect', async () => {
+  console.log('Disconnected - reconnecting to utxo stream...');
   await reconnectWithRetry();
 });
 
-node.on('error', (error) => {
+client.on('error', (error) => {
   console.error('Node error:', error);
   // Log to monitoring system
 });
@@ -1551,7 +1551,7 @@ builder.addChangeOutput(wallet.address);
 try {
   builder.validate();
   const signedTx = builder.sign();
-  await node.submitTransaction(signedTx);
+  await client.submitTransaction(signedTx);
 } catch (error) {
   console.error('Transaction validation failed:', error);
 }
@@ -1576,7 +1576,7 @@ const encryptedKey = encrypt(privateKey, password);
 
 ```typescript
 // Use testnet for development
-const node = new HoosatNode({
+const client = new HoosatClient({
   host: 'testnet-node.hoosat.fi',
   port: 42420
 });
@@ -1598,7 +1598,7 @@ logger.info('Transaction submitted', {
 });
 
 // Monitor UTXO changes
-node.on('utxoChange', (notification) => {
+client.on('utxoChange', (notification) => {
   logger.info('UTXO change detected', {
     added: notification.added.length,
     removed: notification.removed.length
@@ -1649,7 +1649,7 @@ The SDK aims for high test coverage of critical components:
 - ✅ **HoosatCrypto** - 90%+ coverage
 - ✅ **HoosatTxBuilder** - 90%+ coverage
 - ✅ **HoosatUtils** - 95%+ coverage
-- 🔄 **HoosatNode** - Integration tests
+- 🔄 **HoosatClient** - Integration tests
 - 🔄 **HoosatFeeEstimator** - Unit tests
 
 ---

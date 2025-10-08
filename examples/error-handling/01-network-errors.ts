@@ -22,7 +22,7 @@
  * - Implement retry logic for transient failures
  * - Log errors for debugging
  */
-import { HoosatNode } from '../../src';
+import { HoosatClient } from '../../src';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -34,14 +34,14 @@ async function main() {
   console.log('═════════════════════════════════════');
   console.log('Simulating slow/unresponsive node...\n');
 
-  const slowNode = new HoosatNode({
+  const slowClient = new HoosatClient({
     host: '54.38.176.95',
     port: 42420,
     timeout: 100, // Very short timeout to trigger error
   });
 
   try {
-    const result = await slowNode.getInfo();
+    const result = await slowClient.getInfo();
 
     if (!result.ok) {
       console.log('❌ Connection failed (expected)');
@@ -64,21 +64,21 @@ async function main() {
     console.error('❌ Unexpected error:', error);
   }
 
-  slowNode.disconnect();
+  slowClient.disconnect();
 
   // ==================== SCENARIO 2: NODE OFFLINE ====================
   console.log('2️⃣  Scenario: Node Offline/Unreachable');
   console.log('═════════════════════════════════════');
   console.log('Attempting to connect to non-existent node...\n');
 
-  const offlineNode = new HoosatNode({
+  const offlineClient = new HoosatClient({
     host: '192.168.255.255', // Non-routable IP
     port: 99999,
     timeout: 2000,
   });
 
   try {
-    const result = await offlineNode.getInfo();
+    const result = await offlineClient.getInfo();
 
     if (!result.ok) {
       console.log('❌ Connection failed (expected)');
@@ -99,21 +99,21 @@ async function main() {
     console.error('❌ Unexpected error:', error);
   }
 
-  offlineNode.disconnect();
+  offlineClient.disconnect();
 
   // ==================== SCENARIO 3: WRONG PORT ====================
   console.log('3️⃣  Scenario: Wrong Port Configuration');
   console.log('═════════════════════════════════════');
   console.log('Attempting to connect to wrong port...\n');
 
-  const wrongPortNode = new HoosatNode({
+  const wrongPortClient = new HoosatClient({
     host: '54.38.176.95',
     port: 12345, // Wrong port
     timeout: 3000,
   });
 
   try {
-    const result = await wrongPortNode.getInfo();
+    const result = await wrongPortClient.getInfo();
 
     if (!result.ok) {
       console.log('❌ Connection failed (expected)');
@@ -130,21 +130,21 @@ async function main() {
     console.error('❌ Unexpected error:', error);
   }
 
-  wrongPortNode.disconnect();
+  wrongPortClient.disconnect();
 
   // ==================== SCENARIO 4: SUCCESSFUL CONNECTION ====================
   console.log('4️⃣  Scenario: Successful Connection');
   console.log('═════════════════════════════════════');
   console.log('Connecting to actual working node...\n');
 
-  const workingNode = new HoosatNode({
+  const workingClient = new HoosatClient({
     host: '54.38.176.95',
     port: 42420,
     timeout: 10000,
   });
 
   try {
-    const result = await workingNode.getInfo();
+    const result = await workingClient.getInfo();
 
     if (result.ok && result.result) {
       console.log('✅ Connection successful!');
@@ -158,7 +158,7 @@ async function main() {
     console.error('❌ Unexpected error:', error);
   }
 
-  workingNode.disconnect();
+  workingClient.disconnect();
 
   // ==================== PRODUCTION PATTERNS ====================
   console.log('5️⃣  Production-Ready Error Handling');

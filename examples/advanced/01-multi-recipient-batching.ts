@@ -26,7 +26,7 @@
  * - Track success/failure for each batch
  * - Calculate total fees upfront
  */
-import { FeeEstimator, FeePriority, HoosatCrypto, HoosatNode, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
+import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatClient, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
 
 interface Recipient {
   address: string;
@@ -152,14 +152,14 @@ async function main() {
   console.log('2️⃣  Connecting to Node');
   console.log('═════════════════════════════════════');
 
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: NODE_HOST,
     port: NODE_PORT,
     timeout: 15000,
   });
 
   try {
-    const nodeInfo = await node.getInfo();
+    const nodeInfo = await client.getInfo();
     if (!nodeInfo.ok || !nodeInfo.result) {
       throw new Error('Failed to connect to node');
     }
@@ -198,7 +198,7 @@ async function main() {
   let totalBalance = 0n;
 
   try {
-    const utxoResponse = await node.getUtxosByAddresses([wallet.address]);
+    const utxoResponse = await client.getUtxosByAddresses([wallet.address]);
     if (!utxoResponse.ok || !utxoResponse.result) {
       throw new Error('Failed to fetch UTXOs');
     }
@@ -213,7 +213,7 @@ async function main() {
     console.log();
 
     // Estimate total fees
-    const feeEstimator = new FeeEstimator(node);
+    const feeEstimator = new HoosatFeeEstimator(client);
     const recommendations = await feeEstimator.getRecommendations();
     const feeRate = recommendations[FEE_PRIORITY].feeRate;
 
@@ -260,7 +260,7 @@ async function main() {
 
     try {
       // Get fresh UTXOs
-      const utxoResponse = await node.getUtxosByAddresses([wallet.address]);
+      const utxoResponse = await client.getUtxosByAddresses([wallet.address]);
       if (!utxoResponse.ok || !utxoResponse.result) {
         throw new Error('Failed to fetch UTXOs');
       }
@@ -276,7 +276,7 @@ async function main() {
       }, 0n);
 
       // Estimate fee
-      const feeEstimator = new FeeEstimator(node);
+      const feeEstimator = new HoosatFeeEstimator(client);
       const feeEstimate = await feeEstimator.estimateFee(FEE_PRIORITY, 1, batch.length + 1);
       const fee = BigInt(feeEstimate.totalFee);
 
@@ -330,7 +330,7 @@ async function main() {
 
       // Submit
       console.log('  📡 Submitting transaction...');
-      const submitResult = await node.submitTransaction(signedTx);
+      const submitResult = await client.submitTransaction(signedTx);
 
       if (!submitResult.ok || !submitResult.result) {
         throw new Error(submitResult.error || 'Transaction rejected');
@@ -413,7 +413,7 @@ async function main() {
   }
   console.log();
 
-  node.disconnect();
+  client.disconnect();
   console.log('✅ Disconnected from node\n');
 }
 

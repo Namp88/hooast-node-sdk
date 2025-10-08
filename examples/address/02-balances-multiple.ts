@@ -10,12 +10,12 @@
  * Prerequisites:
  * - Running Hoosat node
  */
-import { HoosatNode, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from '../../src';
 
 async function main() {
   console.log('💰 Check Multiple Address Balances\n');
 
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: process.env.HOOSAT_NODE_HOST || '54.38.176.95',
     port: parseInt(process.env.HOOSAT_NODE_PORT || '42420'),
   });
@@ -37,7 +37,7 @@ async function main() {
 
   try {
     // Fetch balances
-    const result = await node.getBalances(addresses);
+    const result = await client.getBalances(addresses);
 
     if (!result.ok) {
       console.error('Failed to fetch balances:', result.error);

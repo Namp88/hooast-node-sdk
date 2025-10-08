@@ -24,7 +24,7 @@
  * - Log all balance changes for audit trail
  * - Show pending vs confirmed transactions
  */
-import { HoosatNode, HoosatUtils, UtxoChangeNotification } from '../../src';
+import { HoosatClient, HoosatUtils, UtxoChangeNotification } from '../../src';
 
 // Balance tracker class
 class BalanceTracker {
@@ -128,14 +128,14 @@ async function main() {
   console.log('1️⃣  Connecting to Node');
   console.log('═════════════════════════════════════');
 
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: NODE_HOST,
     port: NODE_PORT,
     timeout: 15000,
   });
 
   try {
-    const info = await node.getInfo();
+    const info = await client.getInfo();
     if (!info.ok || !info.result) {
       throw new Error('Failed to connect to node');
     }
@@ -161,7 +161,7 @@ async function main() {
 
   // Get initial balance
   try {
-    const balanceResult = await node.getBalance(WATCH_ADDRESS);
+    const balanceResult = await client.getBalance(WATCH_ADDRESS);
 
     if (!balanceResult.ok || !balanceResult.result) {
       throw new Error('Failed to get balance');
@@ -183,7 +183,7 @@ async function main() {
 
   try {
     // Subscribe to UTXO changes
-    await node.subscribeToUtxoChanges([WATCH_ADDRESS]);
+    await client.subscribeToUtxoChanges([WATCH_ADDRESS]);
 
     console.log('✅ Subscribed to UTXO changes');
     console.log('   Monitoring for transactions...\n');
@@ -201,7 +201,7 @@ async function main() {
   console.log('   Press Ctrl+C to stop monitoring...\n');
 
   // Listen for UTXO changes
-  node.on('utxoChange', async (notification: UtxoChangeNotification) => {
+  client.on('utxoChange', async (notification: UtxoChangeNotification) => {
     console.log('🔔 UTXO Change Detected!');
     console.log('─────────────────────────────────────');
 
@@ -237,7 +237,7 @@ async function main() {
 
     // Update balance
     try {
-      const balanceResult = await node.getBalance(WATCH_ADDRESS);
+      const balanceResult = await client.getBalance(WATCH_ADDRESS);
 
       if (balanceResult.ok && balanceResult.result) {
         const newBalance = BigInt(balanceResult.result.balance);
@@ -251,13 +251,13 @@ async function main() {
   });
 
   // Handle connection errors
-  node.on('error', error => {
+  client.on('error', error => {
     console.error('\n❌ Connection Error:', error);
     console.log('   Attempting to reconnect...\n');
   });
 
   // Handle disconnection
-  node.on('disconnect', () => {
+  client.on('disconnect', () => {
     console.log('\n⚠️  Disconnected from node');
     console.log('   Streaming stopped\n');
   });
@@ -266,7 +266,7 @@ async function main() {
   // Check balance every 30 seconds as backup
   const balanceCheckInterval = setInterval(async () => {
     try {
-      const balanceResult = await node.getBalance(WATCH_ADDRESS);
+      const balanceResult = await client.getBalance(WATCH_ADDRESS);
 
       if (balanceResult.ok && balanceResult.result) {
         const currentBalance = BigInt(balanceResult.result.balance);
@@ -299,8 +299,8 @@ async function main() {
 
     // Disconnect
     try {
-      await node.unsubscribeFromUtxoChanges();
-      node.disconnect();
+      await client.unsubscribeFromUtxoChanges();
+      client.disconnect();
       console.log('✅ Disconnected from node\n');
     } catch (error) {
       console.error('❌ Error during disconnect:', error);

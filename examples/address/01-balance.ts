@@ -11,13 +11,13 @@
  * - Running Hoosat node
  * - Valid Hoosat address to check
  */
-import { HoosatNode, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from '../../src';
 
 async function main() {
   console.log('💰 Check Address Balance\n');
 
   // Connect to node
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: process.env.HOOSAT_NODE_HOST || '54.38.176.95',
     port: parseInt(process.env.HOOSAT_NODE_PORT || '42420'),
   });
@@ -39,7 +39,7 @@ async function main() {
 
   try {
     // Fetch balance
-    const result = await node.getBalance(address);
+    const result = await client.getBalance(address);
 
     if (!result.ok) {
       console.error('❌ Failed to fetch balance:', result.error);

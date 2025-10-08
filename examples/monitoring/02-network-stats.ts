@@ -22,7 +22,7 @@
  * - Cache results to reduce node load
  * - Monitor trends over time, not just snapshots
  */
-import { HoosatNode, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from '../../src';
 
 interface NetworkSnapshot {
   timestamp: Date;
@@ -85,14 +85,14 @@ async function main() {
   console.log('1️⃣  Connecting to Node');
   console.log('═════════════════════════════════════');
 
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: NODE_HOST,
     port: NODE_PORT,
     timeout: 15000,
   });
 
   try {
-    const info = await node.getInfo();
+    const info = await client.getInfo();
     if (!info.ok || !info.result) {
       throw new Error('Failed to connect to node');
     }
@@ -114,23 +114,23 @@ async function main() {
   async function collectSnapshot(): Promise<NetworkSnapshot | null> {
     try {
       // Get node info
-      const infoResult = await node.getInfo();
+      const infoResult = await client.getInfo();
       if (!infoResult.ok || !infoResult.result) {
         throw new Error('Failed to get node info');
       }
 
       // Get block count
-      const blockCountResult = await node.getBlockCount();
+      const blockCountResult = await client.getBlockCount();
       if (!blockCountResult.ok || !blockCountResult.result) {
         throw new Error('Failed to get block count');
       }
 
       // Get mempool entries
-      const mempoolResult = await node.getMempoolEntries(false, false);
+      const mempoolResult = await client.getMempoolEntries(false, false);
       const mempoolSize = mempoolResult.ok && mempoolResult.result ? mempoolResult.result.entries.length : 0;
 
       // Get connected peers
-      const peersResult = await node.getConnectedPeerInfo();
+      const peersResult = await client.getConnectedPeerInfo();
       const peerCount = peersResult.ok && peersResult.result ? peersResult.result.peers.length : 0;
 
       return {
@@ -171,7 +171,7 @@ async function main() {
   console.log('═════════════════════════════════════\n');
 
   try {
-    const peersResult = await node.getConnectedPeerInfo();
+    const peersResult = await client.getConnectedPeerInfo();
 
     if (peersResult.ok && peersResult.result) {
       const peers = peersResult.result.peers;
@@ -204,7 +204,7 @@ async function main() {
   console.log('═════════════════════════════════════\n');
 
   try {
-    const mempoolResult = await node.getMempoolEntries(false, false);
+    const mempoolResult = await client.getMempoolEntries(false, false);
 
     if (mempoolResult.ok && mempoolResult.result) {
       const entries = mempoolResult.result.entries;
@@ -337,7 +337,7 @@ async function main() {
       console.log();
     }
 
-    node.disconnect();
+    client.disconnect();
     console.log('✅ Disconnected from node\n');
 
     process.exit(0);

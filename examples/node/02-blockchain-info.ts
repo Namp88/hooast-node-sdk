@@ -10,12 +10,12 @@
  * Prerequisites:
  * - Running Hoosat node
  */
-import { HoosatNode, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from '../../src';
 
 async function main() {
   console.log('⛓️  Hoosat Blockchain Information\n');
 
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: process.env.HOOSAT_NODE_HOST || '54.38.176.95',
     port: parseInt(process.env.HOOSAT_NODE_PORT || '42420'),
   });
@@ -25,7 +25,7 @@ async function main() {
     console.log('📊 Block DAG Information:');
     console.log('─────────────────────────────────────');
 
-    const dagInfo = await node.getBlockDagInfo();
+    const dagInfo = await client.getBlockDagInfo();
 
     if (!dagInfo.ok) {
       console.error('Failed to fetch DAG info:', dagInfo.error);
@@ -48,7 +48,7 @@ async function main() {
     console.log('🔢 Block Statistics:');
     console.log('─────────────────────────────────────');
 
-    const blockCount = await node.getBlockCount();
+    const blockCount = await client.getBlockCount();
 
     if (!blockCount.ok) {
       console.error('Failed to fetch block count:', blockCount.error);
@@ -64,7 +64,7 @@ async function main() {
     console.log('🎯 Selected Tip:');
     console.log('─────────────────────────────────────');
 
-    const tipHash = await node.getSelectedTipHash();
+    const tipHash = await client.getSelectedTipHash();
 
     if (!tipHash.ok) {
       console.error('Failed to fetch tip hash:', tipHash.error);
@@ -80,7 +80,7 @@ async function main() {
     console.log('💙 Virtual Blue Score:');
     console.log('─────────────────────────────────────');
 
-    const blueScore = await node.getVirtualSelectedParentBlueScore();
+    const blueScore = await client.getVirtualSelectedParentBlueScore();
 
     if (!blueScore.ok) {
       console.error('Failed to fetch blue score:', blueScore.error);

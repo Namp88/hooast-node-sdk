@@ -10,12 +10,12 @@
  * Prerequisites:
  * - Running Hoosat node
  */
-import { HoosatNode, HoosatUtils } from '../../src';
+import { HoosatClient, HoosatUtils } from '../../src';
 
 async function main() {
   console.log('🧱 Working with Blocks\n');
 
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: process.env.HOOSAT_NODE_HOST || '54.38.176.95',
     port: parseInt(process.env.HOOSAT_NODE_PORT || '42420'),
   });
@@ -25,7 +25,7 @@ async function main() {
     console.log('1️⃣ Getting Selected Tip Block...');
     console.log('─────────────────────────────────────');
 
-    const tipResult = await node.getSelectedTipHash();
+    const tipResult = await client.getSelectedTipHash();
 
     if (!tipResult.ok) {
       console.error('Failed to get tip hash:', tipResult.error);
@@ -40,7 +40,7 @@ async function main() {
     console.log('2️⃣ Getting Block Details...');
     console.log('─────────────────────────────────────');
 
-    const blockResult = await node.getBlock(tipHash, false);
+    const blockResult = await client.getBlock(tipHash, false);
 
     if (!blockResult.ok) {
       console.error('Failed to get block:', blockResult.error);
@@ -112,7 +112,7 @@ async function main() {
     if (firstParentHash) {
       console.log(`Getting blocks starting from: ${HoosatUtils.truncateHash(firstParentHash)}\n`);
 
-      const blocksResult = await node.getBlocks(firstParentHash, false);
+      const blocksResult = await client.getBlocks(firstParentHash, false);
 
       if (blocksResult.ok) {
         console.log(`Retrieved ${blocksResult.result!.blocks.length} block(s):\n`);

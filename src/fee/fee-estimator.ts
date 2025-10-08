@@ -1,4 +1,4 @@
-import { HoosatNode } from '@client/client';
+import { HoosatClient } from '@client/client';
 import { HoosatCrypto } from '@crypto/crypto';
 import { FeeEstimate, FeeEstimatorConfig, FeePriority, FeeRecommendations } from './fee-estimator.types';
 
@@ -44,7 +44,7 @@ const FEE_BOUNDS = {
  * ```
  */
 export class HoosatFeeEstimator {
-  private readonly _node: HoosatNode;
+  private readonly _node: HoosatClient;
   private readonly _debug: boolean;
 
   private _cacheDuration: number;
@@ -65,7 +65,7 @@ export class HoosatFeeEstimator {
    * });
    * ```
    */
-  constructor(node: HoosatNode, config: FeeEstimatorConfig = {}) {
+  constructor(node: HoosatClient, config: FeeEstimatorConfig = {}) {
     this._node = node;
     this._cacheDuration = config.cacheDuration ?? DEFAULT_CACHE_DURATION;
     this._debug = config.debug ?? false;

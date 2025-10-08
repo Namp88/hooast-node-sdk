@@ -17,7 +17,7 @@
  * - Private key with sufficient balance
  * - Valid recipient address
  */
-import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatNode, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
+import { HoosatFeeEstimator, FeePriority, HoosatCrypto, HoosatClient, HoosatUtils, HoosatTxBuilder, UtxoForSigning } from '../../src';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -58,14 +58,14 @@ async function main() {
   console.log('1️⃣  Connecting to Hoosat Node');
   console.log('═════════════════════════════════════');
 
-  const node = new HoosatNode({
+  const client = new HoosatClient({
     host: NODE_HOST,
     port: NODE_PORT,
     timeout: 15000,
   });
 
   try {
-    const nodeInfo = await node.getInfo();
+    const nodeInfo = await client.getInfo();
     if (!nodeInfo.ok || !nodeInfo.result) {
       throw new Error('Failed to connect to node');
     }
@@ -122,7 +122,7 @@ async function main() {
 
   let utxos;
   try {
-    const utxoResponse = await node.getUtxosByAddresses([wallet.address]);
+    const utxoResponse = await client.getUtxosByAddresses([wallet.address]);
 
     if (!utxoResponse.ok || !utxoResponse.result) {
       throw new Error('Failed to fetch UTXOs');
@@ -164,7 +164,7 @@ async function main() {
   console.log('5️⃣  Estimate Fee from Network');
   console.log('═════════════════════════════════════');
 
-  const feeEstimator = new HoosatFeeEstimator(node);
+  const feeEstimator = new HoosatFeeEstimator(client);
   const feeRecommendations = await feeEstimator.getRecommendations();
 
   console.log('Network Conditions:');
@@ -333,7 +333,7 @@ async function main() {
   await new Promise(resolve => setTimeout(resolve, 3000));
 
   try {
-    const submitResult = await node.submitTransaction(signedTx);
+    const submitResult = await client.submitTransaction(signedTx);
 
     if (!submitResult.ok || !submitResult.result) {
       throw new Error(submitResult.error || 'Transaction rejected by node');
@@ -374,7 +374,7 @@ async function main() {
 
   try {
     const txId = HoosatCrypto.getTransactionId(signedTx);
-    const mempoolEntry = await node.getMempoolEntry(txId);
+    const mempoolEntry = await client.getMempoolEntry(txId);
 
     if (mempoolEntry.ok && mempoolEntry.result) {
       console.log('✅ Transaction found in mempool');
@@ -415,7 +415,7 @@ async function main() {
   console.log();
 
   // Cleanup
-  node.disconnect();
+  client.disconnect();
   console.log('✅ Disconnected from node\n');
 }
 
