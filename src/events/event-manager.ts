@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import { EventType, EventManagerConfig, EventManagerStats } from './event-manager.types';
 import { UtxoChangeStream } from '@events/streams/utxo-change/utxo-change-stream';
 import { UTXO_CHANGE_STREAM_EVENTS } from '@events/streams/utxo-change/utxo-change-stream.types';
