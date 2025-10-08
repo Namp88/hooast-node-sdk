@@ -1,6 +1,6 @@
 import * as blake3 from 'blake3';
 import * as secp256k1 from 'secp256k1';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import * as bech32Hoosat from '@libs/bech32-hoosat';
 import { HOOSAT_PARAMS } from '@constants/hoosat-params.const';
 import { Transaction, UtxoForSigning } from '@models/transaction.types';

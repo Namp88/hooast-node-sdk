@@ -1,6 +1,6 @@
 {
   "name": "hoosat-sdk",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "TypeScript SDK for Hoosat blockchain: full node integration, crypto utilities, real-time UTXO streaming, transaction building, dynamic fee estimation, and QR code generation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -76,6 +76,7 @@
     "@grpc/proto-loader": "^0.8.0",
     "bech32": "^2.0.0",
     "blake3": "^2.1.7",
+    "hoosat-sdk": "^0.1.2",
     "qrcode": "^1.5.4",
     "secp256k1": "^5.0.0"
   },
