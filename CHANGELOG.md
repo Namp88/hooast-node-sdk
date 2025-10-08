@@ -8,8 +8,6 @@ All notable changes to this project will be documented in this file.
 
 - setup automatic changelog generation with standard-version ([85a47f0](https://github.com/Namp88/hoosat-sdk/commit/85a47f09c4c7cb0c1d10026faf5af6d60197697a))
 
-## [0.1.3] - 2025-10-08
-
 ### ✨ Features
 
 - **Event System**: Introduced `HoosatEventManager` for real-time blockchain events
