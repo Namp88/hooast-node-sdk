@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+### [0.1.6](https://github.com/Namp88/hoosat-sdk/compare/v0.1.5...v0.1.6) (2025-10-08)
+
+### 🐛 Bug Fixes
+
+- Path to node EventEmitter in UtxoChangeStream imports ([025f2a3](https://github.com/Namp88/hoosat-sdk/commit/025f2a3b1fb93df0c03164ed648b0effc399db8f))
+
 ### [0.1.5](https://github.com/Namp88/hoosat-sdk/compare/v0.1.4...v0.1.5) (2025-10-08)
 
 ### 📝 Documentation
