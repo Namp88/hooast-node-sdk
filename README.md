@@ -19,7 +19,7 @@
     - [HoosatFeeEstimator](#hoosatfeeestimator)
     - [HoosatQR](#hoosatqr)
     - [HoosatUtils](#hoosatutils)
-    - [UtxoStreamManager](#utxostreammanager)
+    - [UtxoChangeStream](#utxostreammanager)
 - [Usage Examples](#-usage-examples)
 - [Error Handling](#-error-handling)
 - [UTXO Management](#-utxo-management)
@@ -987,7 +987,7 @@ HoosatUtils.compareHashes(hash1: string, hash2: string): boolean
 
 ---
 
-## UtxoStreamManager
+## UtxoChangeStream
 
 **Low-level class for managing real-time UTXO streaming (usually used through HoosatClient).**
 
@@ -1013,7 +1013,7 @@ interface UtxoStreamConfig {
 }
 ```
 
-**Note:** In most cases, use `HoosatClient` methods instead of working directly with `UtxoStreamManager`.
+**Note:** In most cases, use `HoosatClient` methods instead of working directly with `UtxoChangeStream`.
 
 ---
 

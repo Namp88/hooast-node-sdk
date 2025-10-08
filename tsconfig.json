@@ -18,12 +18,12 @@
       "@constants/*": ["src/constants/*"],
       "@crypto/*": ["src/crypto/*"],
       "@enums/*": ["src/enums/*"],
+      "@events/*": ["src/events/*"],
       "@fee/*": ["src/fee/*"],
       "@helpers/*": ["src/helpers/*"],
       "@libs/*": ["src/libs/*"],
       "@models/*": ["src/models/*"],
       "@qr/*": ["src/qr/*"],
-      "@streaming/*": ["src/streaming/*"],
       "@transaction/*": ["src/transaction/*"],
       "@utils/*": ["src/utils/*"]
     }

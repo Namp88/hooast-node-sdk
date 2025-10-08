@@ -2,14 +2,13 @@ import { EventEmitter } from 'events';
 import { RequestType } from '@enums/request-type.enum';
 import { HoosatUtils } from '@utils/utils';
 import {
-  UTXO_STREAM_EVENTS,
+  UTXO_CHANGE_STREAM_EVENTS,
   UtxoChangeNotification,
   UtxoChanges,
   UtxoChangeEntry,
-  UtxoStreamConfig,
-  UtxoStreamStats,
-} from '@streaming/utxo-stream-manager.types';
-import { StreamingUtxoChanges, StreamingUtxoEntry } from '@streaming/models/utxo-notification.types';
+  UtxoChangeStreamConfig,
+  UtxoChangeStreamStats,
+} from '@events/streams/utxo-change/utxo-change-stream.types';
 
 /** Default configuration values */
 const DEFAULT_CONFIG = {
@@ -24,7 +23,7 @@ interface GrpcClient {
 }
 
 /**
- * UtxoStreamManager handles real-time UTXO change notifications from Hoosat nodes
+ * UtxoChangeStream handles real-time UTXO change notifications from Hoosat nodes
  *
  * This class manages gRPC streaming connections to receive live updates when UTXOs
  * are added or removed for subscribed addresses. Features include automatic reconnection
@@ -32,7 +31,7 @@ interface GrpcClient {
  *
  * @example
  * ```typescript
- * const manager = new UtxoStreamManager(grpcClient, {
+ * const manager = new UtxoChangeStream(grpcClient, {
  *   maxReconnectAttempts: 10,
  *   debug: true
  * });
@@ -60,7 +59,7 @@ interface GrpcClient {
  * @fires reconnected - When reconnection succeeds
  * @fires maxReconnectAttemptsReached - When max reconnect attempts reached
  */
-export class UtxoStreamManager extends EventEmitter {
+export class UtxoChangeStream extends EventEmitter {
   private readonly _maxReconnectAttempts: number;
   private readonly _reconnectDelay: number;
   private readonly _maxSubscribedAddresses: number;
@@ -72,7 +71,7 @@ export class UtxoStreamManager extends EventEmitter {
   private _reconnectAttempts = 0;
 
   /**
-   * Creates a new UtxoStreamManager instance
+   * Creates a new UtxoChangeStream instance
    *
    * @param client - The gRPC client instance for communication
    * @param config - Optional configuration for streaming behavior
@@ -80,7 +79,7 @@ export class UtxoStreamManager extends EventEmitter {
    *
    * @example
    * ```typescript
-   * const manager = new UtxoStreamManager(grpcClient, {
+   * const manager = new UtxoChangeStream(grpcClient, {
    *   maxReconnectAttempts: 10,
    *   reconnectDelay: 3000,
    *   maxSubscribedAddresses: 500,
@@ -88,11 +87,11 @@ export class UtxoStreamManager extends EventEmitter {
    * });
    * ```
    */
-  constructor(client: GrpcClient, config: UtxoStreamConfig = {}) {
+  constructor(client: GrpcClient, config: UtxoChangeStreamConfig = {}) {
     super();
 
     if (!client) {
-      throw new Error('gRPC client is required for UtxoStreamManager');
+      throw new Error('gRPC client is required for UtxoChangeStream');
     }
 
     this._client = client;
@@ -256,7 +255,7 @@ export class UtxoStreamManager extends EventEmitter {
    * console.log('Reconnect attempts:', stats.reconnectAttempts);
    * ```
    */
-  getStreamStats(): UtxoStreamStats {
+  getStreamStats(): UtxoChangeStreamStats {
     return {
       isConnected: this.isConnected(),
       subscribedAddressCount: this._subscribedAddresses.size,
@@ -300,7 +299,7 @@ export class UtxoStreamManager extends EventEmitter {
     try {
       await this._createUtxoStream();
       this._log('Manual reconnection successful');
-      this.emit(UTXO_STREAM_EVENTS.RECONNECTED);
+      this.emit(UTXO_CHANGE_STREAM_EVENTS.RECONNECTED);
     } catch (error) {
       this._log(`Manual reconnection failed: ${error}`);
       throw new Error(`Manual reconnection failed: ${error}`);
@@ -310,7 +309,7 @@ export class UtxoStreamManager extends EventEmitter {
   /**
    * Cleanly disconnects from streaming and removes all subscriptions
    *
-   * This method should be called when the UtxoStreamManager is no longer needed
+   * This method should be called when the UtxoChangeStream is no longer needed
    * to ensure proper cleanup of resources and event listeners.
    *
    * @example
@@ -394,19 +393,19 @@ export class UtxoStreamManager extends EventEmitter {
 
     this._utxoStream.on('error', (error: any) => {
       this._log(`Stream error: ${error}`);
-      this.emit(UTXO_STREAM_EVENTS.ERROR, error);
+      this.emit(UTXO_CHANGE_STREAM_EVENTS.ERROR, error);
       this._handleStreamingError();
     });
 
     this._utxoStream.on('end', () => {
       this._log('Stream connection ended');
-      this.emit(UTXO_STREAM_EVENTS.STREAM_ENDED);
+      this.emit(UTXO_CHANGE_STREAM_EVENTS.STREAM_ENDED);
       this._handleStreamingError();
     });
 
     this._utxoStream.on('close', () => {
       this._log('Stream connection closed');
-      this.emit(UTXO_STREAM_EVENTS.STREAM_CLOSED);
+      this.emit(UTXO_CHANGE_STREAM_EVENTS.STREAM_CLOSED);
     });
   }
 
@@ -445,14 +444,14 @@ export class UtxoStreamManager extends EventEmitter {
 
       // Emit address-specific events
       Object.entries(changesByAddress).forEach(([address, addressChanges]) => {
-        this.emit(UTXO_STREAM_EVENTS.UTXO_CHANGED, {
+        this.emit(UTXO_CHANGE_STREAM_EVENTS.UTXO_CHANGED, {
           address,
           changes: this._toPublicUtxoChanges(addressChanges),
         } as UtxoChangeNotification);
       });
 
       // Emit general event
-      this.emit(UTXO_STREAM_EVENTS.UTXOS_CHANGED, publicChanges);
+      this.emit(UTXO_CHANGE_STREAM_EVENTS.UTXOS_CHANGED, publicChanges);
 
       // Log activity
       const totalChanges = publicChanges.added.length + publicChanges.removed.length;
@@ -528,7 +527,7 @@ export class UtxoStreamManager extends EventEmitter {
     // Check if we've reached max reconnection attempts
     if (this._reconnectAttempts >= this._maxReconnectAttempts) {
       this._log(`Max reconnection attempts (${this._maxReconnectAttempts}) reached`);
-      this.emit(UTXO_STREAM_EVENTS.MAX_RECONNECT_ATTEMPTS_REACHED);
+      this.emit(UTXO_CHANGE_STREAM_EVENTS.MAX_RECONNECT_ATTEMPTS_REACHED);
       return;
     }
 
@@ -545,7 +544,7 @@ export class UtxoStreamManager extends EventEmitter {
       try {
         await this._createUtxoStream();
         this._log('Stream reconnected successfully');
-        this.emit(UTXO_STREAM_EVENTS.RECONNECTED);
+        this.emit(UTXO_CHANGE_STREAM_EVENTS.RECONNECTED);
       } catch (error) {
         this._log(`Reconnection failed: ${error}`);
         this._handleStreamingError();
@@ -572,4 +571,36 @@ export class UtxoStreamManager extends EventEmitter {
       console.log(`[UtxoStreamManager] ${message}`);
     }
   }
+}
+
+// Local types
+
+/**
+ * Internal gRPC UTXO notification types
+ * These types represent the raw format from the Hoosat node
+ * and are NOT exported to the public API
+ */
+
+/**
+ * Internal gRPC UTXO changes format
+ * Used for processing raw notifications from the node
+ */
+interface StreamingUtxoChanges {
+  added: StreamingUtxoEntry[];
+  removed: StreamingUtxoEntry[];
+}
+
+/**
+ * Internal gRPC UTXO entry (raw from node)
+ * This format is converted to public UtxoEntry before emitting events
+ */
+interface StreamingUtxoEntry {
+  outpoint: {
+    transactionId: string;
+    index: number;
+  };
+  amount: string;
+  scriptPublicKey?: any;
+  blockDaaScore?: string;
+  isCoinbase?: boolean; // Optional in gRPC response
 }

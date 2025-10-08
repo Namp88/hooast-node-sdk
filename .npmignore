@@ -1,6 +1,7 @@
 # .npmignore
 src/
 examples/
+tests/
 .github/
 *.ts
 tsconfig.json

@@ -51,7 +51,7 @@ export class AddressService extends BaseService {
     }
   }
 
-  async getBalances(addresses: string[]): Promise<BaseResult<GetBalancesByAddresses>> {
+  async getBalancesByAddresses(addresses: string[]): Promise<BaseResult<GetBalancesByAddresses>> {
     try {
       if (!HoosatUtils.isValidAddresses(addresses)) {
         throw new Error('Some of addresses has invalid format');

@@ -1,35 +1,39 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { join } from 'path';
-import { EventEmitter } from 'events';
 import { BaseResult } from '@models/base.result';
-import { GetSelectedTipHash } from '@client/models/result/get-selected-tip-hash';
-import { GetMempoolEntry } from '@client/models/result/get-mempool-entry';
+import { HoosatEventManager } from '@events/event-manager';
+
+// Services
+import { AddressService } from '@client/services/address.service';
+import { BlockchainService } from '@client/services/blockchain.service';
+import { MempoolService } from '@client/services/mempool.service';
+import { NetworkService } from '@client/services/network.service';
+import { NodeInfoService } from '@client/services/node-info.service';
+import { TransactionService } from '@client/services/transaction.service';
+
+// Result types
+import { GetInfo } from '@client/models/result/get-info';
+import { GetBlockDagInfo } from '@client/models/result/get-block-dag-info';
+import { GetBlockCount } from '@client/models/result/get-block-count';
 import { GetBlock } from '@client/models/result/get-block';
 import { GetBlocks } from '@client/models/result/get-blocks';
-import { GetBlockCount } from '@client/models/result/get-block-count';
-import { GetBlockDagInfo } from '@client/models/result/get-block-dag-info';
-import { GetMempoolEntries } from '@client/models/result/get-mempool-entries';
-import { GetUtxosByAddresses } from '@client/models/result/get-utxos-by-addresses';
+import { GetSelectedTipHash } from '@client/models/result/get-selected-tip-hash';
 import { GetVirtualSelectedParentBlueScore } from '@client/models/result/get-virtual-selected-parent-blue-score';
-import { GetInfo } from '@client/models/result/get-info';
-import { EstimateNetworkHashesPerSecond } from '@client/models/result/estimate-network-hashes-per-second';
 import { GetBalanceByAddress } from '@client/models/result/get-balance-by-address';
 import { GetBalancesByAddresses } from '@client/models/result/get-balances-by-addresses';
+import { GetUtxosByAddresses } from '@client/models/result/get-utxos-by-addresses';
+import { GetMempoolEntry } from '@client/models/result/get-mempool-entry';
+import { GetMempoolEntries } from '@client/models/result/get-mempool-entries';
 import { GetMempoolEntriesByAddresses } from '@client/models/result/get-mempool-entries-by-addresses';
+import { GetPeerAddresses } from '@client/models/result/get-peer-addresses';
+import { GetConnectedPeerInfo } from '@client/models/result/get-connected-peer-info';
+import { GetCurrentNetwork } from '@client/models/result/get-current-network';
+import { EstimateNetworkHashesPerSecond } from '@client/models/result/estimate-network-hashes-per-second';
 import { GetCoinSupply } from '@client/models/result/get-coin-supply';
 import { SubmitTransaction } from '@client/models/result/submit-transaction';
 import { Transaction } from '@models/transaction.types';
-import { UtxoStreamManager } from '@streaming/utxo-stream-manager';
-import { GetClientInfo } from '@client/models/result/get-client-info';
-import { HoosatUtils } from '@utils/utils';
-import { NodeConfig } from '@client/client.types';
-import { NetworkService } from '@client/services/network.service';
-import { BlockchainService } from '@client/services/blockchain.service';
-import { MempoolService } from '@client/services/mempool.service';
-import { AddressService } from '@client/services/address.service';
-import { NodeInfoService } from '@client/services/node-info.service';
-import { TransactionService } from '@client/services/transaction.service';
+import { HoosatClientConfig } from '@client/client.types';
 
 const GRPC_CONFIG = {
   MAX_MESSAGE_SIZE: 1024 * 1024 * 1024, // 1GB
@@ -41,14 +45,49 @@ const CLIENT_DEFAULT_CONFIG = {
   TIMEOUT: 10000,
 } as const;
 
-export class HoosatClient extends EventEmitter {
+/**
+ * HoosatClient - Main client for interacting with Hoosat blockchain nodes
+ *
+ * This class provides a complete interface for blockchain operations including:
+ * - Node information and network status
+ * - Blockchain queries (blocks, DAG info, etc.)
+ * - Address and balance operations
+ * - Transaction submission
+ * - Mempool queries
+ * - Real-time event streaming via `client.events`
+ *
+ * @example
+ * ```typescript
+ * const client = new HoosatClient({
+ *   host: '54.38.176.95',
+ *   port: 42420,
+ *   timeout: 10000
+ * });
+ *
+ * // Request/response operations
+ * const balance = await client.getBalance('hoosat:qz7ulu...');
+ * if (balance.ok) {
+ *   console.log('Balance:', balance.result.balance);
+ * }
+ *
+ * // Real-time event streaming
+ * await client.events.subscribeToUtxoChanges(['hoosat:qz7ulu...']);
+ * client.events.on('utxoChange', (notification) => {
+ *   console.log('UTXO changed:', notification);
+ * });
+ *
+ * // Cleanup
+ * client.disconnect();
+ * ```
+ */
+export class HoosatClient {
   private readonly _host: string;
   private readonly _port: number;
   private readonly _timeout: number;
 
   private _client: any;
-  private _streamingManager: UtxoStreamManager | null = null;
 
+  // Services
   private _networkService: NetworkService | null = null;
   private _blockchainService: BlockchainService | null = null;
   private _mempoolService: MempoolService | null = null;
@@ -57,22 +96,75 @@ export class HoosatClient extends EventEmitter {
   private _transactionService: TransactionService | null = null;
 
   /**
+   * Event manager for real-time blockchain events
+   *
+   * Provides access to event subscriptions such as:
+   * - UTXO changes
+   * - Block additions (future)
+   * - Chain reorganizations (future)
+   *
+   * @example
+   * ```typescript
+   * // Subscribe to UTXO changes
+   * await client.events.subscribeToUtxoChanges(['hoosat:qz7ulu...']);
+   *
+   * // Listen for events
+   * client.events.on('utxoChange', (notification) => {
+   *   console.log('UTXO changed for', notification.address);
+   * });
+   *
+   * // Check connection status
+   * console.log('Connected:', client.events.isConnected());
+   *
+   * // Get statistics
+   * const stats = client.events.getStats();
+   * console.log('Active subscriptions:', stats.utxoSubscriptions.length);
+   * ```
+   */
+  public readonly events: HoosatEventManager;
+
+  /**
    * Creates a new HoosatClient instance
-   * @param config - Node configuration options
+   *
+   * @param config - Client configuration options
    * @param config.host - Hostname or IP address of the Hoosat node (default: '127.0.0.1')
    * @param config.port - Port number of the Hoosat node (default: 42420)
    * @param config.timeout - Request timeout in milliseconds (default: 10000)
+   * @param config.events - Event manager configuration (optional)
+   *
+   * @example
+   * ```typescript
+   * // Basic configuration
+   * const client = new HoosatClient({
+   *   host: '54.38.176.95',
+   *   port: 42420
+   * });
+   *
+   * // With event manager config
+   * const client = new HoosatClient({
+   *   host: '54.38.176.95',
+   *   port: 42420,
+   *   events: {
+   *     maxReconnectAttempts: 10,
+   *     reconnectDelay: 3000,
+   *     debug: true
+   *   }
+   * });
+   * ```
    */
-  constructor(config: NodeConfig = {}) {
-    super();
-
+  constructor(config: HoosatClientConfig = {}) {
     this._host = config.host || CLIENT_DEFAULT_CONFIG.HOST;
     this._port = config.port || CLIENT_DEFAULT_CONFIG.PORT;
     this._timeout = config.timeout || CLIENT_DEFAULT_CONFIG.TIMEOUT;
 
+    // Initialize gRPC client
     this._initializeClient();
+
+    // Initialize services
     this._initializeServices();
-    this._initializeStreaming();
+
+    // Initialize event manager
+    this.events = new HoosatEventManager(this._client, config.events);
   }
 
   /**
@@ -92,12 +184,11 @@ export class HoosatClient extends EventEmitter {
         includeDirs: [join(__dirname, '..', 'protos')],
       });
 
-      const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-      const protowire = protoDescriptor.protowire as any;
+      const protoDescriptor = grpc.loadPackageDefinition(packageDefinition) as any;
 
-      this._client = new protowire.RPC(`${this._host}:${this._port}`, grpc.credentials.createInsecure(), {
-        'grpc.max_send_message_length': GRPC_CONFIG.MAX_MESSAGE_SIZE,
+      this._client = new protoDescriptor.protowire.RPC(`${this._host}:${this._port}`, grpc.credentials.createInsecure(), {
         'grpc.max_receive_message_length': GRPC_CONFIG.MAX_MESSAGE_SIZE,
+        'grpc.max_send_message_length': GRPC_CONFIG.MAX_MESSAGE_SIZE,
       });
     } catch (error) {
       throw new Error(`Failed to initialize gRPC client: ${error}`);
@@ -117,320 +208,416 @@ export class HoosatClient extends EventEmitter {
     this._transactionService = new TransactionService(this._client, this._timeout);
   }
 
-  /**
-   * Initializes the streaming manager for real-time updates
-   * @private
-   */
-  private _initializeStreaming(): void {
-    this._streamingManager = new UtxoStreamManager(this._client);
-
-    // Proxy events from UtxoStreamManager
-    this._streamingManager.on('utxoChanged', change => this.emit('utxoChanged', change));
-    this._streamingManager.on('utxosChanged', changes => this.emit('utxosChanged', changes));
-    this._streamingManager.on('error', error => this.emit('streamingError', error));
-    this._streamingManager.on('streamEnded', () => this.emit('streamEnded'));
-    this._streamingManager.on('streamClosed', () => this.emit('streamClosed'));
-    this._streamingManager.on('reconnected', () => this.emit('streamReconnected'));
-    this._streamingManager.on('maxReconnectAttemptsReached', () => this.emit('streamMaxReconnectAttemptsReached'));
-  }
+  // ==================== NODE INFORMATION ====================
 
   /**
-   * Gets the current connection configuration
-   */
-  getClientInfo(): GetClientInfo {
-    return {
-      host: this._host,
-      port: this._port,
-      timeout: this._timeout,
-    };
-  }
-
-  // ==================== NETWORK INFORMATION METHODS ====================
-
-  /**
-   * Gets the current network name that the node is running on
-   */
-  async getCurrentNetwork() {
-    return this._networkService!.getCurrentNetwork();
-  }
-
-  /**
-   * Gets the list of known peer addresses in the current network
-   */
-  async getPeerAddresses() {
-    return this._networkService!.getPeerAddresses();
-  }
-
-  /**
-   * Gets information about all currently connected peers
-   */
-  async getConnectedPeerInfo() {
-    return this._networkService!.getConnectedPeerInfo();
-  }
-
-  // ==================== BLOCKCHAIN METHODS ====================
-
-  /**
-   * Gets the hash of the current virtual's selected parent (tip of the chain)
-   */
-  async getSelectedTipHash(): Promise<BaseResult<GetSelectedTipHash>> {
-    return this._blockchainService!.getSelectedTipHash();
-  }
-
-  /**
-   * Gets detailed information about a specific block by its hash
+   * Gets information about the connected Hoosat node
    *
-   * @param blockHash - The hash of the block to retrieve (64-character hex string)
-   * @param includeTransactions - Whether to include transaction data in the response (default: true)
-   */
-  async getBlock(blockHash: string, includeTransactions = true): Promise<BaseResult<GetBlock>> {
-    return this._blockchainService!.getBlock(blockHash, includeTransactions);
-  }
-
-  /**
-   * Gets multiple blocks starting from a specific hash up to the current virtual
+   * @returns Node information including version, sync status, and UTXO index status
    *
-   * @param lowHash - The starting block hash (64-character hex string)
-   * @param includeTransactions - Whether to include transaction data (default: false)
-   */
-  async getBlocks(lowHash: string, includeTransactions = false): Promise<BaseResult<GetBlocks>> {
-    return this._blockchainService!.getBlocks(lowHash, includeTransactions);
-  }
-
-  /**
-   * Gets the current number of blocks and headers in the node's DAG
-   * Note: Block count may decrease as pruning occurs
-   */
-  async getBlockCount(): Promise<BaseResult<GetBlockCount>> {
-    return this._blockchainService!.getBlockCount();
-  }
-
-  /**
-   * Gets general information about the current state of the node's DAG (Directed Acyclic Graph)
-   */
-  async getBlockDagInfo(): Promise<BaseResult<GetBlockDagInfo>> {
-    return this._blockchainService!.getBlockDagInfo();
-  }
-
-  // ==================== MEMPOOL METHODS ====================
-
-  /**
-   * Gets information about a specific transaction in the mempool
-   *
-   * @param txId - The transaction ID to look up (64-character hex string)
-   * @param includeOrphanPool - Whether to include orphan pool in search (default: true)
-   * @param filterTransactionPool - Whether to filter the transaction pool (default: false)
-   */
-  async getMempoolEntry(txId: string, includeOrphanPool = true, filterTransactionPool = false): Promise<BaseResult<GetMempoolEntry>> {
-    return this._mempoolService!.getMempoolEntry(txId, includeOrphanPool, filterTransactionPool);
-  }
-
-  /**
-   * Gets information about all transactions currently in the mempool
-   *
-   * @param includeOrphanPool - Whether to include orphan pool transactions (default: true)
-   * @param filterTransactionPool - Whether to filter the transaction pool (default: false)
-   */
-  async getMempoolEntries(includeOrphanPool = true, filterTransactionPool = false): Promise<BaseResult<GetMempoolEntries>> {
-    return this._mempoolService!.getMempoolEntries(includeOrphanPool, filterTransactionPool);
-  }
-
-  /**
-   * Gets pending mempool transactions for specific addresses
-   * Returns both sending and receiving transactions for each address
-   *
-   * @param addresses - Array of Hoosat addresses to check
-   * @param includeOrphanPool - Whether to include orphan pool transactions (default: false)
-   * @param filterTransactionPool - Whether to filter the transaction pool (default: false)
-   */
-  async getMempoolEntriesByAddresses(
-    addresses: string[],
-    includeOrphanPool = false,
-    filterTransactionPool = false
-  ): Promise<BaseResult<GetMempoolEntriesByAddresses>> {
-    return this._mempoolService!.getMempoolEntriesByAddresses(addresses, includeOrphanPool, filterTransactionPool);
-  }
-
-  // ==================== ADDRESS & UTXO METHODS ====================
-
-  /**
-   * Gets all current UTXOs (Unspent Transaction Outputs) for multiple addresses
-   * Requires the node to be started with --utxoindex flag
-   *
-   * @param addresses - Array of Hoosat addresses to get UTXOs for
-   */
-  async getUtxosByAddresses(addresses: string[]): Promise<BaseResult<GetUtxosByAddresses>> {
-    return this._addressService!.getUtxosByAddresses(addresses);
-  }
-
-  /**
-   * Gets the balance for a single Hoosat address
-   * Requires the node to be started with --utxoindex flag
-   *
-   * @param address - The Hoosat address to check balance for
-   */
-  async getBalance(address: string): Promise<BaseResult<GetBalanceByAddress>> {
-    return this._addressService!.getBalance(address);
-  }
-
-  /**
-   * Gets balances for multiple Hoosat addresses in a single request
-   * Requires the node to be started with --utxoindex flag
-   *
-   * @param addresses - Array of Hoosat addresses to check balances for
-   */
-  async getBalances(addresses: string[]): Promise<BaseResult<GetBalancesByAddresses>> {
-    return this._addressService!.getBalances(addresses);
-  }
-
-  // ==================== NODE INFORMATION METHODS ====================
-
-  /**
-   * Gets general information about the node including version, sync status, and capabilities
+   * @example
+   * ```typescript
+   * const info = await client.getInfo();
+   * if (info.ok) {
+   *   console.log('Server version:', info.result.serverVersion);
+   *   console.log('Is synced:', info.result.isSynced);
+   *   console.log('UTXO indexed:', info.result.isUtxoIndexed);
+   * }
+   * ```
    */
   async getInfo(): Promise<BaseResult<GetInfo>> {
     return this._nodeInfoService!.getInfo();
   }
 
   /**
-   * Gets the current blue score of the virtual's selected parent
-   * The blue score represents the number of blue blocks in the selected chain
+   * Gets the virtual selected parent blue score
+   * This represents the current height/score of the blockchain
+   *
+   * @returns Blue score of the virtual selected parent
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getVirtualSelectedParentBlueScore();
+   * if (result.ok) {
+   *   console.log('Current blue score:', result.result.blueScore);
+   * }
+   * ```
    */
   async getVirtualSelectedParentBlueScore(): Promise<BaseResult<GetVirtualSelectedParentBlueScore>> {
     return this._nodeInfoService!.getVirtualSelectedParentBlueScore();
   }
 
   /**
-   * Estimates the network hash rate (hashes per second) over a specified window
+   * Estimates the network hashrate over a specified window
    *
-   * @param windowSize - Number of blocks to use for estimation (default: 1000, range: 1-10000)
-   * @param startHash - Optional starting block hash for calculation
+   * @param windowSize - Number of blocks to analyze (default: 1000)
+   * @param startHash - Optional starting block hash
+   * @returns Estimated network hashrate in hashes per second
+   *
+   * @example
+   * ```typescript
+   * const result = await client.estimateNetworkHashesPerSecond(1000);
+   * if (result.ok) {
+   *   console.log('Network hashrate:', result.result.networkHashesPerSecond, 'H/s');
+   * }
+   * ```
    */
   async estimateNetworkHashesPerSecond(windowSize = 1000, startHash?: string): Promise<BaseResult<EstimateNetworkHashesPerSecond>> {
     return this._nodeInfoService!.estimateNetworkHashesPerSecond(windowSize, startHash);
   }
 
   /**
-   * Gets information about the coin supply including circulating and maximum supply
+   * Gets information about the coin supply
+   *
+   * @returns Circulating and maximum coin supply
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getCoinSupply();
+   * if (result.ok) {
+   *   console.log('Circulating supply:', result.result.circulatingSompi);
+   *   console.log('Max supply:', result.result.maxSompi);
+   * }
+   * ```
    */
   async getCoinSupply(): Promise<BaseResult<GetCoinSupply>> {
     return this._nodeInfoService!.getCoinSupply();
   }
 
+  // ==================== NETWORK METHODS ====================
+
+  /**
+   * Gets the current network name (mainnet/testnet)
+   *
+   * @returns Current network identifier
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getCurrentNetwork();
+   * if (result.ok) {
+   *   console.log('Network:', result.result.currentNetwork);
+   * }
+   * ```
+   */
+  async getCurrentNetwork(): Promise<BaseResult<GetCurrentNetwork>> {
+    return this._networkService!.getCurrentNetwork();
+  }
+
+  /**
+   * Gets list of known peer addresses
+   *
+   * @returns List of peer addresses including banned addresses
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getPeerAddresses();
+   * if (result.ok) {
+   *   console.log('Known peers:', result.result.addresses.length);
+   *   console.log('Banned peers:', result.result.bannedAddresses.length);
+   * }
+   * ```
+   */
+  async getPeerAddresses(): Promise<BaseResult<GetPeerAddresses>> {
+    return this._networkService!.getPeerAddresses();
+  }
+
+  /**
+   * Gets information about currently connected peers
+   *
+   * @returns List of connected peers with connection details
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getConnectedPeerInfo();
+   * if (result.ok) {
+   *   console.log('Connected peers:', result.result.peers.length);
+   *   result.result.peers.forEach(peer => {
+   *     console.log(`- ${peer.address} (${peer.userAgent})`);
+   *   });
+   * }
+   * ```
+   */
+  async getConnectedPeerInfo(): Promise<BaseResult<GetConnectedPeerInfo>> {
+    return this._networkService!.getConnectedPeerInfo();
+  }
+
+  // ==================== BLOCKCHAIN METHODS ====================
+
+  /**
+   * Gets the hash of the current selected tip block
+   *
+   * @returns Selected tip block hash
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getSelectedTipHash();
+   * if (result.ok) {
+   *   console.log('Tip hash:', result.result.selectedTipHash);
+   * }
+   * ```
+   */
+  async getSelectedTipHash(): Promise<BaseResult<GetSelectedTipHash>> {
+    return this._blockchainService!.getSelectedTipHash();
+  }
+
+  /**
+   * Gets a block by its hash
+   *
+   * @param blockHash - Hash of the block to retrieve
+   * @param includeTransactions - Whether to include full transaction data (default: true)
+   * @returns Block data including header, transactions, and verbose data
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getBlock('abc123...', true);
+   * if (result.ok) {
+   *   console.log('Block transactions:', result.result.transactions?.length);
+   *   console.log('Block timestamp:', result.result.header.timestamp);
+   * }
+   * ```
+   */
+  async getBlock(blockHash: string, includeTransactions = true): Promise<BaseResult<GetBlock>> {
+    return this._blockchainService!.getBlock(blockHash, includeTransactions);
+  }
+
+  /**
+   * Gets multiple blocks starting from a specified hash
+   *
+   * @param lowHash - Starting block hash
+   * @param includeTransactions - Whether to include transaction data (default: false)
+   * @returns Array of blocks
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getBlocks('abc123...', false);
+   * if (result.ok) {
+   *   console.log('Retrieved blocks:', result.result.blocks.length);
+   * }
+   * ```
+   */
+  async getBlocks(lowHash: string, includeTransactions = false): Promise<BaseResult<GetBlocks>> {
+    return this._blockchainService!.getBlocks(lowHash, includeTransactions);
+  }
+
+  /**
+   * Gets the current blockchain height
+   *
+   * @returns Block count and header count
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getBlockCount();
+   * if (result.ok) {
+   *   console.log('Block count:', result.result.blockCount);
+   *   console.log('Header count:', result.result.headerCount);
+   * }
+   * ```
+   */
+  async getBlockCount(): Promise<BaseResult<GetBlockCount>> {
+    return this._blockchainService!.getBlockCount();
+  }
+
+  /**
+   * Gets comprehensive information about the block DAG
+   *
+   * @returns DAG info including network name, block count, difficulty, etc.
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getBlockDagInfo();
+   * if (result.ok) {
+   *   console.log('Network:', result.result.networkName);
+   *   console.log('Block count:', result.result.blockCount);
+   *   console.log('Difficulty:', result.result.difficulty);
+   * }
+   * ```
+   */
+  async getBlockDagInfo(): Promise<BaseResult<GetBlockDagInfo>> {
+    return this._blockchainService!.getBlockDagInfo();
+  }
+
+  // ==================== ADDRESS & BALANCE METHODS ====================
+
+  /**
+   * Gets the balance of a single address
+   *
+   * @param address - Hoosat address to query
+   * @returns Balance in sompi (smallest unit)
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getBalance('hoosat:qz7ulu...');
+   * if (result.ok) {
+   *   console.log('Balance:', result.result.balance, 'sompi');
+   * }
+   * ```
+   */
+  async getBalance(address: string): Promise<BaseResult<GetBalanceByAddress>> {
+    return this._addressService!.getBalance(address);
+  }
+
+  /**
+   * Gets balances for multiple addresses
+   *
+   * @param addresses - Array of Hoosat addresses to query
+   * @returns Array of balances for each address
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getBalancesByAddresses([
+   *   'hoosat:qz7ulu...',
+   *   'hoosat:qyp...'
+   * ]);
+   * if (result.ok) {
+   *   result.result.balances.forEach(b => {
+   *     console.log(`${b.address}: ${b.balance} sompi`);
+   *   });
+   * }
+   * ```
+   */
+  async getBalancesByAddresses(addresses: string[]): Promise<BaseResult<GetBalancesByAddresses>> {
+    return this._addressService!.getBalancesByAddresses(addresses);
+  }
+
+  /**
+   * Gets all UTXOs for specified addresses
+   *
+   * @param addresses - Array of Hoosat addresses to query
+   * @returns Array of UTXOs with outpoint and amount information
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getUtxosByAddresses(['hoosat:qz7ulu...']);
+   * if (result.ok) {
+   *   console.log('Total UTXOs:', result.result.utxos.length);
+   *   result.result.utxos.forEach(utxo => {
+   *     console.log(`UTXO: ${utxo.utxoEntry.amount} sompi`);
+   *   });
+   * }
+   * ```
+   */
+  async getUtxosByAddresses(addresses: string[]): Promise<BaseResult<GetUtxosByAddresses>> {
+    return this._addressService!.getUtxosByAddresses(addresses);
+  }
+
+  // ==================== MEMPOOL METHODS ====================
+
+  /**
+   * Gets a single mempool entry by transaction ID
+   *
+   * @param txId - Transaction ID to look up
+   * @param includeOrphanPool - Whether to include orphan pool (default: true)
+   * @param filterTransactionPool - Whether to filter transaction pool (default: false)
+   * @returns Mempool entry with transaction data and fee
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getMempoolEntry('abc123...', true, false);
+   * if (result.ok) {
+   *   console.log('Fee:', result.result.fee);
+   *   console.log('Is orphan:', result.result.isOrphan);
+   * }
+   * ```
+   */
+  async getMempoolEntry(txId: string, includeOrphanPool = true, filterTransactionPool = false): Promise<BaseResult<GetMempoolEntry>> {
+    return this._mempoolService!.getMempoolEntry(txId, includeOrphanPool, filterTransactionPool);
+  }
+
+  /**
+   * Gets all mempool entries
+   *
+   * @param includeOrphanPool - Whether to include orphan pool (default: true)
+   * @param filterTransactionPool - Whether to filter transaction pool (default: false)
+   * @returns Array of all mempool entries
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getMempoolEntries(true, false);
+   * if (result.ok) {
+   *   console.log('Mempool size:', result.result.entries.length);
+   *   const totalFees = result.result.entries.reduce((sum, e) => sum + BigInt(e.fee), 0n);
+   *   console.log('Total fees:', totalFees);
+   * }
+   * ```
+   */
+  async getMempoolEntries(includeOrphanPool = true, filterTransactionPool = false): Promise<BaseResult<GetMempoolEntries>> {
+    return this._mempoolService!.getMempoolEntries(includeOrphanPool, filterTransactionPool);
+  }
+
+  /**
+   * Gets mempool entries by addresses
+   *
+   * @param addresses - Array of addresses to filter by
+   * @param includeOrphanPool - Whether to include orphan pool (default: true)
+   * @param filterTransactionPool - Whether to filter transaction pool (default: false)
+   * @returns Mempool entries related to specified addresses
+   *
+   * @example
+   * ```typescript
+   * const result = await client.getMempoolEntriesByAddresses(['hoosat:qz7ulu...']);
+   * if (result.ok) {
+   *   console.log('Pending transactions:', result.result.entries.length);
+   * }
+   * ```
+   */
+  async getMempoolEntriesByAddresses(
+    addresses: string[],
+    includeOrphanPool = true,
+    filterTransactionPool = false
+  ): Promise<BaseResult<GetMempoolEntriesByAddresses>> {
+    return this._mempoolService!.getMempoolEntriesByAddresses(addresses, includeOrphanPool, filterTransactionPool);
+  }
+
   // ==================== TRANSACTION METHODS ====================
 
   /**
-   * Submits a signed transaction to the mempool for broadcast to the network
+   * Submits a signed transaction to the network
    *
-   * @param transaction - The signed transaction object
+   * @param transaction - Signed transaction object
    * @param allowOrphan - Whether to allow orphan transactions (default: false)
+   * @returns Transaction ID if successful
+   *
+   * @example
+   * ```typescript
+   * const signedTx = builder.sign();
+   * const result = await client.submitTransaction(signedTx);
+   * if (result.ok) {
+   *   console.log('Transaction ID:', result.result.transactionId);
+   * } else {
+   *   console.error('Error:', result.error);
+   * }
+   * ```
    */
   async submitTransaction(transaction: Transaction, allowOrphan = false): Promise<BaseResult<SubmitTransaction>> {
     return this._transactionService!.submitTransaction(transaction, allowOrphan);
   }
 
-  // ==================== STREAMING METHODS ====================
+  // ==================== CLEANUP ====================
 
   /**
-   * Subscribes to real-time UTXO changes for specific addresses
-   * When UTXOs are added or removed for these addresses, events will be emitted
+   * Disconnects from the node and cleans up all resources
    *
-   * @param addresses - Array of Hoosat addresses to monitor
-   * @throws Error if addresses are invalid or streaming fails
+   * This method should be called when shutting down the client to:
+   * - Close gRPC connection
+   * - Unsubscribe from all event streams
+   * - Clean up event listeners
    *
    * @example
    * ```typescript
-   * await node.subscribeToUtxoChanges(['hoosat:...', 'hoosat:...']);
-   *
-   * node.on('utxoChanged', (change) => {
-   *   console.log(`UTXO change for ${change.address}`);
-   *   console.log('Added UTXOs:', change.changes.added.length);
-   *   console.log('Removed UTXOs:', change.changes.removed.length);
-   * });
-   * ```
-   */
-  async subscribeToUtxoChanges(addresses: string[]): Promise<void> {
-    if (HoosatUtils.isValidAddresses(addresses)) {
-      return this._streamingManager!.subscribeToUtxoChanges(addresses);
-    } else {
-      throw new Error('Some of addresses has invalid format');
-    }
-  }
-
-  /**
-   * Unsubscribes from UTXO changes for specific addresses or all addresses
-   *
-   * @param addresses - Optional array of addresses to unsubscribe from. If not provided, unsubscribes from all
-   * @throws Error if unsubscription fails
-   *
-   * @example
-   * ```typescript
-   * // Unsubscribe from specific addresses
-   * await node.unsubscribeFromUtxoChanges(['hoosat:...']);
-   *
-   * // Unsubscribe from all addresses
-   * await node.unsubscribeFromUtxoChanges();
-   * ```
-   */
-  async unsubscribeFromUtxoChanges(addresses?: string[]): Promise<void> {
-    if (addresses && !HoosatUtils.isValidAddresses(addresses)) {
-      throw new Error('Some of addresses has invalid format');
-    }
-
-    return this._streamingManager!.unsubscribeFromUtxoChanges(addresses);
-  }
-
-  /**
-   * Checks if the streaming connection is currently active
-   *
-   * @returns True if streaming is connected, false otherwise
-   *
-   * @example
-   * ```typescript
-   * if (node.isStreamingConnected()) {
-   *   console.log('Streaming is active');
-   * } else {
-   *   console.log('Streaming is disconnected');
-   * }
-   * ```
-   */
-  isStreamingConnected(): boolean {
-    return this._streamingManager!.isConnected();
-  }
-
-  /**
-   * Gets the list of addresses currently subscribed for UTXO changes
-   *
-   * @returns Array of subscribed addresses
-   *
-   * @example
-   * ```typescript
-   * const subscribed = node.getSubscribedAddresses();
-   * console.log('Monitoring', subscribed.length, 'addresses');
-   * ```
-   */
-  getSubscribedAddresses(): string[] {
-    return this._streamingManager!.getSubscribedAddresses();
-  }
-
-  /**
-   * Cleanly disconnects from the node and stops all streaming
-   * Should be called when the node instance is no longer needed
-   *
-   * @example
-   * ```typescript
-   * // Clean shutdown
+   * // Cleanup on application shutdown
    * process.on('SIGINT', () => {
-   *   node.disconnect();
+   *   client.disconnect();
    *   process.exit(0);
    * });
    * ```
    */
   disconnect(): void {
-    if (this._streamingManager) {
-      this._streamingManager.disconnect();
-    }
+    // Disconnect event manager and all streams
+    this.events.disconnect();
 
-    this.removeAllListeners();
+    // Close gRPC connection
+    if (this._client) {
+      this._client.close();
+    }
   }
 }

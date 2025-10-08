@@ -1,5 +1,5 @@
 export { HoosatClient } from '@client/client';
-export type { NodeConfig } from '@client/client.types';
+export type { HoosatClientConfig } from '@client/client.types';
 export type { GetInfo } from '@client/models/result/get-info';
 export type { GetBlockDagInfo } from '@client/models/result/get-block-dag-info';
 export type { GetBlockCount } from '@client/models/result/get-block-count';
@@ -25,15 +25,15 @@ export type { HoosatNetwork } from '@models/network.type';
 export { HoosatCrypto } from '@crypto/crypto';
 export type { KeyPair, TransactionSignature } from '@crypto/crypto.types';
 
-export { UtxoStreamManager } from '@streaming/utxo-stream-manager';
-export { UTXO_STREAM_EVENTS, UtxoStreamEventName } from '@streaming/utxo-stream-manager.types';
+export { HoosatEventManager } from '@events/event-manager';
+export { EventType } from '@events/event-manager.types';
 export type {
-  UtxoStreamConfig,
-  UtxoStreamStats,
+  EventManagerConfig,
+  EventManagerStats,
   UtxoChangeNotification,
   UtxoChanges,
   UtxoChangeEntry,
-} from '@streaming/utxo-stream-manager.types';
+} from '@events/event-manager.types';
 
 export { HoosatQR } from '@qr/qr';
 export type { PaymentURIParams, QRCodeOptions, ParsedPaymentURI } from '@qr/qr.types';

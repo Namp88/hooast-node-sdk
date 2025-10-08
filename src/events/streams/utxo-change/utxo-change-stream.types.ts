@@ -1,8 +1,8 @@
 /**
- * Event names for UtxoStreamManager
+ * Event names for UtxoChangeStream
  * Use these constants to listen to events in a type-safe way
  */
-export const UTXO_STREAM_EVENTS = {
+export const UTXO_CHANGE_STREAM_EVENTS = {
   /** Emitted when UTXOs change for a specific address */
   UTXO_CHANGED: 'utxoChanged',
 
@@ -32,10 +32,10 @@ export const UTXO_STREAM_EVENTS = {
  * const eventName: UtxoStreamEventName = 'utxoChanged';
  * ```
  */
-export type UtxoStreamEventName = (typeof UTXO_STREAM_EVENTS)[keyof typeof UTXO_STREAM_EVENTS];
+export type UtxoStreamEventName = (typeof UTXO_CHANGE_STREAM_EVENTS)[keyof typeof UTXO_CHANGE_STREAM_EVENTS];
 
 /**
- * Configuration options for UtxoStreamManager
+ * Configuration options for UtxoChangeStream
  * @example
  * ```typescript
  * const config: UtxoStreamConfig = {
@@ -46,7 +46,7 @@ export type UtxoStreamEventName = (typeof UTXO_STREAM_EVENTS)[keyof typeof UTXO_
  * };
  * ```
  */
-export interface UtxoStreamConfig {
+export interface UtxoChangeStreamConfig {
   /** Maximum number of reconnection attempts (default: 5) */
   maxReconnectAttempts?: number;
 
@@ -69,7 +69,7 @@ export interface UtxoStreamConfig {
  * console.log('Addresses:', stats.subscribedAddressCount);
  * ```
  */
-export interface UtxoStreamStats {
+export interface UtxoChangeStreamStats {
   /** Whether the streaming connection is active */
   isConnected: boolean;
 
