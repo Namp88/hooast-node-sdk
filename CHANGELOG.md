@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+### [0.1.7](https://github.com/Namp88/hoosat-sdk/compare/v0.1.6...v0.1.7) (2025-10-10)
+
+### 🐛 Bug Fixes
+
+- update logic for calculate fee based on util\txmass\calculator.go in HTND. Up the minimum fee to 3250 ([eef66f0](https://github.com/Namp88/hoosat-sdk/commit/eef66f0801d8fcc7182eaa83dd7edf7dd5428998))
+
 ### [0.1.6](https://github.com/Namp88/hoosat-sdk/compare/v0.1.5...v0.1.6) (2025-10-08)
 
 ### 🐛 Bug Fixes
