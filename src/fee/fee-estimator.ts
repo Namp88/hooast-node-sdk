@@ -5,7 +5,7 @@ import { FeeEstimate, FeeEstimatorConfig, FeePriority, FeeRecommendations } from
 /** Default cache duration (1 minute) */
 const DEFAULT_CACHE_DURATION = 60000;
 
-/** Fee rate bounds (sompi/byte) */
+/** Fee rate bounds (sompi/gram) */
 const FEE_BOUNDS = {
   MIN: 1,
   MAX: 50,
@@ -18,9 +18,9 @@ const FEE_BOUNDS = {
  * for different priority levels. It uses percentile-based analysis to suggest fees that
  * give transactions a high probability of confirmation at their priority level.
  *
- * **Important:** This class provides fee RATE recommendations (sompi/byte).
+ * **Important:** This class provides fee RATE recommendations (sompi/gram).
  * Actual fee calculation uses mass-based formula via `HoosatCrypto.calculateFee()`:
- * `fee = (mass/10) × feeRate`
+ * `fee = totalMass × feeRate`
  *
  * **Features:**
  * - Real-time mempool analysis with percentile-based recommendations
@@ -35,7 +35,7 @@ const FEE_BOUNDS = {
  *
  * // Get recommendations for all priority levels
  * const recommendations = await estimator.getRecommendations();
- * console.log('Normal priority:', recommendations.normal.feeRate, 'sompi/byte');
+ * console.log('Normal priority:', recommendations.normal.feeRate, 'sompi/gram');
  * console.log('Mempool size:', recommendations.mempoolSize, 'transactions');
  *
  * // Estimate fee for specific transaction
@@ -51,20 +51,6 @@ export class HoosatFeeEstimator {
   private _cache: FeeRecommendations | null = null;
   private _cacheExpiry = 0;
 
-  /**
-   * Creates a new HoosatFeeEstimator instance
-   *
-   * @param node - HoosatNode instance for mempool queries
-   * @param config - Optional configuration
-   *
-   * @example
-   * ```typescript
-   * const estimator = new HoosatFeeEstimator(node, {
-   *   cacheDuration: 30000, // 30 seconds
-   *   debug: true
-   * });
-   * ```
-   */
   constructor(node: HoosatClient, config: FeeEstimatorConfig = {}) {
     this._node = node;
     this._cacheDuration = config.cacheDuration ?? DEFAULT_CACHE_DURATION;
@@ -73,33 +59,6 @@ export class HoosatFeeEstimator {
 
   /**
    * Estimates fee for a transaction using mass-based calculation
-   *
-   * This method combines mempool analysis (for fee rate) with mass-based calculation
-   * (for total fee). The mass formula accounts for ScriptPubKey cost, which is 10x
-   * more expensive than regular transaction bytes.
-   *
-   * @param priority - Fee priority level (default: Normal)
-   * @param inputs - Number of transaction inputs
-   * @param outputs - Number of transaction outputs
-   * @param forceRefresh - Force mempool re-analysis, bypassing cache
-   * @returns Fee estimate with rate and total fee
-   *
-   * @example
-   * ```typescript
-   * // Estimate fee for transaction with 2 inputs, 2 outputs
-   * const estimate = await estimator.estimateFee(FeePriority.Normal, 2, 2);
-   * console.log('Fee rate:', estimate.feeRate, 'sompi/byte');
-   * console.log('Total fee:', estimate.totalFee, 'sompi');
-   * console.log('Based on', estimate.basedOnSamples, 'mempool txs');
-   *
-   * // Force fresh mempool analysis
-   * const freshEstimate = await estimator.estimateFee(
-   *   FeePriority.High,
-   *   3,
-   *   2,
-   *   true // force refresh
-   * );
-   * ```
    */
   async estimateFee(
     priority: FeePriority = FeePriority.Normal,
@@ -127,34 +86,10 @@ export class HoosatFeeEstimator {
    *
    * **Algorithm:**
    * 1. Fetch mempool transactions from node
-   * 2. Calculate fee rate for each transaction (fee / estimated_size)
+   * 2. Calculate fee rate for each transaction: feeRate = fee / mass
    * 3. Remove outliers using IQR method
    * 4. Calculate percentiles: 25th (Low), 50th (Normal), 75th (High), 90th (Urgent)
-   * 5. Apply safety bounds (1-50 sompi/byte)
-   *
-   * **Edge cases:**
-   * - Empty mempool → Use low default rates (1-3 sompi/byte)
-   * - Small mempool (< 10 txs) → Use conservative defaults
-   * - Unavailable mempool → Use fallback rates (1-10 sompi/byte)
-   *
-   * @param forceRefresh - Force mempool re-analysis, bypassing cache
-   * @returns Complete fee recommendations
-   *
-   * @example
-   * ```typescript
-   * const recommendations = await estimator.getRecommendations();
-   *
-   * console.log('Network status:');
-   * console.log('  Mempool:', recommendations.mempoolSize, 'transactions');
-   * console.log('  Average fee:', recommendations.averageFeeRate, 'sompi/byte');
-   * console.log('  Median fee:', recommendations.medianFeeRate, 'sompi/byte');
-   *
-   * console.log('\nRecommended rates:');
-   * console.log('  Low:', recommendations.low.feeRate, 'sompi/byte');
-   * console.log('  Normal:', recommendations.normal.feeRate, 'sompi/byte');
-   * console.log('  High:', recommendations.high.feeRate, 'sompi/byte');
-   * console.log('  Urgent:', recommendations.urgent.feeRate, 'sompi/byte');
-   * ```
+   * 5. Apply safety bounds (1-50 sompi/gram)
    */
   async getRecommendations(forceRefresh = false): Promise<FeeRecommendations> {
     const now = Date.now();
@@ -197,15 +132,12 @@ export class HoosatFeeEstimator {
       const mass = BigInt(entry.mass || '1');
 
       if (fee > 0n && mass > 0n) {
-        // Mass correlates with computational cost
-        // Typically: mass ≈ transaction_size_bytes * 10
-        // So: fee_per_byte ≈ fee / (mass / 10)
-        const estimatedSizeBytes = Number(mass) / 10;
-        const feeRate = Number(fee) / estimatedSizeBytes;
+        // Fee rate = fee / mass (in sompi/gram)
+        const feeRate = Number(fee) / Number(mass);
 
-        // Filter reasonable fee rates (1-100 sompi/byte)
-        if (feeRate >= 1 && feeRate <= 100) {
-          feeRates.push(Math.ceil(feeRate));
+        // Filter reasonable fee rates (0.5-100 sompi/gram)
+        if (feeRate >= 0.5 && feeRate <= 100) {
+          feeRates.push(feeRate);
         }
       }
     }
@@ -219,6 +151,7 @@ export class HoosatFeeEstimator {
     const filteredRates = this._removeOutliers(feeRates);
     const finalRates = filteredRates.length > 0 ? filteredRates : feeRates;
 
+    // Sort for percentile calculation
     finalRates.sort((a, b) => a - b);
 
     this._log(`Analyzed ${entries.length} mempool txs, using ${finalRates.length} valid rates`);
@@ -234,12 +167,12 @@ export class HoosatFeeEstimator {
     const p75 = getPercentile(75);
     const p90 = getPercentile(90);
 
-    // Calculate average
+    // Calculate statistics
     const sum = finalRates.reduce((acc, rate) => acc + rate, 0);
-    const avg = Math.ceil(sum / finalRates.length);
+    const avg = sum / finalRates.length;
 
     // Apply safety bounds
-    const ensureBounds = (rate: number) => Math.min(Math.max(rate, FEE_BOUNDS.MIN), FEE_BOUNDS.MAX);
+    const ensureBounds = (rate: number) => Math.min(Math.max(Math.ceil(rate), FEE_BOUNDS.MIN), FEE_BOUNDS.MAX);
 
     const recommendations: FeeRecommendations = {
       low: {
@@ -271,7 +204,7 @@ export class HoosatFeeEstimator {
         basedOnSamples: finalRates.length,
       },
       mempoolSize: entries.length,
-      averageFeeRate: Math.min(avg, FEE_BOUNDS.MAX),
+      averageFeeRate: Math.min(Math.ceil(avg), FEE_BOUNDS.MAX),
       medianFeeRate: ensureBounds(p50),
       timestamp: now,
     };
@@ -289,16 +222,6 @@ export class HoosatFeeEstimator {
 
   /**
    * Clears the fee recommendations cache
-   *
-   * Next call to `getRecommendations()` will fetch fresh data from mempool.
-   * Useful when you want to force an update regardless of cache duration.
-   *
-   * @example
-   * ```typescript
-   * // Clear cache and get fresh recommendations
-   * estimator.clearCache();
-   * const recommendations = await estimator.getRecommendations();
-   * ```
    */
   clearCache(): void {
     this._cache = null;
@@ -308,17 +231,6 @@ export class HoosatFeeEstimator {
 
   /**
    * Sets the cache duration
-   *
-   * @param duration - Cache duration in milliseconds
-   *
-   * @example
-   * ```typescript
-   * // Cache for 30 seconds instead of default 1 minute
-   * estimator.setCacheDuration(30000);
-   *
-   * // Disable caching (always fetch fresh)
-   * estimator.setCacheDuration(0);
-   * ```
    */
   setCacheDuration(duration: number): void {
     this._cacheDuration = duration;
