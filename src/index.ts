@@ -25,6 +25,10 @@ export type { HoosatNetwork } from '@models/network.type';
 export { HoosatCrypto } from '@crypto/crypto';
 export type { KeyPair, TransactionSignature } from '@crypto/crypto.types';
 
+export { HoosatSigner } from '@crypto/signer';
+export { hashMessage, formatMessage, hashBuffer, MESSAGE_PREFIX } from '@crypto/hasher';
+export type { SignedMessage, VerificationResult } from '@crypto/signer.types';
+
 export { HoosatEventManager } from '@events/event-manager';
 export { EventType } from '@events/event-manager.types';
 export type {

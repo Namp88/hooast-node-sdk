@@ -594,6 +594,175 @@ HoosatCrypto.blake3Hash(data: Buffer | string): Buffer
 
 ---
 
+### HoosatSigner
+
+Message signing utilities for DApp authentication, proof of address ownership, and off-chain signing.
+
+**Key Features:**
+- ECDSA message signatures with BLAKE3 hashing
+- Deterministic signatures (RFC6979)
+- Public key recovery from signatures
+- DApp authentication with metadata support
+- Compatible with Bitcoin-style message signing
+
+**Basic Signing**
+```typescript
+// Sign message
+const signature = HoosatSigner.signMessage(privateKeyHex: string, message: string): string
+
+// Verify signature
+const isValid = HoosatSigner.verifyMessage(
+  signatureHex: string,
+  message: string,
+  publicKeyHex: string
+): boolean
+
+// Example
+import { HoosatSigner, HoosatCrypto } from 'hoosat-sdk';
+
+const wallet = HoosatCrypto.generateKeyPair();
+const message = 'Authenticate with MyDApp';
+
+const signature = HoosatSigner.signMessage(
+  wallet.privateKey.toString('hex'),
+  message
+);
+
+const isValid = HoosatSigner.verifyMessage(
+  signature,
+  message,
+  wallet.publicKey.toString('hex')
+);
+console.log('Valid:', isValid); // true
+```
+
+**Public Key Operations**
+```typescript
+// Derive public key from private key
+HoosatSigner.getPublicKey(privateKeyHex: string): string
+
+// Recover public key from signature (best effort)
+HoosatSigner.recoverPublicKey(signatureHex: string, message: string): string | null
+```
+
+**DApp Authentication**
+```typescript
+// Create signed message with metadata
+HoosatSigner.createSignedMessage(
+  privateKeyHex: string,
+  message: string,
+  network?: HoosatNetwork,
+  options?: { appId?: string; nonce?: string }
+): SignedMessage
+
+// Verify signed message
+HoosatSigner.verifySignedMessage(
+  signedMessage: SignedMessage,
+  network?: HoosatNetwork
+): VerificationResult
+
+interface SignedMessage {
+  message: string;
+  signature: string;         // 128-char hex (64 bytes)
+  publicKey: string;         // 66-char hex (33 bytes compressed)
+  address: string;           // Hoosat address
+  timestamp: string;         // ISO 8601
+  appId?: string;
+  nonce?: string;
+}
+
+interface VerificationResult {
+  isValid: boolean;
+  recoveredPublicKey?: string;
+  recoveredAddress?: string;
+  error?: string;
+}
+
+// Example: DApp login flow
+// Client-side
+const signedMsg = HoosatSigner.createSignedMessage(
+  privateKey,
+  'Login to MyDApp',
+  'mainnet',
+  { appId: 'my-dapp', nonce: '123456' }
+);
+
+// Send to server
+fetch('/api/auth', {
+  method: 'POST',
+  body: JSON.stringify(signedMsg)
+});
+
+// Server-side
+const result = HoosatSigner.verifySignedMessage(signedMsg);
+if (result.isValid) {
+  console.log('Authenticated as:', result.recoveredAddress);
+  // Grant access
+} else {
+  console.error('Authentication failed:', result.error);
+}
+```
+
+**Use Cases:**
+
+1. **DApp Authentication**
+```typescript
+// User signs login message
+const loginMsg = HoosatSigner.createSignedMessage(
+  privateKey,
+  'Login to MyDApp at ' + new Date().toISOString(),
+  'mainnet',
+  { appId: 'my-dapp' }
+);
+
+// Server verifies and authenticates
+const result = HoosatSigner.verifySignedMessage(loginMsg);
+if (result.isValid) {
+  // Create session for result.recoveredAddress
+}
+```
+
+2. **Proof of Address Ownership**
+```typescript
+// User proves they own an address
+const proof = HoosatSigner.createSignedMessage(
+  privateKey,
+  'I own this Hoosat address',
+  'mainnet'
+);
+
+// Anyone can verify
+const verification = HoosatSigner.verifySignedMessage(proof);
+console.log('Address owner:', verification.recoveredAddress);
+```
+
+3. **Off-chain Message Signing**
+```typescript
+// Sign arbitrary data
+const data = JSON.stringify({ action: 'approve', amount: '100' });
+const signature = HoosatSigner.signMessage(privateKey, data);
+
+// Verify later
+const isValid = HoosatSigner.verifyMessage(signature, data, publicKey);
+```
+
+**Technical Details:**
+
+- **Hashing:** BLAKE3 with "Hoosat Signed Message:\n" prefix
+- **Signature:** 64-byte ECDSA (r + s components)
+- **Determinism:** RFC6979 (same message + key = same signature)
+- **Encoding:** Variable-length integer (varint) for message length
+- **Public Key:** 33-byte compressed ECDSA public key
+
+**Important Notes:**
+
+- Signatures are deterministic (RFC6979) - same input always produces same signature
+- Message prefix prevents signature reuse as transaction signatures
+- Public key recovery is best-effort due to library limitations
+- For production use, always verify signature + address together
+
+---
+
 ### HoosatTxBuilder
 
 **Constructor**
