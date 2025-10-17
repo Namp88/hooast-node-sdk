@@ -3,6 +3,7 @@ import * as protoLoader from '@grpc/proto-loader';
 import { join } from 'path';
 import { BaseResult } from '@models/base.result';
 import { HoosatEventManager } from '@events/event-manager';
+import { NodeManager } from '@client/node-manager';
 
 // Services
 import { AddressService } from '@client/services/address.service';
@@ -86,8 +87,12 @@ export class HoosatClient {
   private readonly _host: string;
   private readonly _port: number;
   private readonly _timeout: number;
+  private readonly _retryAttempts: number;
+  private readonly _retryDelay: number;
+  private readonly _isMultiNode: boolean;
 
   private _client: any;
+  private _nodeManager?: NodeManager;
 
   // Services
   private _networkService: NetworkService | null = null;
@@ -156,25 +161,44 @@ export class HoosatClient {
    * ```
    */
   constructor(config: HoosatClientConfig = {}) {
-    this._host = config.host || CLIENT_DEFAULT_CONFIG.HOST;
-    this._port = config.port || CLIENT_DEFAULT_CONFIG.PORT;
-    this._timeout = config.timeout || CLIENT_DEFAULT_CONFIG.TIMEOUT;
+    // Determine if this is a multi-node configuration
+    this._isMultiNode = !!(config.nodes && config.nodes.length > 0);
 
-    // Initialize gRPC client
-    this._initializeClient();
+    if (this._isMultiNode) {
+      // Multi-node mode
+      this._host = config.nodes![0].host;
+      this._port = config.nodes![0].port;
+      this._timeout = config.nodes![0].timeout || config.timeout || CLIENT_DEFAULT_CONFIG.TIMEOUT;
+    } else {
+      // Single node mode
+      this._host = config.host || CLIENT_DEFAULT_CONFIG.HOST;
+      this._port = config.port || CLIENT_DEFAULT_CONFIG.PORT;
+      this._timeout = config.timeout || CLIENT_DEFAULT_CONFIG.TIMEOUT;
+    }
+
+    this._retryAttempts = config.retryAttempts || 3;
+    this._retryDelay = config.retryDelay || 1000;
+
+    // Initialize client (single or multi-node)
+    if (this._isMultiNode) {
+      this._initializeMultiNodeClient(config);
+    } else {
+      this._initializeSingleNodeClient();
+    }
 
     // Initialize services
     this._initializeServices();
 
-    // Initialize event manager
-    this.events = new HoosatEventManager(this._client, config.events);
+    // Initialize event manager (always uses primary/current client)
+    const eventClient = this._nodeManager ? this._nodeManager.getCurrentClient() : this._client;
+    this.events = new HoosatEventManager(eventClient, config.events);
   }
 
   /**
-   * Initializes the gRPC client connection
+   * Initializes a single-node gRPC client connection
    * @private
    */
-  private _initializeClient(): void {
+  private _initializeSingleNodeClient(): void {
     try {
       const PROTO_PATH = join(__dirname, '..', 'protos', 'messages.proto');
 
@@ -199,16 +223,47 @@ export class HoosatClient {
   }
 
   /**
+   * Initializes multi-node client with NodeManager and automatic failover
+   * @private
+   */
+  private _initializeMultiNodeClient(config: HoosatClientConfig): void {
+    try {
+      if (!config.nodes || config.nodes.length === 0) {
+        throw new Error('Multi-node configuration requires at least one node');
+      }
+
+      // Initialize NodeManager which creates clients for all nodes
+      this._nodeManager = new NodeManager(config.nodes, {
+        requireUtxoIndex: config.requireUtxoIndex,
+        requireSynced: config.requireSynced,
+        healthCheckInterval: config.healthCheckInterval,
+        debug: config.debug,
+      });
+
+      // Set the primary client for direct access (used by event manager)
+      this._client = this._nodeManager.getCurrentClient();
+    } catch (error) {
+      throw new Error(`Failed to initialize multi-node client: ${error}`);
+    }
+  }
+
+  /**
    * Initializes all service instances
    * @private
    */
   private _initializeServices(): void {
-    this._networkService = new NetworkService(this._client, this._timeout);
-    this._blockchainService = new BlockchainService(this._client, this._timeout);
-    this._mempoolService = new MempoolService(this._client, this._timeout);
-    this._addressService = new AddressService(this._client, this._timeout);
-    this._nodeInfoService = new NodeInfoService(this._client, this._timeout);
-    this._transactionService = new TransactionService(this._client, this._timeout);
+    this._networkService = new NetworkService(this._client, this._timeout, this._nodeManager, this._retryAttempts, this._retryDelay);
+    this._blockchainService = new BlockchainService(
+      this._client,
+      this._timeout,
+      this._nodeManager,
+      this._retryAttempts,
+      this._retryDelay
+    );
+    this._mempoolService = new MempoolService(this._client, this._timeout, this._nodeManager, this._retryAttempts, this._retryDelay);
+    this._addressService = new AddressService(this._client, this._timeout, this._nodeManager, this._retryAttempts, this._retryDelay);
+    this._nodeInfoService = new NodeInfoService(this._client, this._timeout, this._nodeManager, this._retryAttempts, this._retryDelay);
+    this._transactionService = new TransactionService(this._client, this._timeout, this._nodeManager, this._retryAttempts, this._retryDelay);
     this._transactionStatusService = new TransactionStatusService(
       this._client,
       this._timeout,
@@ -651,13 +706,44 @@ export class HoosatClient {
     return this._transactionStatusService!.getTransactionStatus(txId, senderAddress, recipientAddress);
   }
 
+  // ==================== NODE MANAGEMENT ====================
+
+  /**
+   * Gets the status of all nodes in multi-node configuration
+   *
+   * Returns null if client is in single-node mode.
+   * In multi-node mode, returns health and configuration info for all nodes.
+   *
+   * @returns Array of node statuses or null if single-node mode
+   *
+   * @example
+   * ```typescript
+   * const nodesStatus = client.getNodesStatus();
+   * if (nodesStatus) {
+   *   nodesStatus.forEach(node => {
+   *     console.log(`Node: ${node.config.name || node.config.host}`);
+   *     console.log(`  Healthy: ${node.health.isHealthy}`);
+   *     console.log(`  Synced: ${node.health.isSynced}`);
+   *     console.log(`  UTXO Indexed: ${node.health.isUtxoIndexed}`);
+   *   });
+   * }
+   * ```
+   */
+  getNodesStatus() {
+    if (!this._nodeManager) {
+      return null;
+    }
+    return this._nodeManager.getNodesStatus();
+  }
+
   // ==================== CLEANUP ====================
 
   /**
    * Disconnects from the node and cleans up all resources
    *
    * This method should be called when shutting down the client to:
-   * - Close gRPC connection
+   * - Close gRPC connection(s)
+   * - Disconnect NodeManager (if multi-node)
    * - Unsubscribe from all event streams
    * - Clean up event listeners
    *
@@ -674,8 +760,13 @@ export class HoosatClient {
     // Disconnect event manager and all streams
     this.events.disconnect();
 
-    // Close gRPC connection
-    if (this._client) {
+    // Disconnect NodeManager (if multi-node mode)
+    if (this._nodeManager) {
+      this._nodeManager.disconnect();
+    }
+
+    // Close gRPC connection (if single-node mode)
+    if (this._client && !this._nodeManager) {
       this._client.close();
     }
   }

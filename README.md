@@ -51,7 +51,8 @@
 
 - 🛡️ **Spam Protection Compliance** - Built-in limits (max 2 recipients per tx) following Kaspa inheritance
 - ⚠️ **Comprehensive Error Handling** - Robust error categorization and recovery
-- 🔄 **Retry Strategies** - Exponential backoff, circuit breaker patterns
+- 🔄 **Multi-Node Failover** - Automatic node switching with health monitoring for high availability
+- 🔁 **Retry Strategies** - Exponential backoff, circuit breaker patterns
 - 📈 **Network Monitoring** - Real-time statistics and health checks
 - 🔒 **Type Safety** - Full TypeScript support with comprehensive types
 - ✅ **Test Coverage** - Unit tests with Vitest (90%+ coverage for critical components)
@@ -98,7 +99,58 @@ if (info.ok) {
 }
 ```
 
-### 2. Generate Wallet
+### 2. Multi-Node Setup (High Availability)
+
+```typescript
+import { HoosatClient } from 'hoosat-sdk';
+
+// Configure multiple nodes with automatic failover
+const client = new HoosatClient({
+  nodes: [
+    {
+      host: '54.38.176.95',
+      port: 42420,
+      primary: true, // Primary node
+      name: 'Primary Node',
+    },
+    {
+      host: 'backup1.example.com',
+      port: 42420,
+      name: 'Backup Node 1',
+    },
+    {
+      host: 'backup2.example.com',
+      port: 42420,
+      name: 'Backup Node 2',
+    },
+  ],
+  healthCheckInterval: 30000, // Check health every 30 seconds
+  requireUtxoIndex: true, // Only use nodes with UTXO index
+  requireSynced: true, // Only use synced nodes
+  retryAttempts: 3, // Retry failed requests up to 3 times
+  retryDelay: 1000, // Wait 1 second between retries
+  debug: true, // Enable debug logging
+});
+
+// All SDK methods automatically benefit from failover
+const balance = await client.getBalance(wallet.address);
+
+// Monitor node health
+const nodesStatus = client.getNodesStatus();
+nodesStatus?.forEach((node) => {
+  console.log(`${node.config.name}: ${node.health.isHealthy ? '✅' : '❌'}`);
+});
+```
+
+**Key Benefits:**
+- ✅ Automatic failover when primary node fails
+- ✅ Health checks with sync and UTXO index validation
+- ✅ Transparent request retry without code changes
+- ✅ Real-time node status monitoring
+
+**See:** `examples/advanced/02-multi-node-failover.ts`
+
+### 3. Generate Wallet
 
 ```typescript
 import { HoosatCrypto } from 'hoosat-sdk';
@@ -372,10 +424,30 @@ Comprehensive utility functions for validation, conversion, and formatting.
 const client = new HoosatClient(config?: HoosatClientConfig);
 
 interface HoosatClientConfig {
-  host?: string;     // Default: 'localhost'
+  // Single node configuration (legacy)
+  host?: string;     // Default: '127.0.0.1'
   port?: number;     // Default: 42420
   timeout?: number;  // Default: 10000 (ms)
-  events?: EventManagerConfig;  // Event manager configuration
+
+  // Multi-node configuration (high availability)
+  nodes?: NodeConfig[];  // Array of nodes for failover
+  healthCheckInterval?: number;  // Health check interval in ms (default: 30000)
+  retryAttempts?: number;        // Retry attempts per request (default: 3)
+  retryDelay?: number;           // Delay between retries in ms (default: 1000)
+  requireUtxoIndex?: boolean;    // Only use nodes with UTXO index (default: true)
+  requireSynced?: boolean;       // Only use synced nodes (default: true)
+
+  // Event manager configuration
+  events?: EventManagerConfig;
+  debug?: boolean;  // Enable debug logging (default: false)
+}
+
+interface NodeConfig {
+  host: string;      // Node hostname or IP
+  port: number;      // Node port
+  timeout?: number;  // Request timeout for this node
+  primary?: boolean; // Designate as primary node
+  name?: string;     // Optional node name for logging
 }
 
 interface EventManagerConfig {
@@ -384,6 +456,30 @@ interface EventManagerConfig {
   maxSubscribedAddresses?: number;    // Default: 1000
   debug?: boolean;                    // Default: false
 }
+```
+
+**Single-Node Example:**
+```typescript
+const client = new HoosatClient({
+  host: '54.38.176.95',
+  port: 42420,
+  timeout: 10000
+});
+```
+
+**Multi-Node Example:**
+```typescript
+const client = new HoosatClient({
+  nodes: [
+    { host: '54.38.176.95', port: 42420, primary: true, name: 'Primary' },
+    { host: 'backup.example.com', port: 42420, name: 'Backup' }
+  ],
+  healthCheckInterval: 30000,
+  retryAttempts: 3,
+  requireUtxoIndex: true,
+  requireSynced: true,
+  debug: true
+});
 ```
 
 **Node Information**
@@ -413,6 +509,9 @@ interface EventManagerConfig {
 
 **Events**
 - `client.events` - Access to HoosatEventManager (see below)
+
+**Node Management**
+- `getNodesStatus()` - Get health status of all nodes (multi-node mode only)
 
 **Connection**
 - `disconnect()` - Close all connections and clean up resources
@@ -1104,6 +1203,7 @@ tsx examples/transaction/05-send-real.ts
 
 #### 🚀 Advanced (2 examples)
 - `01-multi-recipient-batching.ts` - Batch payments (3+ recipients)
+- `02-multi-node-failover.ts` - Multi-node setup with automatic failover
 
 #### 🛠 Utilities (3 examples)
 - `01-amount-conversion.ts` - Amount conversions

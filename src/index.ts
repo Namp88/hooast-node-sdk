@@ -1,5 +1,6 @@
 export { HoosatClient } from '@client/client';
-export type { HoosatClientConfig } from '@client/client.types';
+export type { HoosatClientConfig, NodeConfig, MultiNodeConfig } from '@client/client.types';
+export type { NodeHealth, NodeStatus } from '@client/node-manager';
 export type { GetInfo } from '@client/models/result/get-info';
 export type { GetBlockDagInfo } from '@client/models/result/get-block-dag-info';
 export type { GetBlockCount } from '@client/models/result/get-block-count';
