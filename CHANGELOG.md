@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0](https://github.com/Namp88/hoosat-sdk/compare/v0.1.8...v0.2.0) (2025-10-17)
+
+### ✨ Features
+
+- add transaction status checking (PENDING/CONFIRMED/NOT_FOUND) ([0350b47](https://github.com/Namp88/hoosat-sdk/commit/0350b4750510d91b4ef0d17cbe1b6f471c7bcfb9))
+
 ### [0.1.8](https://github.com/Namp88/hoosat-sdk/compare/v0.1.7...v0.1.8) (2025-10-16)
 
 ### ✨ Features
