@@ -7,6 +7,15 @@ const GRPC_CONFIG = {
   MAX_MESSAGE_SIZE: 1024 * 1024 * 1024, // 1GB
 } as const;
 
+/**
+ * Health status information for a Hoosat node
+ *
+ * @property isHealthy - Overall health status (meets all requirements)
+ * @property isSynced - Whether the node is fully synchronized with the network
+ * @property isUtxoIndexed - Whether the node has UTXO index enabled (--utxoindex flag)
+ * @property lastCheck - Timestamp of the last health check (milliseconds)
+ * @property consecutiveFailures - Number of consecutive failed health checks
+ */
 export interface NodeHealth {
   isHealthy: boolean;
   isSynced: boolean;
@@ -15,6 +24,16 @@ export interface NodeHealth {
   consecutiveFailures: number;
 }
 
+/**
+ * Complete status information for a Hoosat node
+ *
+ * Includes configuration, gRPC client, and health status.
+ * Returned by `HoosatClient.getNodesStatus()` in multi-node mode.
+ *
+ * @property config - Node configuration (host, port, name, etc.)
+ * @property client - gRPC client instance for this node
+ * @property health - Current health status of the node
+ */
 export interface NodeStatus {
   config: NodeConfig;
   client: any;

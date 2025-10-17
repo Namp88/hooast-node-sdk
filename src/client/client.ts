@@ -55,22 +55,47 @@ const CLIENT_DEFAULT_CONFIG = {
  * - Node information and network status
  * - Blockchain queries (blocks, DAG info, etc.)
  * - Address and balance operations
- * - Transaction submission
+ * - Transaction submission and status tracking
  * - Mempool queries
  * - Real-time event streaming via `client.events`
+ * - Multi-node configuration with automatic failover (high availability)
+ *
+ * **Single-node mode** - Connect to one Hoosat node (simple setup)
+ * **Multi-node mode** - Connect to multiple nodes with automatic health monitoring and failover
  *
  * @example
  * ```typescript
+ * // Single-node configuration
  * const client = new HoosatClient({
  *   host: '54.38.176.95',
  *   port: 42420,
  *   timeout: 10000
  * });
  *
- * // Request/response operations
+ * // Multi-node configuration with automatic failover
+ * const client = new HoosatClient({
+ *   nodes: [
+ *     { host: '54.38.176.95', port: 42420, primary: true, name: 'Primary' },
+ *     { host: 'backup.example.com', port: 42420, name: 'Backup' }
+ *   ],
+ *   healthCheckInterval: 30000,
+ *   retryAttempts: 3,
+ *   requireUtxoIndex: true,
+ *   requireSynced: true
+ * });
+ *
+ * // Request/response operations (work the same in both modes)
  * const balance = await client.getBalance('hoosat:qz7ulu...');
  * if (balance.ok) {
  *   console.log('Balance:', balance.result.balance);
+ * }
+ *
+ * // Monitor node health (multi-node mode only)
+ * const nodesStatus = client.getNodesStatus();
+ * if (nodesStatus) {
+ *   nodesStatus.forEach(node => {
+ *     console.log(`${node.config.name}: ${node.health.isHealthy ? '✅' : '❌'}`);
+ *   });
  * }
  *
  * // Real-time event streaming
@@ -134,18 +159,49 @@ export class HoosatClient {
   /**
    * Creates a new HoosatClient instance
    *
+   * Supports both single-node and multi-node configurations:
+   * - **Single-node**: Connect to one Hoosat node (simple setup)
+   * - **Multi-node**: Connect to multiple nodes with automatic failover (high availability)
+   *
    * @param config - Client configuration options
+   *
+   * **Single-node configuration:**
    * @param config.host - Hostname or IP address of the Hoosat node (default: '127.0.0.1')
    * @param config.port - Port number of the Hoosat node (default: 42420)
    * @param config.timeout - Request timeout in milliseconds (default: 10000)
+   *
+   * **Multi-node configuration:**
+   * @param config.nodes - Array of node configurations for automatic failover
+   * @param config.healthCheckInterval - Health check interval in ms (default: 30000)
+   * @param config.retryAttempts - Number of retry attempts per request (default: 3)
+   * @param config.retryDelay - Delay between retries in ms (default: 1000)
+   * @param config.requireUtxoIndex - Only use nodes with UTXO index enabled (default: true)
+   * @param config.requireSynced - Only use synced nodes (default: true)
+   *
+   * **Common configuration:**
    * @param config.events - Event manager configuration (optional)
+   * @param config.debug - Enable debug logging (default: false)
    *
    * @example
    * ```typescript
-   * // Basic configuration
+   * // Single-node configuration
    * const client = new HoosatClient({
    *   host: '54.38.176.95',
-   *   port: 42420
+   *   port: 42420,
+   *   timeout: 10000
+   * });
+   *
+   * // Multi-node configuration with automatic failover
+   * const client = new HoosatClient({
+   *   nodes: [
+   *     { host: '54.38.176.95', port: 42420, primary: true, name: 'Primary' },
+   *     { host: 'backup.example.com', port: 42420, name: 'Backup' }
+   *   ],
+   *   healthCheckInterval: 30000,
+   *   retryAttempts: 3,
+   *   requireUtxoIndex: true,
+   *   requireSynced: true,
+   *   debug: true
    * });
    *
    * // With event manager config
