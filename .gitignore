@@ -7,3 +7,6 @@ coverage/
 *.tgz
 .idea
 /.idea/
+
+# Desktop Wallet App (local development)
+wallet-app/
