@@ -19,6 +19,7 @@ export type { GetCurrentNetwork } from '@client/models/result/get-current-networ
 export type { EstimateNetworkHashesPerSecond } from '@client/models/result/estimate-network-hashes-per-second';
 export type { GetCoinSupply } from '@client/models/result/get-coin-supply';
 export type { SubmitTransaction } from '@client/models/result/submit-transaction';
+export type { GetTransactionStatus, TransactionStatusType, TransactionStatusDetails } from '@client/models/result/get-transaction-status';
 export type { GetClientInfo } from '@client/models/result/get-client-info';
 export type { HoosatNetwork } from '@models/network.type';
 

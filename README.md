@@ -41,6 +41,7 @@
 
 - 📡 **Real-time Event System** - `HoosatEventManager` with automatic reconnection and error handling
 - 🎯 **Dynamic Fee Estimation** - Network-aware fee recommendations based on mempool analysis
+- 🔍 **Transaction Status Tracking** - Check if transactions are PENDING, CONFIRMED, or NOT_FOUND
 - 🔄 **UTXO Selection Strategies** - Optimize fees and privacy (largest-first, smallest-first, random)
 - 📦 **Batch Payments** - Send to multiple recipients efficiently (2 recipients per tx)
 - ⚡ **UTXO Consolidation** - Optimize wallet structure by combining small UTXOs
@@ -164,7 +165,56 @@ if (submitResult.ok) {
 }
 ```
 
-### 5. Real-time UTXO Monitoring
+### 5. Check Transaction Status
+
+```typescript
+// Check if transaction is pending, confirmed, or not found
+const status = await client.getTransactionStatus(
+  'transaction_id_here',
+  'sender_address_here',
+  'recipient_address_here'
+);
+
+if (status.ok) {
+  switch (status.result.status) {
+    case 'PENDING':
+      console.log('Transaction in mempool');
+      console.log('Fee:', status.result.details.fee);
+      break;
+
+    case 'CONFIRMED':
+      console.log('Transaction confirmed!');
+      console.log('Block DAA Score:', status.result.details.blockDaaScore);
+      break;
+
+    case 'NOT_FOUND':
+      console.log('Transaction not found');
+      console.log('Reason:', status.result.details.message);
+      break;
+  }
+}
+
+// Poll for confirmation
+async function waitForConfirmation(txId, sender, recipient) {
+  const maxAttempts = 60;
+  for (let i = 0; i < maxAttempts; i++) {
+    const status = await client.getTransactionStatus(txId, sender, recipient);
+
+    if (status.ok && status.result.status === 'CONFIRMED') {
+      console.log('✅ Confirmed!');
+      return true;
+    }
+
+    console.log(`⏳ Attempt ${i + 1}/${maxAttempts}...`);
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  return false;
+}
+```
+
+**Note:** Node must be started with `--utxoindex` flag for CONFIRMED status detection.
+
+### 6. Real-time UTXO Monitoring
 
 ```typescript
 import { EventType } from 'hoosat-sdk';
@@ -210,7 +260,7 @@ await client.events.unsubscribeFromUtxoChanges();
 client.disconnect();
 ```
 
-### 6. Generate Payment QR Codes
+### 7. Generate Payment QR Codes
 
 ```typescript
 import { HoosatQR } from 'hoosat-sdk';
@@ -355,6 +405,7 @@ interface EventManagerConfig {
 
 **Transactions**
 - `submitTransaction(transaction, allowOrphan?)` - Submit transaction to network
+- `getTransactionStatus(txId, senderAddress, recipientAddress)` - Check transaction status (PENDING/CONFIRMED/NOT_FOUND)
 
 **Mempool**
 - `getMempoolEntry(txId, includeOrphanPool?, filterTransactionPool?)` - Get single mempool entry
@@ -1030,7 +1081,7 @@ tsx examples/transaction/05-send-real.ts
 - `02-generate-payment.ts` - Payment request QR codes
 - `03-parse-payment-uri.ts` - Parse payment URIs
 
-#### 💸 Transaction Management (9 examples)
+#### 💸 Transaction Management (10 examples)
 - `01-build-simple.ts` - Build simple transaction
 - `02-build-with-change.ts` - Automatic change handling
 - `03-multiple-inputs.ts` - Handle multiple inputs
@@ -1040,6 +1091,7 @@ tsx examples/transaction/05-send-real.ts
 - `07-send-real-batch.ts` - Batch payment ⚠️
 - `08-consolidate-utxos.ts` - UTXO consolidation ⚠️
 - `09-split-utxo.ts` - Split UTXO ⚠️
+- `10-check-transaction-status.ts` - Check transaction status (PENDING/CONFIRMED/NOT_FOUND)
 
 #### ⚠️ Error Handling (3 examples)
 - `01-network-errors.ts` - Network error handling

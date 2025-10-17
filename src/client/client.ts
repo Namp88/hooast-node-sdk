@@ -11,6 +11,7 @@ import { MempoolService } from '@client/services/mempool.service';
 import { NetworkService } from '@client/services/network.service';
 import { NodeInfoService } from '@client/services/node-info.service';
 import { TransactionService } from '@client/services/transaction.service';
+import { TransactionStatusService } from '@client/services/transaction-status.service';
 
 // Result types
 import { GetInfo } from '@client/models/result/get-info';
@@ -32,6 +33,7 @@ import { GetCurrentNetwork } from '@client/models/result/get-current-network';
 import { EstimateNetworkHashesPerSecond } from '@client/models/result/estimate-network-hashes-per-second';
 import { GetCoinSupply } from '@client/models/result/get-coin-supply';
 import { SubmitTransaction } from '@client/models/result/submit-transaction';
+import { GetTransactionStatus } from '@client/models/result/get-transaction-status';
 import { Transaction } from '@models/transaction.types';
 import { HoosatClientConfig } from '@client/client.types';
 
@@ -94,6 +96,7 @@ export class HoosatClient {
   private _addressService: AddressService | null = null;
   private _nodeInfoService: NodeInfoService | null = null;
   private _transactionService: TransactionService | null = null;
+  private _transactionStatusService: TransactionStatusService | null = null;
 
   /**
    * Event manager for real-time blockchain events
@@ -206,6 +209,12 @@ export class HoosatClient {
     this._addressService = new AddressService(this._client, this._timeout);
     this._nodeInfoService = new NodeInfoService(this._client, this._timeout);
     this._transactionService = new TransactionService(this._client, this._timeout);
+    this._transactionStatusService = new TransactionStatusService(
+      this._client,
+      this._timeout,
+      this._mempoolService,
+      this._addressService
+    );
   }
 
   // ==================== NODE INFORMATION ====================
@@ -590,6 +599,56 @@ export class HoosatClient {
    */
   async submitTransaction(transaction: Transaction, allowOrphan = false): Promise<BaseResult<SubmitTransaction>> {
     return this._transactionService!.submitTransaction(transaction, allowOrphan);
+  }
+
+  /**
+   * Gets the status of a transaction
+   *
+   * This method checks:
+   * 1. Mempool for PENDING transactions
+   * 2. Recipient address UTXOs for CONFIRMED transactions
+   * 3. Sender address UTXOs for change outputs (additional confirmation check)
+   *
+   * **Important:** Node must be started with `--utxoindex` flag for CONFIRMED status detection.
+   *
+   * @param txId - Transaction ID to check
+   * @param senderAddress - Sender address (for additional verification via change outputs)
+   * @param recipientAddress - Recipient address (required for CONFIRMED status detection)
+   * @returns Transaction status: PENDING, CONFIRMED, or NOT_FOUND
+   *
+   * @example
+   * ```typescript
+   * const status = await client.getTransactionStatus(
+   *   'a1b2c3d4e5f6...',
+   *   'hoosat:qzsender123...',
+   *   'hoosat:qzrecipient456...'
+   * );
+   *
+   * if (status.ok) {
+   *   console.log('Status:', status.result.status);
+   *
+   *   if (status.result.status === 'PENDING') {
+   *     console.log('Fee:', status.result.details.fee);
+   *     console.log('Is Orphan:', status.result.details.isOrphan);
+   *   }
+   *
+   *   if (status.result.status === 'CONFIRMED') {
+   *     console.log('Block DAA Score:', status.result.details.blockDaaScore);
+   *     console.log('Confirmed Amount:', status.result.details.confirmedAmount);
+   *   }
+   *
+   *   if (status.result.status === 'NOT_FOUND') {
+   *     console.log('Message:', status.result.details.message);
+   *   }
+   * }
+   * ```
+   */
+  async getTransactionStatus(
+    txId: string,
+    senderAddress: string,
+    recipientAddress: string
+  ): Promise<BaseResult<GetTransactionStatus>> {
+    return this._transactionStatusService!.getTransactionStatus(txId, senderAddress, recipientAddress);
   }
 
   // ==================== CLEANUP ====================
