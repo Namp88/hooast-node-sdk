@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+### [0.2.1](https://github.com/Namp88/hoosat-sdk/compare/v0.2.0...v0.2.1) (2025-10-17)
+
+### ✨ Features
+
+- add multi-node configuration with automatic failover ([c63f388](https://github.com/Namp88/hoosat-sdk/commit/c63f388de72776d9abe4a45706718514b2d4d223))
+
+### 📝 Documentation
+
+- add comprehensive JSDoc annotations for multi-node features ([f83559c](https://github.com/Namp88/hoosat-sdk/commit/f83559cfba10cb640ff84c9f26b7074cca3cd992))
+
 ## [0.2.0](https://github.com/Namp88/hoosat-sdk/compare/v0.1.8...v0.2.0) (2025-10-17)
 
 ### ✨ Features
