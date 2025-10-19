@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+### [0.2.2](https://github.com/Namp88/hoosat-sdk/compare/v0.2.1...v0.2.2) (2025-10-19)
+
+### ✨ Features
+
+- add subnetwork and payload support to transaction builder ([d4f5b11](https://github.com/Namp88/hoosat-sdk/commit/d4f5b1151f3a22f3dcaf8a19d8694c68c4bbef0c))
+- add UTXO maturity utilities and payload size support to fee calculation ([a3e3a7d](https://github.com/Namp88/hoosat-sdk/commit/a3e3a7dbd0cc0461f25de966406e3874f7be8945))
+
 ### [0.2.1](https://github.com/Namp88/hoosat-sdk/compare/v0.2.0...v0.2.1) (2025-10-17)
 
 ### ✨ Features
