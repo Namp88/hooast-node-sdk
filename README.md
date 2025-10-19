@@ -734,7 +734,18 @@ HoosatCrypto.addressToScriptPublicKey(address: string): Buffer
 ```typescript
 HoosatCrypto.getTransactionId(transaction: Transaction): string
 HoosatCrypto.signTransaction(transaction: Transaction, privateKey: Buffer, sighashType?: number): Transaction
-HoosatCrypto.calculateFee(inputsCount: number, outputsCount: number, feeRate?: number): string
+
+// Calculate transaction fee
+HoosatCrypto.calculateFee(
+  inputsCount: number,
+  outputsCount: number,
+  feeRate?: number,
+  payloadSize?: number  // Optional: additional data size in bytes
+): string
+
+// Example:
+const fee = HoosatCrypto.calculateFee(5, 2, 1);
+// Returns: "7170" (for 5 inputs, 2 outputs at 1 sompi/gram)
 ```
 
 **Hashing**
@@ -1120,6 +1131,65 @@ HoosatUtils.parseHashrate(formatted: string): number | null
 HoosatUtils.hexToBuffer(hex: string): Buffer | null
 HoosatUtils.bufferToHex(buffer: Buffer): string
 ```
+
+**UTXO Utilities**
+```typescript
+// Filter only mature (spendable) UTXOs
+// Coinbase UTXOs require 100 confirmations before they can be spent
+HoosatUtils.filterMatureUtxos<T>(
+  utxos: T[],
+  currentDaaScore: number,
+  coinbaseMaturity?: number
+): T[]
+
+// Separate UTXOs into mature and immature groups
+HoosatUtils.separateMatureUtxos<T>(
+  utxos: T[],
+  currentDaaScore: number,
+  coinbaseMaturity?: number
+): { mature: T[], immature: T[] }
+```
+
+**Example: Filter Mature UTXOs**
+```typescript
+import { HoosatClient, HoosatUtils } from 'hoosat-sdk';
+
+const client = new HoosatClient({ host: 'node.hoosat.fi', port: 42420 });
+
+// Get current DAA score
+const dagInfo = await client.getBlockDagInfo();
+const currentDaa = parseInt(dagInfo.result.virtualDaaScore);
+
+// Get UTXOs for address
+const utxosResponse = await client.getUtxosByAddresses([address]);
+
+// Filter only spendable UTXOs (handles coinbase maturity automatically)
+const spendableUtxos = HoosatUtils.filterMatureUtxos(
+  utxosResponse.result.utxos,
+  currentDaa
+);
+
+console.log(`Total UTXOs: ${utxosResponse.result.utxos.length}`);
+console.log(`Spendable: ${spendableUtxos.length}`);
+
+// Or get detailed breakdown
+const { mature, immature } = HoosatUtils.separateMatureUtxos(
+  utxosResponse.result.utxos,
+  currentDaa
+);
+
+console.log(`Mature (spendable): ${mature.length}`);
+console.log(`Immature (waiting): ${immature.length}`);
+if (immature.length > 0) {
+  console.log('Immature UTXOs need to wait for more confirmations');
+}
+```
+
+**Why is this needed?**
+- Coinbase UTXOs (from mining) require **100 block confirmations** before they can be spent
+- Regular UTXOs are spendable immediately
+- These utilities automatically check confirmations using DAA score
+- Prevents "immature UTXO" errors when building transactions
 
 ---
 

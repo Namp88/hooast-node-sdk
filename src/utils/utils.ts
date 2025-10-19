@@ -489,4 +489,86 @@ export class HoosatUtils {
   static bufferToHex(buffer: Buffer): string {
     return buffer.toString('hex');
   }
+
+  // ==================== UTXO UTILITIES ====================
+
+  /**
+   * Filters UTXOs to return only mature (spendable) ones
+   *
+   * Coinbase UTXOs require a minimum number of confirmations (100 blocks) before they can be spent.
+   * Regular (non-coinbase) UTXOs are always spendable.
+   *
+   * @param utxos - Array of UTXOs to filter
+   * @param currentDaaScore - Current DAA score from the network (from getBlockDagInfo().virtualDaaScore)
+   * @param coinbaseMaturity - Minimum confirmations required for coinbase UTXOs (default: 100)
+   * @returns Filtered array containing only mature (spendable) UTXOs
+   *
+   * @example
+   * const dagInfo = await client.getBlockDagInfo();
+   * const currentDaa = parseInt(dagInfo.result.virtualDaaScore);
+   * const utxos = await client.getUtxosByAddresses([address]);
+   * const spendableUtxos = HoosatUtils.filterMatureUtxos(utxos.result.utxos, currentDaa);
+   *
+   * @example
+   * // Custom maturity requirement (e.g., wait for 200 blocks)
+   * const extraSafeUtxos = HoosatUtils.filterMatureUtxos(utxos, currentDaa, 200);
+   */
+  static filterMatureUtxos<T extends { utxoEntry: { isCoinbase: boolean; blockDaaScore: string } }>(
+    utxos: T[],
+    currentDaaScore: number,
+    coinbaseMaturity: number = 100
+  ): T[] {
+    return utxos.filter(utxo => {
+      // Regular UTXOs are always spendable
+      if (!utxo.utxoEntry.isCoinbase) {
+        return true;
+      }
+
+      // Coinbase UTXOs need sufficient confirmations
+      const confirmations = currentDaaScore - parseInt(utxo.utxoEntry.blockDaaScore);
+      return confirmations >= coinbaseMaturity;
+    });
+  }
+
+  /**
+   * Separates UTXOs into mature and immature groups
+   *
+   * @param utxos - Array of UTXOs to separate
+   * @param currentDaaScore - Current DAA score from the network
+   * @param coinbaseMaturity - Minimum confirmations required for coinbase UTXOs (default: 100)
+   * @returns Object with 'mature' and 'immature' arrays
+   *
+   * @example
+   * const dagInfo = await client.getBlockDagInfo();
+   * const currentDaa = parseInt(dagInfo.result.virtualDaaScore);
+   * const utxos = await client.getUtxosByAddresses([address]);
+   * const { mature, immature } = HoosatUtils.separateMatureUtxos(utxos.result.utxos, currentDaa);
+   *
+   * console.log(`Spendable: ${mature.length}, Waiting: ${immature.length}`);
+   */
+  static separateMatureUtxos<T extends { utxoEntry: { isCoinbase: boolean; blockDaaScore: string } }>(
+    utxos: T[],
+    currentDaaScore: number,
+    coinbaseMaturity: number = 100
+  ): { mature: T[]; immature: T[] } {
+    const mature: T[] = [];
+    const immature: T[] = [];
+
+    for (const utxo of utxos) {
+      if (!utxo.utxoEntry.isCoinbase) {
+        // Regular UTXOs are always mature
+        mature.push(utxo);
+      } else {
+        // Check coinbase maturity
+        const confirmations = currentDaaScore - parseInt(utxo.utxoEntry.blockDaaScore);
+        if (confirmations >= coinbaseMaturity) {
+          mature.push(utxo);
+        } else {
+          immature.push(utxo);
+        }
+      }
+    }
+
+    return { mature, immature };
+  }
 }
