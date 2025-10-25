@@ -1,18 +1,19 @@
 /**
- * Example 04: Dynamic Fee Estimation from Network
+ * Example 04: Calculate Minimum Fee
  *
- * Learn how to use HoosatFeeEstimator to get optimal fee rates
- * based on current network conditions.
+ * Learn how to calculate the minimum transaction fee based on
+ * actual UTXO count and transaction structure.
  *
  * Prerequisites:
  * - Access to Hoosat node
  * - Node must be synced
+ * - Address with UTXOs
  */
-import { FeePriority, HoosatClient, HoosatFeeEstimator, HoosatUtils } from 'hoosat-sdk';
+import { HoosatClient, HoosatCrypto, HoosatUtils } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
-  console.log('   📊 EXAMPLE 04: DYNAMIC FEE ESTIMATION');
+  console.log('   💰 EXAMPLE 04: CALCULATE MINIMUM FEE');
   console.log('═══════════════════════════════════════════════════════════\n');
 
   // ==================== CONNECT TO NODE ====================
@@ -38,124 +39,148 @@ async function main() {
     process.exit(1);
   }
 
-  // ==================== CREATE FEE ESTIMATOR ====================
-  console.log('2️⃣  Initialize Fee Estimator');
+  // ==================== TEST ADDRESS ====================
+  console.log('2️⃣  Test Address Setup');
   console.log('═════════════════════════════════════');
 
-  const feeEstimator = new HoosatFeeEstimator(client);
-  console.log('✅ Fee estimator created (uses MASS-based calculation)\n');
+  const testAddress = 'hoosat:qz7uluw5ckcm6z9v8mwqypzqkfqmqy48jtunzm5mqrjtkfnnf77j5s6k38dv7';
+  console.log(`Address: ${testAddress}\n`);
 
-  // ==================== ANALYZE MEMPOOL ====================
-  console.log('3️⃣  Analyze Current Mempool');
+  // ==================== GET UTXOS ====================
+  console.log('3️⃣  Fetch UTXOs for Address');
   console.log('═════════════════════════════════════');
 
-  const recommendations = await feeEstimator.getRecommendations();
+  const utxosResult = await client.getUtxosByAddresses([testAddress]);
 
-  console.log('Network Status:');
-  console.log(`  Mempool Size:     ${recommendations.mempoolSize} transactions`);
-  console.log(`  Analyzed Samples: ${recommendations.low.basedOnSamples}`);
-  console.log(`  Average Fee Rate: ${recommendations.averageFeeRate} sompi/byte`);
-  console.log(`  Median Fee Rate:  ${recommendations.medianFeeRate} sompi/byte`);
-  console.log();
-
-  // ==================== PRIORITY LEVELS ====================
-  console.log('4️⃣  Fee Recommendations by Priority');
-  console.log('═════════════════════════════════════');
-
-  console.log('Priority | Fee Rate      | Percentile');
-  console.log('---------|---------------|------------');
-  console.log(`Low      | ${recommendations.low.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.low.percentile}th`);
-  console.log(`Normal   | ${recommendations.normal.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.normal.percentile}th`);
-  console.log(`High     | ${recommendations.high.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.high.percentile}th`);
-  console.log(`Urgent   | ${recommendations.urgent.feeRate.toString().padStart(2)} sompi/byte | ${recommendations.urgent.percentile}th`);
-  console.log();
-
-  // ==================== EXAMPLE CALCULATION ====================
-  console.log('5️⃣  Example: Calculate Fee for Transaction');
-  console.log('═════════════════════════════════════');
-
-  const inputs = 2;
-  const outputs = 2;
-
-  console.log(`Transaction: ${inputs} inputs → ${outputs} outputs (standard payment)`);
-  console.log();
-
-  console.log('Estimated Fees by Priority:');
-  console.log('─────────────────────────────────────');
-
-  const priorities = [FeePriority.Low, FeePriority.Normal, FeePriority.High, FeePriority.Urgent];
-
-  for (const priority of priorities) {
-    const estimate = await feeEstimator.estimateFee(priority, inputs, outputs);
-
-    const feeHTN = HoosatUtils.sompiToAmount(estimate.totalFee);
-    const priorityName = priority.charAt(0).toUpperCase() + priority.slice(1);
-
-    console.log(`${priorityName.padEnd(8)}: ${estimate.totalFee.padStart(6)} sompi (${feeHTN} HTN) @ ${estimate.feeRate} sompi/byte`);
+  if (!utxosResult.ok || !utxosResult.result) {
+    console.error('❌ Failed to fetch UTXOs');
+    process.exit(1);
   }
-  console.log();
 
-  // ==================== COMPARE TRANSACTION TYPES ====================
-  console.log('6️⃣  Fee Comparison for Different Transaction Types');
+  const utxos = utxosResult.result.utxos;
+  console.log(`✅ Found ${utxos.length} UTXOs\n`);
+
+  if (utxos.length === 0) {
+    console.log('⚠️  No UTXOs available for this address');
+    console.log('   Try using an address with balance\n');
+    client.disconnect();
+    return;
+  }
+
+  // ==================== AUTOMATIC FEE CALCULATION ====================
+  console.log('4️⃣  Calculate Minimum Fee (Automatic)');
   console.log('═════════════════════════════════════');
-  console.log('Using Normal priority...\n');
+
+  try {
+    const minFee = await client.calculateMinFee(testAddress);
+    const feeHTN = HoosatUtils.sompiToAmount(minFee);
+
+    console.log('Fee Details:');
+    console.log(`  Inputs:     ${utxos.length} UTXOs`);
+    console.log(`  Outputs:    2 (recipient + change)`);
+    console.log(`  Min Fee:    ${minFee} sompi`);
+    console.log(`  Min Fee:    ${feeHTN} HTN\n`);
+  } catch (error: any) {
+    console.error('❌ Fee calculation failed:', error.message);
+  }
+
+  // ==================== MANUAL FEE CALCULATION ====================
+  console.log('5️⃣  Calculate Fee Manually (HoosatCrypto)');
+  console.log('═════════════════════════════════════');
+
+  const inputCount = utxos.length;
+  const outputCount = 2; // Standard: 1 recipient + 1 change
+
+  const manualFee = HoosatCrypto.calculateMinFee(inputCount, outputCount);
+  const manualFeeHTN = HoosatUtils.sompiToAmount(manualFee);
+
+  console.log('Manual Calculation:');
+  console.log(`  Formula:    HoosatCrypto.calculateMinFee(${inputCount}, ${outputCount})`);
+  console.log(`  Min Fee:    ${manualFee} sompi`);
+  console.log(`  Min Fee:    ${manualFeeHTN} HTN\n`);
+
+  // ==================== COMPARE DIFFERENT SCENARIOS ====================
+  console.log('6️⃣  Fee Comparison for Different Scenarios');
+  console.log('═════════════════════════════════════\n');
 
   const scenarios = [
     { name: 'Simple (1→1)', inputs: 1, outputs: 1 },
     { name: 'Standard (1→2)', inputs: 1, outputs: 2 },
     { name: 'Batch Pay (2→2)', inputs: 2, outputs: 2 }, // Max 2 recipients
     { name: 'Consolidate (5→1)', inputs: 5, outputs: 1 },
-    { name: 'Large Batch (5→2)', inputs: 5, outputs: 2 }, // Max 2 recipients
+    { name: 'Large (10→2)', inputs: 10, outputs: 2 },
+    { name: 'Very Large (20→2)', inputs: 20, outputs: 2 },
   ];
 
   console.log('Type               | Fee (sompi) | Fee (HTN)');
   console.log('-------------------|-------------|-------------');
 
   for (const scenario of scenarios) {
-    const estimate = await feeEstimator.estimateFee(FeePriority.Normal, scenario.inputs, scenario.outputs);
+    const fee = HoosatCrypto.calculateMinFee(scenario.inputs, scenario.outputs);
+    const feeHTN = HoosatUtils.sompiToAmount(fee);
 
-    const feeHTN = HoosatUtils.sompiToAmount(estimate.totalFee);
-
-    console.log(`${scenario.name.padEnd(18)} | ${estimate.totalFee.padStart(11)} | ${feeHTN.padStart(11)}`);
+    console.log(`${scenario.name.padEnd(18)} | ${fee.padStart(11)} | ${feeHTN.padStart(11)}`);
   }
 
   console.log();
   console.log('⚠️  Note: Outputs include recipients + change');
-  console.log('    Current node limitation: max 2 recipient outputs per tx');
-  console.log();
+  console.log('    Network limitation: max 2 recipient outputs per tx\n');
 
-  // ==================== REAL-TIME UPDATES ====================
-  console.log('7️⃣  Cache Management');
+  // ==================== WITH PAYLOAD (FUTURE) ====================
+  console.log('7️⃣  Fee Calculation with Payload');
   console.log('═════════════════════════════════════');
 
-  console.log('Cache settings:');
-  console.log('  Duration: 60 seconds (default)');
-  console.log('  Next refresh: automatic after expiry');
-  console.log();
+  const payloadSizes = [0, 64, 128, 256, 512];
 
-  console.log('To force refresh:');
-  console.log('  feeEstimator.clearCache()');
-  console.log('  await feeEstimator.getRecommendations(true)');
-  console.log();
+  console.log('Standard transaction (5 inputs, 2 outputs):\n');
+  console.log('Payload Size | Fee (sompi) | Fee (HTN)');
+  console.log('-------------|-------------|-------------');
 
-  // ==================== RECOMMENDATIONS ====================
-  console.log('8️⃣  Usage Recommendations');
+  for (const payloadSize of payloadSizes) {
+    const feeWithPayload = HoosatCrypto.calculateMinFee(5, 2, payloadSize);
+    const feeHTN = HoosatUtils.sompiToAmount(feeWithPayload);
+
+    console.log(`${payloadSize.toString().padStart(12)} | ${feeWithPayload.padStart(11)} | ${feeHTN.padStart(11)}`);
+  }
+
+  console.log();
+  console.log('ℹ️  Payload support is for future subnetwork usage');
+  console.log('   Currently not active on the network\n');
+
+  // ==================== HOW IT WORKS ====================
+  console.log('8️⃣  How Fee Calculation Works');
   console.log('═════════════════════════════════════');
 
-  console.log('Fee Priority Guidelines:');
-  console.log('  Low:    Use when not time-sensitive (may take longer)');
-  console.log('  Normal: Standard for most transactions');
-  console.log('  High:   When you need faster confirmation');
-  console.log('  Urgent: Critical transactions only (highest cost)');
-  console.log();
+  console.log('MASS-Based Formula:');
+  console.log('  1. txSize = overhead + (inputs × inputSize) + (outputs × outputSize)');
+  console.log('  2. massForSize = txSize × 1');
+  console.log('  3. massForScriptPubKey = (outputs × scriptPubKeySize) × 10');
+  console.log('  4. massForSigOps = inputs × 1000');
+  console.log('  5. totalMass = massForSize + massForScriptPubKey + massForSigOps');
+  console.log('  6. fee = totalMass (in sompi)\n');
 
-  console.log('Best Practices:');
-  console.log('  • Check mempool size before choosing priority');
-  console.log('  • Use Low priority when mempool is empty');
-  console.log('  • Use High/Urgent during network congestion');
-  console.log('  • Cache is refreshed automatically every minute');
-  console.log('  • All fees use MASS-based calculation (accurate!)');
-  console.log();
+  console.log('Why MASS-based?');
+  console.log('  • Accounts for actual transaction weight');
+  console.log('  • Prevents spam with small outputs');
+  console.log('  • Fair pricing based on resource usage');
+  console.log('  • Compatible with HTND node implementation\n');
+
+  // ==================== BEST PRACTICES ====================
+  console.log('9️⃣  Best Practices');
+  console.log('═════════════════════════════════════');
+
+  console.log('✅ Do:');
+  console.log('  • Always calculate fee before building transaction');
+  console.log('  • Use client.calculateMinFee() for convenience');
+  console.log('  • Use HoosatCrypto.calculateMinFee() for manual calculation');
+  console.log('  • Check balance includes amount + fee');
+  console.log('  • Account for change output in fee calculation\n');
+
+  console.log('❌ Don\'t:');
+  console.log('  • Use hardcoded static fees');
+  console.log('  • Forget to account for change output');
+  console.log('  • Assume fee is always the same');
+  console.log('  • Try to send with insufficient balance\n');
 
   // Cleanup
   client.disconnect();

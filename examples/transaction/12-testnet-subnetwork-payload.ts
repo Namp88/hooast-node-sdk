@@ -22,7 +22,7 @@
  * 4. Wait for blocks to be mined (~1-2 minutes)
  * 5. Run this script with your testnet private key
  */
-import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
+import { HoosatClient, HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from '../../src';
 
 // Testnet configuration
 // Update these with Tonto's testnet node details
@@ -32,8 +32,13 @@ const TESTNET_NODE_PORT = 42422;
 // Subnetwork 0x03 - Data Subnetwork (enabled in Enable-Data-Subnetwork branch)
 const DATA_SUBNETWORK_ID = '0300000000000000000000000000000000000000';
 
-// Test payloads matching the Hoosat Vote Service format
-const TEST_PAYLOADS = [
+// Test payloads - supports both JSON objects and raw hex
+type TestPayload =
+  | { name: string; data: object } // JSON object that will be serialized
+  | { name: string; rawHex: string }; // Raw hex string
+
+// Test payloads matching the Hoosat Vote Service format + edge cases
+const TEST_PAYLOADS: TestPayload[] = [
   {
     name: 'Poll Creation',
     data: {
@@ -64,6 +69,41 @@ const TEST_PAYLOADS = [
       message: 'Hello from Hoosat testnet with payload support!',
       timestamp: Math.floor(Date.now() / 1000),
     },
+  },
+  // ==================== EDGE CASES & NON-JSON PAYLOADS ====================
+  {
+    name: 'Invalid JSON (Malformed)',
+    rawHex: Buffer.from('{invalid_json: "missing quotes", broken: }', 'utf-8').toString('hex'),
+  },
+  {
+    name: 'Binary Data (Random Bytes)',
+    rawHex: Buffer.from(
+      Array.from({ length: 128 }, () => Math.floor(Math.random() * 256))
+    ).toString('hex'),
+  },
+  {
+    name: 'Empty Payload',
+    rawHex: '',
+  },
+  {
+    name: 'Special Characters & Emojis',
+    rawHex: Buffer.from('🔥 Hoosat 🚀 Test with 特殊字符 and émojis! 🎉', 'utf-8').toString('hex'),
+  },
+  {
+    name: 'Large Payload (~2KB)',
+    data: {
+      type: 'stress_test',
+      description: 'A' + 'x'.repeat(1800), // ~2KB payload
+      metadata: Array.from({ length: 10 }, (_, i) => ({ index: i, value: `item_${i}` })),
+    },
+  },
+  {
+    name: 'Raw Binary Image Header (PNG)',
+    rawHex: '89504e470d0a1a0a0000000d49484452', // PNG file signature
+  },
+  {
+    name: 'Null Bytes',
+    rawHex: Buffer.from([0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x48, 0x65, 0x6c, 0x6c, 0x6f]).toString('hex'),
   },
 ];
 
@@ -99,7 +139,7 @@ async function main() {
   const client = new HoosatClient({
     host: TESTNET_NODE_HOST,
     port: TESTNET_NODE_PORT,
-    timeout: 15000,
+    timeout: 60000, // Increased to 60 seconds for slow/syncing nodes
   });
 
   try {
@@ -116,6 +156,12 @@ async function main() {
 
     if (!nodeInfo.result.isUtxoIndexed) {
       throw new Error('Node must have UTXO index enabled (--utxoindex flag)');
+    }
+
+    if (!nodeInfo.result.isSynced) {
+      console.log('⚠️  WARNING: Node is still syncing!');
+      console.log('   UTXO queries may be slow or fail.');
+      console.log('   Consider waiting for sync to complete.\n');
     }
   } catch (error) {
     console.error('❌ Failed to connect to testnet node:', error);
@@ -145,7 +191,7 @@ async function main() {
     const utxoResponse = await client.getUtxosByAddresses([wallet.address]);
 
     if (!utxoResponse.ok || !utxoResponse.result) {
-      throw new Error('Failed to fetch UTXOs');
+      throw new Error(`Failed to fetch UTXOs: ${utxoResponse.error || 'Unknown error'}`);
     }
 
     utxos = utxoResponse.result.utxos;
@@ -197,24 +243,38 @@ async function main() {
     error?: string;
   }> = [];
 
-  // Get fee estimate
-  const feeEstimator = new HoosatFeeEstimator(client);
-  const feeRecommendations = await feeEstimator.getRecommendations();
-  const selectedFeeRate = feeRecommendations[FeePriority.Normal].feeRate;
-
-  console.log(`Fee Rate: ${selectedFeeRate} sompi/byte\n`);
+  console.log('Fee will be calculated based on transaction size with payload\n');
 
   for (const testPayload of TEST_PAYLOADS) {
     console.log(`\n🧪 Testing: ${testPayload.name}`);
     console.log('─────────────────────────────────────────────────────────────');
 
     try {
-      // Convert payload to hex
-      const payloadJson = JSON.stringify(testPayload.data);
-      const payloadHex = Buffer.from(payloadJson, 'utf-8').toString('hex');
+      // Convert payload to hex (support both JSON objects and raw hex)
+      let payloadHex: string;
+      let payloadDescription: string;
 
-      console.log(`Payload JSON: ${payloadJson.substring(0, 80)}...`);
-      console.log(`Payload Size: ${payloadHex.length / 2} bytes\n`);
+      if ('rawHex' in testPayload) {
+        // Raw hex payload (binary data, invalid JSON, etc.)
+        payloadHex = testPayload.rawHex;
+        const payloadBytes = Buffer.from(payloadHex || '00', 'hex');
+        const preview = payloadBytes.slice(0, 40);
+        const isAscii = preview.every(b => b >= 32 && b <= 126);
+
+        if (isAscii) {
+          payloadDescription = `Raw: "${preview.toString('utf-8')}"${payloadBytes.length > 40 ? '...' : ''}`;
+        } else {
+          payloadDescription = `Binary: ${payloadHex.substring(0, 40)}${payloadHex.length > 40 ? '...' : ''} (hex)`;
+        }
+      } else {
+        // JSON payload (standard case)
+        const payloadJson = JSON.stringify(testPayload.data);
+        payloadHex = Buffer.from(payloadJson, 'utf-8').toString('hex');
+        payloadDescription = `JSON: ${payloadJson.substring(0, 60)}${payloadJson.length > 60 ? '...' : ''}`;
+      }
+
+      console.log(`Payload: ${payloadDescription}`);
+      console.log(`Size:    ${payloadHex.length / 2} bytes\n`);
 
       // Send to self with minimal amount
       const sendAmount = 100000n; // 0.001 HTN
@@ -223,13 +283,16 @@ async function main() {
       let selectedUtxos: typeof utxos = [];
       let selectedAmount = 0n;
 
+      // Calculate payload size first
+      const payloadSize = payloadHex.length / 2; // Convert hex to bytes
+
       for (const utxo of utxos) {
         selectedUtxos.push(utxo);
         selectedAmount += BigInt(utxo.utxoEntry.amount);
 
-        const estimatedFee = BigInt(HoosatCrypto.calculateFee(selectedUtxos.length, 2, selectedFeeRate));
+        const minFee = BigInt(HoosatCrypto.calculateMinFee(selectedUtxos.length, 2, payloadSize));
 
-        if (selectedAmount >= sendAmount + estimatedFee) {
+        if (selectedAmount >= sendAmount + minFee) {
           break;
         }
       }
@@ -237,12 +300,10 @@ async function main() {
       // Calculate final amounts with payload
       const numInputs = selectedUtxos.length;
       const numOutputs = 2; // Recipient + change
-      const payloadSize = payloadHex.length / 2; // Convert hex to bytes
 
-      // Use SDK's updated calculateFee with payload size parameter
-      const estimatedFee = BigInt(HoosatCrypto.calculateFee(numInputs, numOutputs, selectedFeeRate, payloadSize));
+      const minFee = BigInt(HoosatCrypto.calculateMinFee(numInputs, numOutputs, payloadSize));
 
-      const changeAmount = selectedAmount - sendAmount - estimatedFee;
+      const changeAmount = selectedAmount - sendAmount - minFee;
 
       if (changeAmount < 0n) {
         throw new Error('Insufficient funds');
@@ -287,7 +348,7 @@ async function main() {
       }
 
       // Set fee, subnetwork, and payload
-      builder.setFee(estimatedFee.toString());
+      builder.setFee(minFee.toString());
       builder.setSubnetworkId(DATA_SUBNETWORK_ID);
       builder.setPayload(payloadHex);
 
@@ -317,7 +378,7 @@ async function main() {
         name: testPayload.name,
         success: true,
         txId: submittedTxId,
-        payload: payloadJson,
+        payload: payloadDescription,
       });
 
       // Wait before next test (longer to allow previous tx to propagate)

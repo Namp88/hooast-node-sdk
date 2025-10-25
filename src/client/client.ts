@@ -13,6 +13,7 @@ import { NetworkService } from '@client/services/network.service';
 import { NodeInfoService } from '@client/services/node-info.service';
 import { TransactionService } from '@client/services/transaction.service';
 import { TransactionStatusService } from '@client/services/transaction-status.service';
+import { TransactionFeeService } from '@client/services/fee.service';
 
 // Result types
 import { GetInfo } from '@client/models/result/get-info';
@@ -127,6 +128,7 @@ export class HoosatClient {
   private _nodeInfoService: NodeInfoService | null = null;
   private _transactionService: TransactionService | null = null;
   private _transactionStatusService: TransactionStatusService | null = null;
+  private _feeService: TransactionFeeService | null = null;
 
   /**
    * Event manager for real-time blockchain events
@@ -326,6 +328,7 @@ export class HoosatClient {
       this._mempoolService,
       this._addressService
     );
+    this._feeService = new TransactionFeeService(this._addressService);
   }
 
   // ==================== NODE INFORMATION ====================
@@ -760,6 +763,39 @@ export class HoosatClient {
     recipientAddress: string
   ): Promise<BaseResult<GetTransactionStatus>> {
     return this._transactionStatusService!.getTransactionStatus(txId, senderAddress, recipientAddress);
+  }
+
+  /**
+   * Calculate minimum transaction fee for sender address
+   *
+   * Automatically fetches UTXOs for the sender address and calculates
+   * the minimum fee based on actual inputs/outputs count.
+   *
+   * This method:
+   * 1. Fetches UTXOs for sender address via `getUtxosByAddresses()`
+   * 2. Counts inputs (number of UTXOs)
+   * 3. Assumes 2 outputs (recipient + change)
+   * 4. Calculates minimum fee using MASS-based formula
+   *
+   * @param address - Sender address to calculate fee for
+   * @param payloadSize - Payload size in bytes (default: 0, for future use)
+   * @returns Minimum fee in sompi
+   *
+   * @example
+   * ```typescript
+   * // Calculate minimum fee for address
+   * const minFee = await client.calculateMinFee('hoosat:qz7ulu...');
+   * console.log('Minimum fee:', minFee, 'sompi');
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // With payload (for future subnetwork usage)
+   * const minFeeWithPayload = await client.calculateMinFee('hoosat:qz7ulu...', 256);
+   * ```
+   */
+  async calculateMinFee(address: string, payloadSize: number = 0): Promise<string> {
+    return this._feeService!.calculateMinFee(address, payloadSize);
   }
 
   // ==================== NODE MANAGEMENT ====================

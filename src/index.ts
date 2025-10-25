@@ -44,9 +44,7 @@ export type {
 export { HoosatQR } from '@qr/qr';
 export type { PaymentURIParams, QRCodeOptions, ParsedPaymentURI } from '@qr/qr.types';
 
-export { HoosatFeeEstimator } from '@fee/fee-estimator';
-export { FeePriority } from '@fee/fee-estimator.types';
-export type { FeeEstimate, FeeRecommendations, FeeEstimatorConfig } from '@fee/fee-estimator.types';
+export { TransactionFeeService } from '@client/services/fee.service';
 
 export { HoosatTxBuilder } from '@transaction/tx-builder';
 export type { TxBuilderOptions } from '@transaction/tx-builder.types';

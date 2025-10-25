@@ -40,7 +40,7 @@
 ### Advanced Features
 
 - 📡 **Real-time Event System** - `HoosatEventManager` with automatic reconnection and error handling
-- 🎯 **Dynamic Fee Estimation** - Network-aware fee recommendations based on mempool analysis
+- 🎯 **Automatic Fee Calculation** - MASS-based minimum fee calculation with payload support
 - 🔍 **Transaction Status Tracking** - Check if transactions are PENDING, CONFIRMED, or NOT_FOUND
 - 🔄 **UTXO Selection Strategies** - Optimize fees and privacy (largest-first, smallest-first, random)
 - 📦 **Batch Payments** - Send to multiple recipients efficiently (2 recipients per tx)
@@ -179,19 +179,15 @@ if (balance.ok) {
 ### 4. Build and Send Transaction
 
 ```typescript
-import { HoosatTxBuilder, HoosatFeeEstimator, FeePriority } from 'hoosat-sdk';
+import { HoosatTxBuilder, HoosatCrypto } from 'hoosat-sdk';
 
 // Get UTXOs
 const utxosResult = await client.getUtxosByAddresses([wallet.address]);
 const utxos = utxosResult.result.utxos;
 
-// Estimate fee
-const feeEstimator = new HoosatFeeEstimator(client);
-const feeEstimate = await feeEstimator.estimateFee(
-  FeePriority.Normal,
-  utxos.length,  // inputs
-  2              // outputs (1 recipient + 1 change)
-);
+// Calculate minimum fee
+const minFee = await client.calculateMinFee(wallet.address);
+console.log('Minimum fee:', minFee, 'sompi');
 
 // Build transaction
 const builder = new HoosatTxBuilder();
@@ -205,7 +201,7 @@ for (const utxo of utxos) {
 builder.addOutput('hoosat:recipient_address', '100000000'); // 1 HTN
 
 // Set fee and add change
-builder.setFee(feeEstimate.totalFee);
+builder.setFee(minFee);
 builder.addChangeOutput(wallet.address);
 
 // Sign and submit
@@ -381,16 +377,15 @@ Intuitive transaction builder with automatic change calculation.
 - Fee estimation and validation
 - Support for multiple inputs and outputs
 
-### HoosatFeeEstimator
-Dynamic fee estimation based on real-time network conditions.
+### TransactionFeeService
+Automatic minimum fee calculation based on actual transaction requirements.
 
 **Key Features:**
-- Mempool analysis with percentile-based recommendations
-- Four priority levels (Low, Normal, High, Urgent)
-- Smart caching (1 minute default)
-- Outlier removal using IQR method
-- Mass-based fee calculation
-- Fallback strategies for edge cases
+- Automatic UTXO fetching for sender address
+- MASS-based fee calculation (HTND compatible)
+- Payload size support for future subnetwork usage
+- Input/output count optimization
+- No need for manual mempool analysis
 
 ### HoosatQR
 QR code generation and parsing for addresses and payment URIs.
@@ -735,17 +730,16 @@ HoosatCrypto.addressToScriptPublicKey(address: string): Buffer
 HoosatCrypto.getTransactionId(transaction: Transaction): string
 HoosatCrypto.signTransaction(transaction: Transaction, privateKey: Buffer, sighashType?: number): Transaction
 
-// Calculate transaction fee
-HoosatCrypto.calculateFee(
+// Calculate minimum transaction fee
+HoosatCrypto.calculateMinFee(
   inputsCount: number,
   outputsCount: number,
-  feeRate?: number,
-  payloadSize?: number  // Optional: additional data size in bytes
+  payloadSize?: number  // Optional: additional data size in bytes (default: 0)
 ): string
 
 // Example:
-const fee = HoosatCrypto.calculateFee(5, 2, 1);
-// Returns: "7170" (for 5 inputs, 2 outputs at 1 sompi/gram)
+const fee = HoosatCrypto.calculateMinFee(5, 2);
+// Returns: "6727" (for 5 inputs, 2 outputs)
 ```
 
 **Hashing**
@@ -965,62 +959,37 @@ builder.clear(): this
 
 ---
 
-### HoosatFeeEstimator
+### TransactionFeeService
 
 **Constructor**
 ```typescript
-const estimator = new HoosatFeeEstimator(client: HoosatClient, config?: FeeEstimatorConfig);
-
-interface FeeEstimatorConfig {
-  cacheDuration?: number; // Cache duration in ms (default: 60000)
-  debug?: boolean;        // Enable debug logging
-}
+const feeService = new TransactionFeeService(addressService: AddressService);
 ```
 
-**Fee Estimation**
+**Fee Calculation**
 ```typescript
-// Get recommendations for all priority levels
-await estimator.getRecommendations(forceRefresh?: boolean): Promise<FeeRecommendations>
+// Calculate minimum fee for sender address
+await feeService.calculateMinFee(
+  address: string,
+  payloadSize?: number  // Default: 0 (for future subnetwork usage)
+): Promise<string>
 
-interface FeeRecommendations {
-  low: FeeEstimate;
-  normal: FeeEstimate;
-  high: FeeEstimate;
-  urgent: FeeEstimate;
-  mempoolSize: number;
-  timestamp: number;
-}
+// Example usage
+const minFee = await feeService.calculateMinFee('hoosat:qz7ulu...');
+console.log('Minimum fee:', minFee, 'sompi');
 
-interface FeeEstimate {
-  feeRate: number;      // Sompi per byte
-  totalFee: string;     // Total fee in sompi
-  priority: FeePriority;
-}
-
-enum FeePriority {
-  Low = 'low',
-  Normal = 'normal',
-  High = 'high',
-  Urgent = 'urgent'
-}
-
-// Estimate fee for specific transaction
-await estimator.estimateFee(
-  priority: FeePriority,
-  inputsCount: number,
-  outputsCount: number
-): Promise<FeeEstimate>
-
-// Cache management
-estimator.clearCache(): void
-estimator.setCacheDuration(duration: number): void
+// With payload (future use)
+const minFeeWithPayload = await feeService.calculateMinFee('hoosat:qz7ulu...', 256);
 ```
 
-**Priority Recommendations:**
-- **Low** - Non-urgent transactions (0.5x base rate)
-- **Normal** - Standard confirmation speed (1.0x base rate)
-- **High** - Fast confirmation (2.0x base rate)
-- **Urgent** - Priority confirmation (5.0x base rate)
+**How it works:**
+1. Fetches UTXOs for the sender address
+2. Counts inputs (number of UTXOs)
+3. Assumes 2 outputs (recipient + change)
+4. Calculates minimum fee using MASS-based formula
+5. Returns fee in sompi as string
+
+**Note:** This service is automatically available via `client.calculateMinFee()` - no need to instantiate manually.
 
 ---
 
@@ -1206,8 +1175,8 @@ examples/
 ├── node/                   # Node operations and queries (4 examples)
 ├── streaming/              # Real-time UTXO monitoring (1 example)
 ├── qr/                     # QR code generation (3 examples)
-├── transaction/            # Transaction building and sending (9 examples)
-├── error-handling/         # Error handling patterns (3 examples)
+├── transaction/            # Transaction building and sending (11 examples)
+├── error-handling/         # Error handling patterns (2 examples)
 ├── monitoring/             # Network monitoring (2 examples)
 ├── advanced/               # Advanced patterns (2 examples)
 └── utils/                  # Utility functions (3 examples)
@@ -1250,21 +1219,21 @@ tsx examples/transaction/05-send-real.ts
 - `02-generate-payment.ts` - Payment request QR codes
 - `03-parse-payment-uri.ts` - Parse payment URIs
 
-#### 💸 Transaction Management (10 examples)
+#### 💸 Transaction Management (8 examples)
 - `01-build-simple.ts` - Build simple transaction
 - `02-build-with-change.ts` - Automatic change handling
 - `03-multiple-inputs.ts` - Handle multiple inputs
-- `04-estimate-fee.ts` - Dynamic fee estimation
+- `04-estimate-fee.ts` - Calculate minimum fee
 - `05-send-real.ts` - Send real transaction ⚠️
-- `06-dynamic-fees.ts` - Network-aware fees
 - `07-send-real-batch.ts` - Batch payment ⚠️
 - `08-consolidate-utxos.ts` - UTXO consolidation ⚠️
 - `09-split-utxo.ts` - Split UTXO ⚠️
 - `10-check-transaction-status.ts` - Check transaction status (PENDING/CONFIRMED/NOT_FOUND)
+- `11-subnetwork-payload-test.ts` - Test payload on subnetworks ⚠️
+- `12-testnet-subnetwork-payload.ts` - Test payload on testnet ⚠️
 
-#### ⚠️ Error Handling (3 examples)
+#### ⚠️ Error Handling (2 examples)
 - `01-network-errors.ts` - Network error handling
-- `02-transaction-errors.ts` - Transaction errors
 - `03-retry-strategies.ts` - Retry patterns
 
 #### 📊 Monitoring (2 examples)
@@ -1401,13 +1370,8 @@ Combine many small UTXOs into one large UTXO:
 const utxosResult = await client.getUtxosByAddresses([wallet.address]);
 const utxos = utxosResult.result.utxos;
 
-// Estimate fee
-const feeEstimator = new HoosatFeeEstimator(client);
-const feeEstimate = await feeEstimator.estimateFee(
-  FeePriority.Low,           // Use low priority
-  utxos.length,              // All inputs
-  1                          // Single output
-);
+// Calculate minimum fee
+const minFee = await client.calculateMinFee(wallet.address);
 
 // Build consolidation transaction
 const builder = new HoosatTxBuilder();
@@ -1419,11 +1383,11 @@ for (const utxo of utxos) {
 
 // Single output to same address
 const totalIn = builder.getTotalInputAmount();
-const fee = BigInt(feeEstimate.totalFee);
+const fee = BigInt(minFee);
 const outputAmount = (totalIn - fee).toString();
 
 builder.addOutput(wallet.address, outputAmount);
-builder.setFee(feeEstimate.totalFee);
+builder.setFee(minFee);
 
 // Submit
 const signedTx = builder.sign();
@@ -1444,27 +1408,23 @@ Split one large UTXO into multiple smaller ones:
 ```typescript
 // Get largest UTXO
 const utxos = await client.getUtxosByAddresses([wallet.address]);
-const largestUtxo = utxos.result.utxos.sort((a, b) => 
+const largestUtxo = utxos.result.utxos.sort((a, b) =>
   Number(BigInt(b.utxoEntry.amount) - BigInt(a.utxoEntry.amount))
 )[0];
 
-// Estimate fee
-const feeEstimate = await feeEstimator.estimateFee(
-  FeePriority.Normal,
-  1,  // Single input
-  2   // 2 split outputs
-);
+// Calculate minimum fee
+const minFee = await client.calculateMinFee(wallet.address);
 
 // Build split transaction
 const totalAmount = BigInt(largestUtxo.utxoEntry.amount);
-const fee = BigInt(feeEstimate.totalFee);
+const fee = BigInt(minFee);
 const splitAmount = (totalAmount - fee) / 2n;
 
 const builder = new HoosatTxBuilder();
 builder.addInput(largestUtxo, wallet.privateKey);
 builder.addOutput(wallet.address, splitAmount.toString());  // Split 1
 builder.addOutput(wallet.address, splitAmount.toString());  // Split 2
-builder.setFee(feeEstimate.totalFee);
+builder.setFee(minFee);
 
 const signedTx = builder.sign();
 await client.submitTransaction(signedTx);
@@ -1587,20 +1547,19 @@ if (!HoosatUtils.isValidAmount(amount)) {
 }
 ```
 
-### 3. Use Dynamic Fee Estimation
+### 3. Use Automatic Fee Calculation
 
 ```typescript
 // Don't use static fees
 // ❌ builder.setFee('1000');
 
-// Use dynamic estimation
-const feeEstimator = new HoosatFeeEstimator(client);
-const estimate = await feeEstimator.estimateFee(
-  FeePriority.Normal,
-  inputsCount,
-  outputsCount
-);
-builder.setFee(estimate.totalFee);
+// Use automatic fee calculation
+const minFee = await client.calculateMinFee(wallet.address);
+builder.setFee(minFee);
+
+// Or calculate manually if you know inputs/outputs count
+const manualFee = HoosatCrypto.calculateMinFee(inputsCount, outputsCount);
+builder.setFee(manualFee);
 ```
 
 ### 4. Handle UTXO Selection Properly
@@ -1662,19 +1621,19 @@ if (client.events.isConnected()) {
 }
 ```
 
-### 6. Use Appropriate Fee Priority
+### 6. Calculate Fee Before Building Transaction
 
 ```typescript
-// Low: Non-urgent, consolidation
-// Normal: Standard transactions
-// High: Time-sensitive payments
-// Urgent: Critical transactions only
+// Always calculate fee before building transaction
+const minFee = await client.calculateMinFee(wallet.address);
 
-// Check mempool first
-const mempool = await client.getMempoolEntries();
-const mempoolSize = mempool.result.entries.length;
+// Check if you have enough funds (amount + fee)
+const balance = await client.getBalance(wallet.address);
+const totalRequired = BigInt(sendAmount) + BigInt(minFee);
 
-const priority = mempoolSize > 100 ? FeePriority.High : FeePriority.Normal;
+if (BigInt(balance.result.balance) < totalRequired) {
+  throw new Error('Insufficient funds including fee');
+}
 ```
 
 ### 7. Implement Retry Logic

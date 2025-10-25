@@ -18,7 +18,7 @@
  *
  * @see https://github.com/kaspanet/kaspad/blob/master/domain/consensus/model/interface_processes_transactionvalidator.go
  */
-import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from '../../src';
+import { HoosatClient, HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from '../../src';
 
 // Test configuration
 const TEST_SUBNETWORKS = [
@@ -42,7 +42,6 @@ async function main() {
   const PRIVATE_KEY = '33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43';
   const RECIPIENT = 'hoosat:qz95mwas8ja7ucsernv9z335rdxxqswff7wvzenl29qukn5qs3lsqfsa4pd74';
   const AMOUNT_HTN = '0.001'; // Small amount for testing
-  const FEE_PRIORITY = FeePriority.Normal;
 
   // Test payload data
   const PAYLOAD_TEXT = 'Hello Hoosat! Test payload on subnetwork.';
@@ -51,7 +50,6 @@ async function main() {
   console.log(`Node:      ${NODE_HOST}:${NODE_PORT}`);
   console.log(`Recipient: ${RECIPIENT.slice(0, 30)}...`);
   console.log(`Amount:    ${AMOUNT_HTN} HTN`);
-  console.log(`Priority:  ${FEE_PRIORITY}`);
   console.log(`Payload:   "${PAYLOAD_TEXT}"`);
   console.log(`Hex:       ${PAYLOAD_HEX}\n`);
 
@@ -153,15 +151,14 @@ async function main() {
     process.exit(1);
   }
 
-  // ==================== STEP 5: ESTIMATE FEE ====================
-  console.log('5️⃣  Estimate Fee from Network');
+  // ==================== STEP 5: CALCULATE FEE ====================
+  console.log('5️⃣  Calculate Minimum Fee');
   console.log('═════════════════════════════════════════════════════════════');
 
-  const feeEstimator = new HoosatFeeEstimator(client);
-  const feeRecommendations = await feeEstimator.getRecommendations();
-
-  const selectedFeeRate = feeRecommendations[FEE_PRIORITY].feeRate;
-  console.log(`✅ Selected ${FEE_PRIORITY} priority: ${selectedFeeRate} sompi/byte\n`);
+  // Calculate fee with payload size
+  const payloadSize = PAYLOAD_HEX.length / 2; // Convert hex to bytes
+  const minFeeString = HoosatCrypto.calculateMinFee(utxos.length, 2, payloadSize);
+  console.log(`✅ Minimum fee for ${payloadSize} byte payload: ${minFeeString} sompi\n`);
 
   // ==================== STEP 6: TEST EACH SUBNETWORK ====================
   console.log('6️⃣  Testing Subnetworks with Payload');
@@ -191,9 +188,9 @@ async function main() {
         selectedUtxos.push(utxo);
         selectedAmount += BigInt(utxo.utxoEntry.amount);
 
-        const estimatedFee = BigInt(HoosatCrypto.calculateFee(selectedUtxos.length, 2, selectedFeeRate));
+        const minFee = BigInt(HoosatCrypto.calculateMinFee(selectedUtxos.length, 2, payloadSize));
 
-        if (selectedAmount >= sendAmount + estimatedFee) {
+        if (selectedAmount >= sendAmount + minFee) {
           break;
         }
       }
@@ -201,8 +198,8 @@ async function main() {
       // Calculate final amounts
       const numInputs = selectedUtxos.length;
       const numOutputs = 2; // Recipient + change
-      const estimatedFee = BigInt(HoosatCrypto.calculateFee(numInputs, numOutputs, selectedFeeRate));
-      const changeAmount = selectedAmount - sendAmount - estimatedFee;
+      const minFee = BigInt(HoosatCrypto.calculateMinFee(numInputs, numOutputs, payloadSize));
+      const changeAmount = selectedAmount - sendAmount - minFee;
 
       if (changeAmount < 0n) {
         throw new Error('Insufficient funds');
@@ -247,7 +244,7 @@ async function main() {
       }
 
       // Set fee, subnetwork, and payload
-      builder.setFee(estimatedFee.toString());
+      builder.setFee(minFee.toString());
       builder.setSubnetworkId(testSubnet.id);
       builder.setPayload(PAYLOAD_HEX);
 

@@ -15,7 +15,7 @@
  * This is a hardcoded network rule to prevent spam.
  */
 
-import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
+import { HoosatClient, HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -43,10 +43,7 @@ async function main() {
     },
   ];
 
-  const FEE_PRIORITY = FeePriority.High;
-
   console.log(`Node:       ${NODE_HOST}:${NODE_PORT}`);
-  console.log(`Priority:   ${FEE_PRIORITY}`);
   console.log(`Recipients: ${RECIPIENTS.length}\n`);
 
   // ==================== SPAM PROTECTION CHECK ====================
@@ -201,23 +198,16 @@ async function main() {
   console.log('5️⃣  Get Fee Rate from Network');
   console.log('═════════════════════════════════════');
 
-  const feeEstimator = new HoosatFeeEstimator(client);
-  const recommendations = await feeEstimator.getRecommendations();
-
-  console.log('Network Conditions:');
-  console.log(`  Mempool Size:     ${recommendations.mempoolSize} transactions`);
-  console.log(`  Average Fee Rate: ${recommendations.averageFeeRate} sompi/byte`);
-  console.log(`  Median Fee Rate:  ${recommendations.medianFeeRate} sompi/byte\n`);
-
-  console.log('Available Priorities:');
-  console.log(`  Low:    ${recommendations.low.feeRate} sompi/byte`);
-  console.log(`  Normal: ${recommendations.normal.feeRate} sompi/byte`);
-  console.log(`  High:   ${recommendations.high.feeRate} sompi/byte`);
-  console.log(`  Urgent: ${recommendations.urgent.feeRate} sompi/byte\n`);
-
-  // Get selected fee rate
-  const selectedFeeRate = 20;
-  console.log(`✅ Selected ${FEE_PRIORITY} priority: ${selectedFeeRate} sompi/byte\n`);
+  // Calculate minimum fee
+  let minFee: string;
+  try {
+    minFee = await client.calculateMinFee(wallet.address);
+    console.log('Fee Calculation:');
+    console.log(`  Min Fee: ${minFee} sompi (${HoosatUtils.sompiToAmount(minFee)} HTN)\n`);
+  } catch (error: any) {
+    console.error('❌ Failed to calculate fee:', error.message);
+    process.exit(1);
+  }
 
   // ==================== STEP 6: CALCULATE CORRECT FEE USING MASS ====================
   console.log('6️⃣  Calculate Fee Using MASS (Correct Method)');
@@ -271,9 +261,9 @@ async function main() {
   }
 
   // Verify we have enough funds
-  if (selectedAmount < totalSendSompi + finalFee!) {
+  if (selectedAmount < totalSendSompi + finalFee) {
     console.error('❌ Insufficient balance');
-    console.error(`   Need: ${HoosatUtils.sompiToAmount(totalSendSompi + finalFee!)} HTN`);
+    console.error(`   Need: ${HoosatUtils.sompiToAmount(totalSendSompi + finalFee)} HTN`);
     console.error(`   Have: ${HoosatUtils.sompiToAmount(selectedAmount)} HTN`);
     process.exit(1);
   }
@@ -344,7 +334,7 @@ async function main() {
     }
 
     // Set mass-based fee BEFORE adding change
-    builder.setFee(finalFeeString);
+    builder.setFee(minFee);
 
     // Add change output automatically (bypasses spam protection check)
     builder.addChangeOutput(wallet.address);

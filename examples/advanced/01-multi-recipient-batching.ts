@@ -26,7 +26,7 @@
  * - Track success/failure for each batch
  * - Calculate total fees upfront
  */
-import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
+import { HoosatClient, HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 interface Recipient {
   address: string;
@@ -66,7 +66,6 @@ async function main() {
 
   const MAX_RECIPIENTS_PER_TX = 2; // Spam protection limit
   const DELAY_BETWEEN_TXS = 2000; // 2 seconds delay
-  const FEE_PRIORITY = FeePriority.Normal;
 
   // Example: 7 recipients (will need 4 transactions)
   // ⚠️ IMPORTANT: Replace with valid Hoosat addresses before running!
@@ -112,7 +111,6 @@ async function main() {
   console.log(`Total Recipients:  ${RECIPIENTS.length}`);
   console.log(`Max per TX:        ${MAX_RECIPIENTS_PER_TX}`);
   console.log(`Delay between TXs: ${DELAY_BETWEEN_TXS}ms`);
-  console.log(`Fee Priority:      ${FEE_PRIORITY}`);
   console.log();
 
   // ==================== CALCULATE BATCHES ====================
@@ -212,14 +210,10 @@ async function main() {
     console.log(`UTXOs:   ${utxos.length}`);
     console.log();
 
-    // Estimate total fees
-    const feeEstimator = new HoosatFeeEstimator(client);
-    const recommendations = await feeEstimator.getRecommendations();
-    const feeRate = recommendations[FEE_PRIORITY].feeRate;
-
+    // Calculate total minimum fees
     let estimatedTotalFees = 0n;
     for (const batch of batches) {
-      const feeString = HoosatCrypto.calculateFee(1, batch.length + 1, feeRate);
+      const feeString = HoosatCrypto.calculateMinFee(1, batch.length + 1);
       estimatedTotalFees += BigInt(feeString);
     }
 
@@ -227,7 +221,7 @@ async function main() {
 
     console.log(`Total needed: ${HoosatUtils.sompiToAmount(totalNeeded)} HTN`);
     console.log(`  Payments:   ${totalAmount.toFixed(8)} HTN`);
-    console.log(`  Est. fees:  ${HoosatUtils.sompiToAmount(estimatedTotalFees)} HTN (${batches.length} txs)`);
+    console.log(`  Min fees:   ${HoosatUtils.sompiToAmount(estimatedTotalFees)} HTN (${batches.length} txs)`);
     console.log();
 
     if (totalBalance < totalNeeded) {
@@ -275,10 +269,9 @@ async function main() {
         return sum + BigInt(HoosatUtils.amountToSompi(r.amount));
       }, 0n);
 
-      // Estimate fee
-      const feeEstimator = new HoosatFeeEstimator(client);
-      const feeEstimate = await feeEstimator.estimateFee(FEE_PRIORITY, 1, batch.length + 1);
-      const fee = BigInt(feeEstimate.totalFee);
+      // Calculate minimum fee for this batch
+      const minFeeString = HoosatCrypto.calculateMinFee(1, batch.length + 1);
+      const minFee = BigInt(minFeeString);
 
       // Select UTXO (use largest for simplicity)
       const sortedUtxos = [...availableUtxos].sort((a, b) => {
@@ -290,7 +283,7 @@ async function main() {
 
       console.log(`  Recipients: ${batch.length}`);
       batch.forEach(r => console.log(`    • ${r.label}: ${r.amount} HTN`));
-      console.log(`  Fee:        ${HoosatUtils.sompiToAmount(fee)} HTN`);
+      console.log(`  Min Fee:    ${HoosatUtils.sompiToAmount(minFee)} HTN`);
       console.log();
 
       // Build transaction
@@ -321,7 +314,7 @@ async function main() {
       }
 
       // Set fee and add change
-      builder.setFee(feeEstimate.totalFee);
+      builder.setFee(minFeeString);
       builder.addChangeOutput(wallet.address);
 
       // Sign

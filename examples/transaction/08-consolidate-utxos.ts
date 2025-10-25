@@ -24,7 +24,7 @@
  * - Consider privacy implications (all UTXOs linked to one address)
  */
 
-import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
+import { HoosatClient, HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -42,12 +42,10 @@ async function main() {
   // Consolidation settings
   const MAX_INPUTS = 50; // Maximum inputs to consolidate in one tx
   const MIN_UTXO_VALUE = 10000n; // Minimum UTXO value to include (0.0001 HTN)
-  const FEE_PRIORITY = FeePriority.Low; // Use low priority for consolidation
 
   console.log(`Node:              ${NODE_HOST}:${NODE_PORT}`);
   console.log(`Max inputs/tx:     ${MAX_INPUTS}`);
   console.log(`Min UTXO value:    ${HoosatUtils.sompiToAmount(MIN_UTXO_VALUE)} HTN`);
-  console.log(`Fee priority:      ${FEE_PRIORITY}`);
   console.log();
 
   // ==================== WARNINGS ====================
@@ -231,24 +229,16 @@ async function main() {
   }
   console.log();
 
-  // ==================== STEP 6: ESTIMATE FEE ====================
-  console.log('6️⃣  Estimate Consolidation Fee');
+  // ==================== STEP 6: CALCULATE FEE ====================
+  console.log('6️⃣  Calculate Consolidation Fee');
   console.log('═════════════════════════════════════');
-
-  const feeEstimator = new HoosatFeeEstimator(client);
-  const recommendations = await feeEstimator.getRecommendations();
-
-  console.log('Network Conditions:');
-  console.log(`  Mempool Size: ${recommendations.mempoolSize} transactions`);
-  console.log(`  Fee Rate:     ${recommendations[FEE_PRIORITY].feeRate} sompi/byte`);
-  console.log();
 
   // Calculate fee for consolidation
   // Many inputs (selected UTXOs) → 1 output (consolidated)
   const numInputs = utxosToConsolidate.length;
   const numOutputs = 1; // Single consolidated output
 
-  const feeString = HoosatCrypto.calculateFee(numInputs, numOutputs, recommendations[FEE_PRIORITY].feeRate);
+  const feeString = HoosatCrypto.calculateMinFee(numInputs, numOutputs);
   const fee = BigInt(feeString);
 
   console.log('Fee Calculation:');
@@ -398,7 +388,6 @@ async function main() {
   console.log();
   console.log('💡 Tips:');
   console.log('  • Run consolidation periodically when UTXOs accumulate');
-  console.log('  • Use Low priority during off-peak hours for cheaper fees');
   console.log('  • Consider privacy implications when consolidating');
   console.log();
 

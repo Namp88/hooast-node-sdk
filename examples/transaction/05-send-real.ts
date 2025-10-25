@@ -18,7 +18,7 @@
  * - Valid recipient address
  */
 
-import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
+import { HoosatClient, HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -34,12 +34,10 @@ async function main() {
   const PRIVATE_KEY = '33a4a81ecd31615c51385299969121707897fb1e167634196f31bd311de5fe43';
   const RECIPIENT = 'hoosat:qz95mwas8ja7ucsernv9z335rdxxqswff7wvzenl29qukn5qs3lsqfsa4pd74';
   const AMOUNT_HTN = '0.01'; // Amount to send in HTN
-  const FEE_PRIORITY = FeePriority.Normal; // Fee priority: Low, Normal, High, Urgent
 
   console.log(`Node:      ${NODE_HOST}:${NODE_PORT}`);
   console.log(`Recipient: ${RECIPIENT.slice(0, 30)}...`);
-  console.log(`Amount:    ${AMOUNT_HTN} HTN`);
-  console.log(`Priority:  ${FEE_PRIORITY}\n`);
+  console.log(`Amount:    ${AMOUNT_HTN} HTN\n`);
 
   // ==================== WARNINGS ====================
   console.log('⚠️  CRITICAL WARNINGS');
@@ -161,26 +159,24 @@ async function main() {
     process.exit(1);
   }
 
-  // ==================== STEP 5: ESTIMATE FEE FROM NETWORK ====================
-  console.log('5️⃣  Estimate Fee from Network');
+  // ==================== STEP 5: CALCULATE MINIMUM FEE ====================
+  console.log('5️⃣  Calculate Minimum Fee');
   console.log('═════════════════════════════════════');
 
-  const feeEstimator = new HoosatFeeEstimator(client);
-  const feeRecommendations = await feeEstimator.getRecommendations();
+  let minFee: string;
+  try {
+    minFee = await client.calculateMinFee(wallet.address);
+    const minFeeHTN = HoosatUtils.sompiToAmount(minFee);
 
-  console.log('Network Conditions:');
-  console.log(`  Mempool Size:     ${feeRecommendations.mempoolSize} transactions`);
-  console.log(`  Average Fee Rate: ${feeRecommendations.averageFeeRate} sompi/byte`);
-  console.log(`  Median Fee Rate:  ${feeRecommendations.medianFeeRate} sompi/byte\n`);
-
-  console.log('Fee Rate Options:');
-  console.log(`  Low:    ${feeRecommendations.low.feeRate} sompi/byte`);
-  console.log(`  Normal: ${feeRecommendations.normal.feeRate} sompi/byte`);
-  console.log(`  High:   ${feeRecommendations.high.feeRate} sompi/byte`);
-  console.log(`  Urgent: ${feeRecommendations.urgent.feeRate} sompi/byte\n`);
-
-  const selectedFeeRate = feeRecommendations[FEE_PRIORITY].feeRate;
-  console.log(`✅ Selected ${FEE_PRIORITY} priority: ${selectedFeeRate} sompi/byte\n`);
+    console.log('Fee Calculation:');
+    console.log(`  Inputs:   ${utxos.length} UTXOs`);
+    console.log(`  Outputs:  2 (recipient + change)`);
+    console.log(`  Min Fee:  ${minFee} sompi`);
+    console.log(`  Min Fee:  ${minFeeHTN} HTN\n`);
+  } catch (error: any) {
+    console.error('❌ Failed to calculate fee:', error.message);
+    process.exit(1);
+  }
 
   // ==================== STEP 6: BUILD TRANSACTION ====================
   console.log('6️⃣  Build Transaction');
@@ -202,11 +198,9 @@ async function main() {
     selectedUtxos.push(utxo);
     selectedAmount += BigInt(utxo.utxoEntry.amount);
 
-    // Estimate fee for current number of inputs using dynamic rate
-    const estimatedFee = BigInt(HoosatCrypto.calculateFee(selectedUtxos.length, 2, selectedFeeRate));
-
-    // Check if we have enough (amount + fee + some buffer)
-    if (selectedAmount >= sendAmount + estimatedFee) {
+    // Check if we have enough (amount + fee)
+    const fee = BigInt(minFee);
+    if (selectedAmount >= sendAmount + fee) {
       break;
     }
   }
@@ -223,13 +217,13 @@ async function main() {
   // Calculate final amounts
   const numInputs = selectedUtxos.length;
   const numOutputs = 2; // Recipient + change
-  const estimatedFee = BigInt(HoosatCrypto.calculateFee(numInputs, numOutputs, selectedFeeRate));
-  const changeAmount = selectedAmount - sendAmount - estimatedFee;
+  const fee = BigInt(minFee);
+  const changeAmount = selectedAmount - sendAmount - fee;
 
   if (changeAmount < 0n) {
     console.error('❌ Insufficient funds');
     console.error(`   Selected: ${HoosatUtils.sompiToAmount(selectedAmount)} HTN`);
-    console.error(`   Need:     ${HoosatUtils.sompiToAmount(sendAmount + estimatedFee)} HTN`);
+    console.error(`   Need:     ${HoosatUtils.sompiToAmount(sendAmount + fee)} HTN`);
     console.error(`   Missing:  ${HoosatUtils.sompiToAmount(-changeAmount)} HTN`);
     process.exit(1);
   }
@@ -238,7 +232,7 @@ async function main() {
   console.log('─────────────────────────────────────');
   console.log(`  Total Input:     ${HoosatUtils.sompiToAmount(selectedAmount)} HTN`);
   console.log(`  Send Amount:     ${HoosatUtils.sompiToAmount(sendAmount)} HTN`);
-  console.log(`  Estimated Fee:   ${HoosatUtils.sompiToAmount(estimatedFee)} HTN`);
+  console.log(`  Minimum Fee:     ${HoosatUtils.sompiToAmount(fee)} HTN`);
   console.log(`  Change:          ${HoosatUtils.sompiToAmount(changeAmount)} HTN`);
   console.log();
   console.log(`  Inputs:  ${numInputs}`);
@@ -284,7 +278,7 @@ async function main() {
     }
 
     // Set fee
-    builder.setFee(estimatedFee.toString());
+    builder.setFee(minFee);
 
     // Sign transaction
     signedTx = builder.sign();
@@ -328,7 +322,7 @@ async function main() {
 
   console.log('You are about to send:');
   console.log(`  ${AMOUNT_HTN} HTN to ${RECIPIENT.slice(0, 30)}...`);
-  console.log(`  Fee: ~${HoosatUtils.sompiToAmount(estimatedFee)} HTN\n`);
+  console.log(`  Fee: ${HoosatUtils.sompiToAmount(fee)} HTN\n`);
 
   console.log('Submitting in 3 seconds... (Ctrl+C to cancel)\n');
   await new Promise(resolve => setTimeout(resolve, 3000));
@@ -401,7 +395,7 @@ async function main() {
 
   console.log('Summary:');
   console.log(`  ✅ Sent ${AMOUNT_HTN} HTN to recipient`);
-  console.log(`  ✅ Fee: ~${HoosatUtils.sompiToAmount(estimatedFee)} HTN`);
+  console.log(`  ✅ Fee: ${HoosatUtils.sompiToAmount(fee)} HTN`);
   console.log(`  ✅ Transaction broadcast to network`);
   console.log();
   console.log('Next Steps:');

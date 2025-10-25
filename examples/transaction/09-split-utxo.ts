@@ -23,7 +23,7 @@
  * To create more, run multiple split transactions.
  */
 
-import { FeePriority, HoosatClient, HoosatCrypto, HoosatFeeEstimator, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
+import { HoosatClient, HoosatCrypto, HoosatTxBuilder, HoosatUtils, UtxoForSigning } from 'hoosat-sdk';
 
 async function main() {
   console.log('\n═══════════════════════════════════════════════════════════');
@@ -41,12 +41,10 @@ async function main() {
   // Split configuration
   const NUM_OUTPUTS = 2; // Max 2 due to spam protection (2 splits + change = 3 total)
   const AMOUNT_PER_OUTPUT = '0.1'; // Amount for each output in HTN
-  const FEE_PRIORITY = FeePriority.Normal;
 
   console.log(`Node:              ${NODE_HOST}:${NODE_PORT}`);
   console.log(`Outputs to create: ${NUM_OUTPUTS}`);
   console.log(`Amount per output: ${AMOUNT_PER_OUTPUT} HTN`);
-  console.log(`Fee priority:      ${FEE_PRIORITY}`);
   console.log();
 
   // ==================== SPAM PROTECTION WARNING ====================
@@ -176,19 +174,15 @@ async function main() {
   const amountPerOutputSompi = BigInt(HoosatUtils.amountToSompi(AMOUNT_PER_OUTPUT));
   const totalOutputAmount = amountPerOutputSompi * BigInt(NUM_OUTPUTS);
 
-  // Estimate fee (1 input, NUM_OUTPUTS + change)
-  const feeEstimator = new HoosatFeeEstimator(client);
-  const recommendations = await feeEstimator.getRecommendations();
-  const feeRate = recommendations[FEE_PRIORITY].feeRate;
+  // Calculate minimum fee (1 input, NUM_OUTPUTS + change)
+  const minFeeString = HoosatCrypto.calculateMinFee(1, NUM_OUTPUTS + 1);
+  const minFee = BigInt(minFeeString);
 
-  const estimatedFeeString = HoosatCrypto.calculateFee(1, NUM_OUTPUTS + 1, feeRate);
-  const estimatedFee = BigInt(estimatedFeeString);
-
-  const requiredAmount = totalOutputAmount + estimatedFee;
+  const requiredAmount = totalOutputAmount + minFee;
 
   console.log('Required funds:');
   console.log(`  ${NUM_OUTPUTS} outputs × ${AMOUNT_PER_OUTPUT} HTN = ${HoosatUtils.sompiToAmount(totalOutputAmount)} HTN`);
-  console.log(`  Estimated fee:              ${HoosatUtils.sompiToAmount(estimatedFee)} HTN`);
+  console.log(`  Minimum fee:                ${HoosatUtils.sompiToAmount(minFee)} HTN`);
   console.log(`  Total required:             ${HoosatUtils.sompiToAmount(requiredAmount)} HTN`);
   console.log();
 
@@ -207,7 +201,7 @@ async function main() {
   }
 
   const selectedAmount = BigInt(selectedUtxo.utxoEntry.amount);
-  const changeAmount = selectedAmount - totalOutputAmount - estimatedFee;
+  const changeAmount = selectedAmount - totalOutputAmount - minFee;
 
   console.log('Selected UTXO:');
   console.log(`  TX ID:   ${HoosatUtils.truncateHash(selectedUtxo.outpoint.transactionId)}`);
@@ -220,7 +214,7 @@ async function main() {
     console.log(`  Output ${i + 1}: ${AMOUNT_PER_OUTPUT} HTN`);
   }
   console.log(`  Change:   ${HoosatUtils.sompiToAmount(changeAmount)} HTN`);
-  console.log(`  Fee:      ${HoosatUtils.sompiToAmount(estimatedFee)} HTN`);
+  console.log(`  Fee:      ${HoosatUtils.sompiToAmount(minFee)} HTN`);
   console.log();
 
   // ==================== STEP 5: BUILD SPLIT TRANSACTION ====================
@@ -256,7 +250,7 @@ async function main() {
     }
 
     // Set fee BEFORE adding change
-    builder.setFee(estimatedFeeString);
+    builder.setFee(minFeeString);
 
     // Add change output automatically
     builder.addChangeOutput(wallet.address);
@@ -287,7 +281,7 @@ async function main() {
 
   console.log('After split:');
   console.log(`  UTXOs: ${utxos.length + NUM_OUTPUTS} (${NUM_OUTPUTS} new + change)`);
-  console.log(`  Balance: ${HoosatUtils.sompiToAmount(totalBalance - estimatedFee)} HTN (after fee)`);
+  console.log(`  Balance: ${HoosatUtils.sompiToAmount(totalBalance - minFee)} HTN (after fee)`);
   console.log();
 
   console.log('New UTXOs created:');
@@ -303,7 +297,7 @@ async function main() {
 
   console.log('You are about to:');
   console.log(`  • Split 1 UTXO into ${NUM_OUTPUTS} new UTXOs + change`);
-  console.log(`  • Pay ${HoosatUtils.sompiToAmount(estimatedFee)} HTN in fees`);
+  console.log(`  • Pay ${HoosatUtils.sompiToAmount(minFee)} HTN in fees`);
   console.log(`  • Create ${NUM_OUTPUTS} × ${AMOUNT_PER_OUTPUT} HTN outputs`);
   console.log();
   console.log('Submitting in 3 seconds... (Ctrl+C to cancel)\n');
@@ -346,7 +340,7 @@ async function main() {
 
   console.log('Summary:');
   console.log(`  ✅ Split 1 UTXO into ${NUM_OUTPUTS} new UTXOs`);
-  console.log(`  ✅ Fee paid: ${HoosatUtils.sompiToAmount(estimatedFee)} HTN`);
+  console.log(`  ✅ Fee paid: ${HoosatUtils.sompiToAmount(minFee)} HTN`);
   console.log(`  ✅ ${NUM_OUTPUTS} UTXOs ready for future use`);
   console.log();
   console.log('💡 Next steps:');
